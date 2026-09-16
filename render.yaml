@@ -1,0 +1,13 @@
+# Render.com Blueprint — kombinerad app + WebSocket-relä (kors-enhet över internet).
+# Anslut repot i Render (New → Blueprint) så byggs och startas detta automatiskt.
+# Ger en https-url; öppna den på dator (#lag1) och iPad (#lag2) → synkas via wss.
+services:
+  - type: web
+    name: forhandlingen
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build:relay
+    startCommand: node server/server.mjs
+    envVars:
+      - key: NODE_VERSION
+        value: '20'

@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+.vite
+coverage
+
+# Original-assets (dubbletter — de använda kopiorna ligger i public/)
+/assets/
+/Sound/
