@@ -12,6 +12,24 @@ Byggd efter metoden i skillen `stationsbygge` (äg sömmen, lägsta-kodade väge
 semantiska meddelanden). **Inga hemligheter** (broker-url, lösenord, tokens) i
 denna kod — de hör hemma i driftmiljöns config.
 
+Repo: `2047-Science-Center/forhandlingen`. Push till `main` → GitHub Pages
+bygger om automatiskt: <https://2047-science-center.github.io/forhandlingen/>.
+
+## Köra online mot annan enhet (dator/iPad)
+
+GitHub Pages ger bara **samma-enhet**-synk (BroadcastChannel). För **kors-enhet
+över internet** (dator ↔ iPad) finns en kombinerad server som servar den byggda
+appen OCH kör WebSocket-reläet på samma origin (`server/server.mjs`):
+
+- **Lokalt / LAN:** `npm run serve` → öppna `http://<din-ip>:8080/#lag1` och `…/#lag2`.
+- **Internet (Render):** anslut repot i Render (New → Blueprint; `render.yaml`
+  finns) — bygger `npm run build:relay` och startar `node server/server.mjs`.
+  Öppna den https-url du får: dator på `…/#lag1`, iPad på `…/#lag2` → synkas via
+  `wss://<host>/ws`. (Railway/Fly funkar likadant; `Dockerfile` finns.)
+
+Appen väljer transport automatiskt: `?net=<wsUrl>` (uttryckligt) → annars
+same-origin-relä om bygget satt `VITE_RELAY_PATH` → annars BroadcastChannel.
+
 ## Kör piloten
 
 ```bash
