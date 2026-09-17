@@ -70,14 +70,6 @@ function skip() {
 }
 
 onMounted(async () => {
-  if (props.subtitleSrc) {
-    try {
-      const res = await fetch(props.subtitleSrc)
-      if (res.ok) subs.value = parseVtt(await res.text())
-    } catch {
-      subs.value = []
-    }
-  }
   const a = audio.value
   if (a) {
     a.onended = finish
@@ -95,15 +87,28 @@ onMounted(async () => {
       if (a.readyState >= 1) seek()
       else a.addEventListener('loadedmetadata', seek, { once: true })
     }
+    // Spela FÖRST — direkt efter mount, medan BÖRJA-klickets user-activation
+    // fortfarande gäller. En await (t.ex. undertext-fetch) före detta kan äta
+    // upp gesten så webbläsaren blockerar uppspelningen (→ play-knappen).
     try {
       await a.play()
       started.value = true
     } catch {
-      // Autoplay blockerad — visa tryck-för-att-spela (starten kom dock från gest).
+      // Autoplay ändå blockerad — visa tryck-för-att-spela som fallback.
       started.value = false
     }
   }
   raf = requestAnimationFrame(tick)
+
+  // Undertext hämtas EFTER uppspelningsförsöket (får inte fördröja play()).
+  if (props.subtitleSrc) {
+    try {
+      const res = await fetch(props.subtitleSrc)
+      if (res.ok) subs.value = parseVtt(await res.text())
+    } catch {
+      subs.value = []
+    }
+  }
 })
 onUnmounted(() => cancelAnimationFrame(raf))
 

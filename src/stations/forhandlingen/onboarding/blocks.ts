@@ -9,13 +9,13 @@
  * skillnad + Bild 10-illustration med 100 kr / 5 resurser.
  */
 import type { IntroBlockDef } from '@/station-kit/intro/introTypes'
-import { encodeAudio } from '@/config'
+import { encodeAudio, asset } from '@/config'
 
 export const BLOCKS: Record<'block1' | 'block2' | 'block3' | 'block4', IntroBlockDef> = {
   block1: {
     id: 'block1',
     audio: encodeAudio('ljud 1.1.mp3'),
-    subtitles: '/subtitles/block1.vtt',
+    subtitles: asset('/subtitles/block1.vtt'),
     cues: [
       { time: 0, photo: 1, mode: 'center' },
       { time: 9.24, photo: 5, mode: 'negotiate', illustration: 'B1' },
@@ -24,7 +24,7 @@ export const BLOCKS: Record<'block1' | 'block2' | 'block3' | 'block4', IntroBloc
   block2: {
     id: 'block2',
     audio: encodeAudio('Ljud 1.2.mp3'),
-    subtitles: '/subtitles/block2.vtt',
+    subtitles: asset('/subtitles/block2.vtt'),
     cues: [
       { time: 0, photo: 6, mode: 'split', illustration: 'I1' },
       { time: 14, photo: 7, mode: 'center' },
@@ -36,13 +36,13 @@ export const BLOCKS: Record<'block1' | 'block2' | 'block3' | 'block4', IntroBloc
   block3: {
     id: 'block3',
     audio: encodeAudio('ljud 1.3.mp3'),
-    subtitles: '/subtitles/block3.vtt',
+    subtitles: asset('/subtitles/block3.vtt'),
     cues: [{ time: 0, photo: 8, mode: 'center' }],
   },
   block4: {
     id: 'block4',
     audio: encodeAudio('ljud 1.4.mp3'),
-    subtitles: '/subtitles/block4.vtt',
+    subtitles: asset('/subtitles/block4.vtt'),
     cues: [
       { time: 0, photo: 2, mode: 'split', illustration: 'roleDiff' },
       { time: 11.01, photo: 10, mode: 'split', illustration: 'I4live' },

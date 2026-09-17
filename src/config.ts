@@ -141,9 +141,19 @@ export const ROUND_TIMERS = {
   live: { getReadyFirst: 10, getReady: 5, negotiation: 30 },
 } as const
 
-/** Ljud-url i public/Sound (filnamn med mellanslag → encodeURI). */
+/**
+ * Bygger en url till en fil i public/ som funkar oavsett bas-sökväg:
+ * `/` i dev och på NUC-hosten, `/forhandlingen/` på GitHub Pages. Utan detta
+ * 404:ar ljud/foton/undertext på Pages (de pekar på fel rot). Filnamn med
+ * mellanslag encode:as.
+ */
+export function asset(path: string): string {
+  return encodeURI(import.meta.env.BASE_URL + path.replace(/^\/+/, ''))
+}
+
+/** Ljud-url i public/Sound (via asset() så basen på Pages följer med). */
 export function encodeAudio(name: string): string {
-  return encodeURI(`/Sound/${name}`)
+  return asset(`/Sound/${name}`)
 }
 
 /**
@@ -152,10 +162,10 @@ export function encodeAudio(name: string): string {
  * Josef i public/subtitles/ — saknas den visas ingen text (renderaren är tålig).
  */
 export const INTRO_MEDIA = {
-  audio: '/Sound/Ljud 1.mp3',
-  subtitles: '/subtitles/sv.vtt',
+  audio: asset('/Sound/Ljud 1.mp3'),
+  subtitles: asset('/subtitles/sv.vtt'),
   /** Foto-url för Bild N (1..10). Filnamn har mellanslag → encodeURI. */
-  photo: (n: number) => encodeURI(`/assets/Bild ${n}.png`),
+  photo: (n: number) => asset(`/assets/Bild ${n}.png`),
 } as const
 
 /**
@@ -184,7 +194,7 @@ export const TEAMS: Record<TeamId, TeamConfig> = {
     id: 'lag1',
     name: 'Syd',
     emoji: 'S',
-    logo: '/teams/syd.png',
+    logo: asset('/teams/syd.png'),
     members: [
       { band_id: 'syd-a', name: 'Alva', team: 'lag1', chosen_role: 'A', assigned_role: 'A', role_presented_as: null },
       { band_id: 'syd-b', name: 'Noah', team: 'lag1', chosen_role: 'B', assigned_role: 'B', role_presented_as: null },
@@ -194,7 +204,7 @@ export const TEAMS: Record<TeamId, TeamConfig> = {
     id: 'lag2',
     name: 'Nord',
     emoji: 'N',
-    logo: '/teams/nord.png',
+    logo: asset('/teams/nord.png'),
     members: [
       { band_id: 'nord-a', name: 'Ebba', team: 'lag2', chosen_role: 'A', assigned_role: 'A', role_presented_as: null },
       { band_id: 'nord-b', name: 'Hugo', team: 'lag2', chosen_role: 'B', assigned_role: 'B', role_presented_as: null },
