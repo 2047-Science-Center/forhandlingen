@@ -12,11 +12,13 @@
 import { ref, computed, watch } from 'vue'
 import type { TeamId } from '../engine/types'
 import { useGameStore } from '../store/gameStore'
-import { TRIAL_DATASET, TEST1_DATASET, ROUND_TIMERS } from '@/config'
+import { TRIAL_DATASET, TEST1_DATASET, ROUND_TIMERS, TEAMS } from '@/config'
 import { useI18n } from '@/station-kit/i18n'
 
 import CrtScreen from '@/station-kit/components/CrtScreen.vue'
-import VoiceWaveform from './anim/VoiceWaveform.vue'
+import TitleScreen from './opening/TitleScreen.vue'
+import ParticipantsScreen from './opening/ParticipantsScreen.vue'
+import OverviewPopups from './opening/OverviewPopups.vue'
 import IntroBlock from '../intro/IntroBlock.vue'
 import PopupSequence, { type PopupSpec } from './PopupSequence.vue'
 import ResultPopups from './ResultPopups.vue'
@@ -38,11 +40,24 @@ const bothReady = computed(
   () => store.onbReady[me.value] && (shared.value || store.onbReady[me.value === 'lag1' ? 'lag2' : 'lag1']),
 )
 
-// --- Headset ---
-const voiced = ref(false)
-function begin() {
-  store.onbGoto('block1', Date.now())
+// --- Öppningssekvens (lokalt, självtempo per valv) medan delad stage = 'headset':
+//   title → participants → overview → gate (klar-gate = sync-barriär till block1). ---
+const openingStep = ref<'title' | 'participants' | 'overview' | 'gate'>('title')
+const participantsMe = computed(() => (shared.value ? null : me.value))
+const otherValvName = computed(() => TEAMS[me.value === 'lag1' ? 'lag2' : 'lag1'].name)
+const iAmReady = computed(() => store.onbReady[me.value])
+
+// Klar-gaten: markera redo (fri klick, ingen mic). Barriären startar block1.
+function markReadyToStart() {
+  store.onbMarkReady(me.value)
 }
+
+// När BÅDA valv klickat "Börja" → synkad start av block1 (leder sätter epoken).
+watch([bothReady, stage], () => {
+  if (bothReady.value && stage.value === 'headset' && leader.value) {
+    store.onbGoto('block1', Date.now())
+  }
+})
 
 // --- Block → nästa steg ---
 function blockDone() {
@@ -59,9 +74,10 @@ function blockDone() {
 // --- Lokala popup-flaggor (nollställs vid stage-byte) ---
 const popupsDone = ref(false)
 const resDone = ref(false)
-watch(stage, () => {
+watch(stage, (s) => {
   popupsDone.value = false
   resDone.value = false
+  if (s === 'headset') openingStep.value = 'title'
 })
 
 // Test 1/2: klar med intro-popupar → markera redo (popup-barriär).
@@ -149,13 +165,31 @@ const isTestPlay = computed(() => stage.value === 'test1' || stage.value === 'te
 
 <template>
   <div class="ob">
-    <!-- HEADSET -->
-    <div v-if="stage === 'headset'" class="ob__headset">
-      <VoiceWaveform @voiced="voiced = true" />
-      <button class="crt-button crt-button--strong ob__begin" :disabled="!voiced" @click="begin">
-        {{ t('intro.begin') }} ▸
-      </button>
-    </div>
+    <!-- ÖPPNING: Titel → Deltagare → 3 pop-ups → Klar-gate -->
+    <template v-if="stage === 'headset'">
+      <TitleScreen v-if="openingStep === 'title'" @next="openingStep = 'participants'" />
+      <ParticipantsScreen
+        v-else-if="openingStep === 'participants'"
+        :me="participantsMe"
+        @next="openingStep = 'overview'"
+      />
+      <OverviewPopups v-else-if="openingStep === 'overview'" @finish="openingStep = 'gate'" />
+
+      <!-- Klar-gate (modifierad headset-ruta: ingen mic, fri klick, sync-barriär) -->
+      <div v-else class="ob__headset">
+        <template v-if="!iAmReady">
+          <span class="ob__headset-icon" aria-hidden="true">🎧</span>
+          <p class="ob__headset-copy">{{ t('opening.headset_on') }}</p>
+          <button class="crt-button crt-button--strong ob__begin" @click="markReadyToStart">
+            {{ t('opening.begin') }} ▸
+          </button>
+        </template>
+        <div v-else class="ob__waiting">
+          <span class="ob__waiting-dot" aria-hidden="true"></span>
+          <span class="ob__waiting-text">{{ t('opening.waiting_valv', { valv: otherValvName }) }}</span>
+        </div>
+      </div>
+    </template>
 
     <!-- LJUDBLOCK -->
     <IntroBlock
@@ -223,6 +257,44 @@ const isTestPlay = computed(() => stage.value === 'test1' || stage.value === 'te
 .ob__begin {
   font-size: 1.5rem;
   padding: 0.5em 2em;
+}
+.ob__headset-icon {
+  font-size: 3.4rem;
+  filter: drop-shadow(0 0 12px var(--color-primary));
+}
+.ob__headset-copy {
+  font-family: var(--font-retro);
+  font-size: 1.6rem;
+  color: var(--color-ink-strong);
+  margin: 0;
+  text-align: center;
+}
+.ob__waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+.ob__waiting-dot {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: var(--color-primary);
+  box-shadow: 0 0 14px var(--color-primary);
+  animation: ob-throb 1s ease-in-out infinite;
+}
+.ob__waiting-text {
+  font-family: var(--font-retro);
+  font-size: 1.5rem;
+  color: var(--color-ink-strong);
+  text-align: center;
+}
+@keyframes ob-throb {
+  0%, 100% { transform: scale(0.7); opacity: 0.6; }
+  50% { transform: scale(1.3); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ob__waiting-dot { animation: none; }
 }
 .ob__stage {
   position: relative;

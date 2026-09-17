@@ -126,6 +126,12 @@ async function manualStart() {
   <div class="as" :class="`as--${mode}`">
     <audio ref="audio" :src="audioSrc" preload="auto"></audio>
 
+    <!-- Flashback: tillbakablick till en tidigare förhandling — bultar tydligt i mitten. -->
+    <div v-if="isMemory" class="as__flashback" aria-live="polite">
+      <span class="as__flashback-badge">◉ REC</span>
+      <span class="as__flashback-text">{{ t('intro.memory') }}</span>
+    </div>
+
     <!-- Förhandlingsdemo (negotiate): stationen äger foto + talarmarkering + settle-UI -->
     <div v-if="mode === 'negotiate'" class="as__negotiate">
       <slot name="negotiate" :cue="currentCue" :t="now" :elapsed="elapsed" :photoUrl="photoUrl" />
@@ -137,7 +143,6 @@ async function manualStart() {
         <transition name="photo" mode="out-in">
           <img :key="photo" :src="photoUrl(photo)" alt="" />
         </transition>
-        <span v-if="isMemory" class="as__memory">◷ {{ t('intro.memory') }}</span>
       </div>
 
       <!-- Split-höger: enkel-demo (stationens illustration) -->
@@ -170,6 +175,54 @@ async function manualStart() {
 }
 .as__negotiate {
   height: 100%;
+}
+/* Flashback-banner: tydlig, bultande "inspelning från tidigare förhandling". */
+.as__flashback {
+  position: absolute;
+  top: 7%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 1.2rem;
+  border: 1px solid var(--color-primary);
+  border-radius: 999px;
+  background: rgba(5, 16, 11, 0.82);
+  box-shadow: 0 0 22px rgba(255, 149, 0, 0.4);
+  animation: as-flashback-throb 1.3s ease-in-out infinite;
+  pointer-events: none;
+  max-width: 92%;
+}
+.as__flashback-badge {
+  font-family: var(--font-retro);
+  font-size: 1rem;
+  letter-spacing: 0.12em;
+  color: var(--color-danger, #ff5a5a);
+  animation: as-flashback-blink 1s steps(1, end) infinite;
+}
+.as__flashback-text {
+  font-family: var(--font-retro);
+  font-size: clamp(1.1rem, 2.4vw, 1.6rem);
+  letter-spacing: 0.06em;
+  color: var(--color-ink-strong);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@keyframes as-flashback-throb {
+  0%, 100% { transform: translateX(-50%) scale(1); box-shadow: 0 0 16px rgba(255, 149, 0, 0.3); }
+  50% { transform: translateX(-50%) scale(1.06); box-shadow: 0 0 30px rgba(255, 149, 0, 0.6); }
+}
+@keyframes as-flashback-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.15; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .as__flashback { animation: none; }
+  .as__flashback-badge { animation: none; }
 }
 .as__photo {
   overflow: hidden;

@@ -18,7 +18,7 @@ export const BLOCKS: Record<'block1' | 'block2' | 'block3' | 'block4', IntroBloc
     subtitles: asset('/subtitles/block1.vtt'),
     cues: [
       { time: 0, photo: 1, mode: 'center' },
-      { time: 9.24, photo: 5, mode: 'negotiate', illustration: 'B1' },
+      { time: 9.24, photo: 5, mode: 'negotiate', illustration: 'B1', memory: true },
     ],
   },
   block2: {
@@ -29,7 +29,7 @@ export const BLOCKS: Record<'block1' | 'block2' | 'block3' | 'block4', IntroBloc
       { time: 0, photo: 6, mode: 'split', illustration: 'I1' },
       { time: 14, photo: 7, mode: 'center' },
       { time: 18, photo: 8, mode: 'split', illustration: 'I2' },
-      { time: 32.18, photo: 9, mode: 'negotiate', illustration: 'B2' },
+      { time: 32.18, photo: 9, mode: 'negotiate', illustration: 'B2', memory: true },
       { time: 48.11, photo: 10, mode: 'split', illustration: 'I4' },
     ],
   },

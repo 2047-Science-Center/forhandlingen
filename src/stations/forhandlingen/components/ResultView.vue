@@ -45,11 +45,15 @@ function teamLabel(id: TeamId): string {
           {{ scores[id].securedCritical ? t('reveal.secured') : t('reveal.not_secured') }}
         </p>
 
-        <p class="result__guess">
-          {{ scores[id].guessedRight ? t('reveal.guess_right') : t('reveal.guess_wrong') }}
-        </p>
+        <!-- Gissning + kapital räknas bara när livsviktig är säkrad; annars är
+             poängen alltid 0 och de raderna vore förvirrande. -->
+        <template v-if="scores[id].securedCritical">
+          <p class="result__guess">
+            {{ scores[id].guessedRight ? t('reveal.guess_right') : t('reveal.guess_wrong') }}
+          </p>
+          <p class="result__capital mono">{{ t('reveal.capital_left', { n: scores[id].capitalLeft }) }}</p>
+        </template>
 
-        <p class="result__capital mono">{{ t('reveal.capital_left', { n: scores[id].capitalLeft }) }}</p>
         <p class="result__score mono ink-strong">
           {{ t('reveal.team_score', { n: scores[id].teamScore }) }}
         </p>

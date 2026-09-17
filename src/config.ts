@@ -218,6 +218,16 @@ export const TEAM_SIDE: Record<TeamId, 'vanster' | 'hoger'> = {
   lag2: 'hoger', // Valv Nord
 }
 
+/**
+ * Deltagarnamn som visas på öppningens deltagarskärm. Mockup i piloten —
+ * kommer från RFID-inloggningen i drift. Frikopplat från spelmotorns `members`
+ * (som är 2 per lag: sändebud/rapportör), så antalet kan skilja.
+ */
+export const TEAM_PARTICIPANTS: Record<TeamId, string[]> = {
+  lag1: ['Alva', 'Noah', 'Iris'],
+  lag2: ['Ebba', 'Hugo', 'Milo'],
+}
+
 /** Deterministisk pilot-roster (delas av alla fönster). */
 export function defaultRoster(): Record<TeamId, Person[]> {
   return {
