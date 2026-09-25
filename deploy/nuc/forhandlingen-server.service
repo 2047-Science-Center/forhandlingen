@@ -1,0 +1,22 @@
+# systemd-tjänst: kombinerad app + WebSocket-relä (server/server.mjs).
+# Installeras av install.sh (platshållarna @...@ ersätts där). Kör som system-
+# tjänst så stationen reser sig själv efter strömavbrott.
+[Unit]
+Description=Förhandlingen — app + relä (X&Y-riggen)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@REPO@
+Environment=PORT=@PORT@
+Environment=NODE_ENV=production
+ExecStart=@NODE@ @REPO@/server/server.mjs
+Restart=always
+RestartSec=3
+# Enkel självläkning: om hälsokollen slutar svara startas tjänsten om.
+# (kräver inget extra paket; watchdog nedan är valfritt)
+
+[Install]
+WantedBy=multi-user.target

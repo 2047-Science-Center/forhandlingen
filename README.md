@@ -30,6 +30,21 @@ appen OCH kör WebSocket-reläet på samma origin (`server/server.mjs`):
 Appen väljer transport automatiskt: `?net=<wsUrl>` (uttryckligt) → annars
 same-origin-relä om bygget satt `VITE_RELAY_PATH` → annars BroadcastChannel.
 
+## Köra som permanent station på en NUC (två skärmar)
+
+Kit för att installera stationen som självstartande kiosk på en Linux-NUC
+(systemd-tjänst för app+relä, kiosk-autostart för båda skärmarna, tvåmus-stöd,
+touch-mappning senare) ligger i [`deploy/nuc/`](deploy/nuc/). Kortversion på
+NUC:en:
+
+```bash
+git clone https://github.com/2047-Science-Center/forhandlingen.git
+cd forhandlingen
+deploy/nuc/install.sh
+```
+
+Full guide: [deploy/nuc/NUC-INSTALL.md](deploy/nuc/NUC-INSTALL.md).
+
 ## Kör piloten
 
 ```bash

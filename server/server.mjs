@@ -40,6 +40,12 @@ async function serveFile(res, filePath) {
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost')
+    // Hälsokoll (systemd/övervakning på NUC:en).
+    if (url.pathname === '/healthz') {
+      res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' })
+      res.end('ok')
+      return
+    }
     // Skydda mot path traversal.
     const rel = normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, '')
     let filePath = join(DIST, rel)
