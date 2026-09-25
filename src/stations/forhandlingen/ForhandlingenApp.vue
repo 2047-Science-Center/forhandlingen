@@ -20,6 +20,7 @@ import FacilitatorControls from './components/FacilitatorControls.vue'
 import PauseOverlay from './components/PauseOverlay.vue'
 import IdleWarning from './components/IdleWarning.vue'
 import Onboarding from './onboarding/Onboarding.vue'
+import PopupSequence, { type PopupSpec } from './onboarding/PopupSequence.vue'
 import type { TeamId } from './engine/types'
 
 const store = useGameStore()
@@ -29,6 +30,12 @@ const { t } = useI18n()
 const entered = ref(false)
 /** Onboardingen klar när koordinatorns stage nått 'live'. */
 const onboarded = computed(() => store.onbStage === 'live')
+
+/** "Ta på lurarna"-ruta i början av skarpa förhandlingen (klickas bort en gång). */
+const liveHeadsetDone = ref(false)
+const liveHeadsetPopups = computed<PopupSpec[]>(() => [
+  { icon: '🎧', title: t('headset.on'), body: t('headset.on_sub') },
+])
 
 const isPilot = computed(() => config.mode === 'pilot')
 const showReveal = computed(() => store.phase === 'reveal')
@@ -47,6 +54,7 @@ watch(entered, (v) => store.setSessionActive(v))
 // Reset (manuell, idle eller från peer) → tillbaka till attract.
 watch(() => store.resetSignal, () => {
   entered.value = false
+  liveHeadsetDone.value = false
 })
 
 function onActivity() {
@@ -101,6 +109,13 @@ onUnmounted(() => {
         </CrtScreen>
       </div>
     </template>
+
+    <!-- "Ta på lurarna" i början av skarpa förhandlingen (klickas bort en gång) -->
+    <PopupSequence
+      v-if="onboarded && !showReveal && !liveHeadsetDone"
+      :popups="liveHeadsetPopups"
+      @finish="liveHeadsetDone = true"
+    />
 
     <!-- Facilitator-kontroller (paus/starta om) — i både pilot och drift -->
     <FacilitatorControls v-if="entered" />

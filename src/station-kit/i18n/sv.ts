@@ -27,8 +27,13 @@ export const sv: Record<string, string> = {
   'opening.tap_continue': 'tryck för att fortsätta',
   'opening.participants': 'Deltagare',
   'opening.tap_start': 'Tryck för att börja',
-  'opening.headset_on': 'Ta på dig headsetet',
+  'opening.headset_on': 'Instruktionen spelas i skärmen. Ha lurarna av så länge.',
   'opening.begin': 'Börja',
+  // Hörlur-instruktioner (lurarna används bara för själva förhandlingen).
+  'headset.on': 'Ta på er lurarna',
+  'headset.on_sub': 'Nu ska ni förhandla — rösten maskeras.',
+  'headset.off': 'Ta av er lurarna',
+  'headset.off_sub': 'Nästa instruktion hörs i skärmen.',
   'opening.market': 'Ni byter inte resurser med varandra – båda valven budar om samma resurser på en gemensam marknad. Ingen äger dem.',
 
   // --- Facilitator (paus/återställ) + idle-återstart ---

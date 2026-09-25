@@ -75,9 +75,12 @@ function blockDone() {
 // --- Lokala popup-flaggor (nollställs vid stage-byte) ---
 const popupsDone = ref(false)
 const resDone = ref(false)
+/** "Ta av lurarna"-rutan efter Test 2 klar. */
+const headsetCueDone = ref(false)
 watch(stage, (s) => {
   popupsDone.value = false
   resDone.value = false
+  headsetCueDone.value = false
   if (s === 'headset') openingStep.value = 'title'
 })
 
@@ -89,6 +92,11 @@ function onPopupsFinish() {
 // Result-popupar klara → markera redo (result-barriär).
 function onResFinish() {
   resDone.value = true
+  store.onbMarkReady(me.value)
+}
+// Test 2-resultat klart → visa "ta av lurarna" INNAN barriären/nästa block.
+function onHeadsetOffFinish() {
+  headsetCueDone.value = true
   store.onbMarkReady(me.value)
 }
 
@@ -103,8 +111,14 @@ const test1Popups: PopupSpec[] = [
 const test2Popups = computed<PopupSpec[]>(() => [
   { title: t('reveal.your_critical_is'), resource: myCritical.value },
   { title: t('reveal.here_is_money'), money: TRIAL_DATASET.kapital },
+  // Sista rutan innan förhandlingen: nu ska lurarna på.
+  { icon: '🎧', title: t('headset.on'), body: t('headset.on_sub') },
 ])
 const test3Popups: PopupSpec[] = [{ body: t('test3.instruction') }]
+// "Ta av lurarna" — efter övningsförhandlingen (Test 2), innan nästa instruktion.
+const headsetOffPopups: PopupSpec[] = [
+  { icon: '🔇', title: t('headset.off'), body: t('headset.off_sub') },
+]
 
 // --- Leder: starta testomgången (PAUSAD) vid stage-enter ---
 watch(
@@ -179,7 +193,7 @@ const isTestPlay = computed(() => stage.value === 'test1' || stage.value === 'te
       <!-- Klar-gate (modifierad headset-ruta: ingen mic, fri klick, sync-barriär) -->
       <div v-else class="ob__headset">
         <template v-if="!iAmReady">
-          <span class="ob__headset-icon" aria-hidden="true">🎧</span>
+          <span class="ob__headset-icon" aria-hidden="true">🔊</span>
           <p class="ob__headset-copy">{{ t('opening.headset_on') }}</p>
           <button class="crt-button crt-button--strong ob__begin" @click="markReadyToStart">
             {{ t('opening.begin') }} ▸
@@ -216,8 +230,13 @@ const isTestPlay = computed(() => stage.value === 'test1' || stage.value === 'te
       />
       <BarrierWait v-else-if="isTestPlay && !bothReady" />
 
-      <!-- Result-popupar efter test 2 -->
-      <ResultPopups v-if="stage === 'test2res' && !resDone" mode="test2" :team="me" @finish="onResFinish" />
+      <!-- Result-popupar efter test 2 → "ta av lurarna" → barriär -->
+      <ResultPopups v-if="stage === 'test2res' && !resDone" mode="test2" :team="me" @finish="resDone = true" />
+      <PopupSequence
+        v-else-if="stage === 'test2res' && !headsetCueDone"
+        :popups="headsetOffPopups"
+        @finish="onHeadsetOffFinish"
+      />
       <BarrierWait v-else-if="stage === 'test2res'" />
     </div>
 
