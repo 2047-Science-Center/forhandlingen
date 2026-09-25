@@ -91,31 +91,39 @@ launch() {
     --app="$URL_BASE/#$hash" &
 }
 
-# Robust ljud-routing: flytta varje valvs ljudström till sin sink när den dyker
-# upp. Fallback ifall PULSE_SINK ignoreras (t.ex. snap-Chromium på PipeWire).
+# Robust ljud-routing: håll ALLA av ett valvs ljudströmmar på rätt utgång så
+# länge valvets webbläsare lever. Ett fönster har typiskt TVÅ strömmar — en
+# mediaström (berättarrösten) och en Web Audio-ström (klick-ljudeffekterna, som
+# ofta dyker upp först när de klickar). Fallback ifall PULSE_SINK ignoreras
+# (t.ex. snap-Chromium på PipeWire).
 route_audio() {
-  local tag="$1" sink="$2"
+  local tag="$1" sink="$2" prof="$3"
   [ -z "$sink" ] && return 0
   command -v pactl >/dev/null 2>&1 || return 0
   command -v python3 >/dev/null 2>&1 || return 0
   (
     set +e
-    for _ in $(seq 1 20); do
-      id=$(pactl -f json list sink-inputs 2>/dev/null | python3 -c '
+    moved=0
+    while pgrep -f "$PROFILE_DIR/$prof" >/dev/null 2>&1; do
+      ids=$(pactl -f json list sink-inputs 2>/dev/null | python3 -c '
 import sys, json
 try:
     data = json.load(sys.stdin)
 except Exception:
     sys.exit(0)
+tag = sys.argv[1]
 for si in data:
-    if si.get("properties", {}).get("application.name") == sys.argv[1]:
-        print(si.get("index", "")); break
+    if si.get("properties", {}).get("application.name") == tag:
+        print(si.get("index", ""))
 ' "$tag" 2>/dev/null)
-      if [ -n "${id:-}" ] && pactl move-sink-input "$id" "$sink" >/dev/null 2>&1; then
+      for id in $ids; do
+        pactl move-sink-input "$id" "$sink" >/dev/null 2>&1
+      done
+      if [ "$moved" = 0 ] && [ -n "${ids:-}" ]; then
         echo "kiosk.sh: $tag → $sink"
-        exit 0
+        moved=1
       fi
-      sleep 1
+      sleep 3
     done
   ) &
 }
@@ -125,7 +133,7 @@ launch lag1 "$LEFT_POS" syd "$SINK_LEFT" ValvSyd
 sleep 1
 launch lag2 "$RIGHT_POS" nord "$SINK_RIGHT" ValvNord
 
-route_audio ValvSyd "$SINK_LEFT"
-route_audio ValvNord "$SINK_RIGHT"
+route_audio ValvSyd "$SINK_LEFT" syd
+route_audio ValvNord "$SINK_RIGHT" nord
 
 wait
