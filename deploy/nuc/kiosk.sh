@@ -29,10 +29,15 @@ TOUCH_LEFT="${TOUCH_LEFT:-}"    ; OUTPUT_LEFT="${OUTPUT_LEFT:-}"
 TOUCH_RIGHT="${TOUCH_RIGHT:-}"  ; OUTPUT_RIGHT="${OUTPUT_RIGHT:-}"
 
 # --- Hitta Chromium/Chrome ---
-BROWSER=""
-for b in chromium chromium-browser google-chrome google-chrome-stable; do
-  if command -v "$b" >/dev/null 2>&1; then BROWSER="$b"; break; fi
-done
+# Föredra icke-snap (Google Chrome .deb): snap-Chromium struntar ofta i
+# per-process-ljudrouting (PULSE_SINK), vilket krävs för ljud per valv.
+# Sätt BROWSER_BIN i kiosk.env för att tvinga en specifik webbläsare.
+BROWSER="${BROWSER_BIN:-}"
+if [ -z "$BROWSER" ]; then
+  for b in google-chrome-stable google-chrome chromium-browser chromium; do
+    if command -v "$b" >/dev/null 2>&1; then BROWSER="$b"; break; fi
+  done
+fi
 if [ -z "$BROWSER" ]; then
   echo "kiosk.sh: hittade ingen chromium/chrome i PATH — installera chromium." >&2
   exit 1
