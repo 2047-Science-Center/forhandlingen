@@ -26,9 +26,13 @@ import {
   TEST1_DATASET,
   LIVE_DATASET_ID,
   ROUND_TIMERS,
+  IDLE_RESTART,
   TEAMS,
   defaultRoster,
 } from '@/config'
+
+const IDLE_MS = IDLE_RESTART.minutes * 60_000
+const IDLE_WARN_MS = IDLE_RESTART.warnSeconds * 1000
 
 export type ViewSide = 'lag1' | 'lag2' | 'shared'
 
@@ -55,6 +59,17 @@ export const useGameStore = defineStore('forhandlingen', () => {
   const now = ref<number>(Date.now())
   /** Epoch-ms när intro-klippet startades (delas mellan skärmar → synkat ljud). */
   const introStartedAt = ref<number | null>(null)
+  /** Facilitator-paus (synkad). Fryser nedräkningen och lägger paus-overlay. */
+  const paused = ref(false)
+  /** Epoch-ms när pausen startade (för att förskjuta nedräkningen vid resume). */
+  const pausedSince = ref(0)
+  /** Räknare som tickar upp vid varje reset → UI kan återgå till attract. */
+  const resetSignal = ref(0)
+  /** Epoch-ms för senaste aktivitet (lokal ELLER från andra skärmen) → idle-återstart. */
+  const lastActivityAt = ref(Date.now())
+  let lastActivityBroadcast = 0
+  /** Sant när stationen är i en körning (efter attract) → idle-återstart aktiv. */
+  const sessionActive = ref(false)
   const selectedDataset = ref<string>(DATASETS[0].id)
   /** Efter ett köp hålls nästa lucka släckt ~1 s innan den tänds (§4.5). */
   const holdActiveUntil = ref(0)
@@ -83,8 +98,19 @@ export const useGameStore = defineStore('forhandlingen', () => {
   /** Sekunder kvar i AKTUELL förhandling. null när timern inte är igång. */
   const secondsLeft = computed<number | null>(() => {
     if (state.value.hatchTimerEndsAt == null) return null
-    return Math.max(0, Math.round((state.value.hatchTimerEndsAt - now.value) / 1000))
+    // Under paus fryses den visade tiden vid pausögonblicket.
+    const ref_ = paused.value ? pausedSince.value : now.value
+    return Math.max(0, Math.round((state.value.hatchTimerEndsAt - ref_) / 1000))
   })
+
+  /** Idle-återstart: sant när varningen ska visas (strax före auto-reset). */
+  const idleWarn = computed(
+    () => sessionActive.value && IDLE_MS > 0 && now.value - lastActivityAt.value >= IDLE_MS - IDLE_WARN_MS,
+  )
+  /** Sekunder kvar till auto-reset (för varningens nedräkning). */
+  const idleSecondsLeft = computed(() =>
+    Math.max(0, Math.ceil((IDLE_MS - (now.value - lastActivityAt.value)) / 1000)),
+  )
 
   /** Luckrad som anonyma thumbnails: resurs avslöjas bara för avgjorda luckor. */
   const hatchCells = computed<HatchCell[]>(() =>
@@ -156,6 +182,9 @@ export const useGameStore = defineStore('forhandlingen', () => {
           payload: { stage: onbStage.value, epoch: onbEpoch.value },
         })
       }
+      if (paused.value) {
+        adapters.value?.transport.send({ kind: 'pause', payload: { paused: true, since: pausedSince.value } })
+      }
     } else if (msg.kind === 'introStart') {
       const ts = msg.payload as number
       if (introStartedAt.value == null || ts < introStartedAt.value) introStartedAt.value = ts
@@ -169,7 +198,30 @@ export const useGameStore = defineStore('forhandlingen', () => {
     } else if (msg.kind === 'onbReady') {
       const p = msg.payload as { vault: TeamId }
       onbReady.value = { ...onbReady.value, [p.vault]: true }
+    } else if (msg.kind === 'pause') {
+      const p = msg.payload as { paused: boolean; since: number }
+      paused.value = p.paused
+      pausedSince.value = p.since
+    } else if (msg.kind === 'sessionReset') {
+      reset(false)
+    } else if (msg.kind === 'activity') {
+      notifyActivity(false)
     }
+  }
+
+  /** Registrera aktivitet (för idle-återstart). Lokala anrop pingas till andra
+   *  skärmen (strypt) så aktivitet på ETT valv håller BÅDA vakna. */
+  function notifyActivity(local = true) {
+    lastActivityAt.value = Date.now()
+    if (local && Date.now() - lastActivityBroadcast > 3000) {
+      lastActivityBroadcast = Date.now()
+      adapters.value?.transport.send({ kind: 'activity', payload: null })
+    }
+  }
+  /** App markerar att en körning pågår (efter attract) → idle-återstart aktiv. */
+  function setSessionActive(v: boolean) {
+    sessionActive.value = v
+    if (v) lastActivityAt.value = Date.now()
   }
 
   /** Starta intro-klippet synkat på BÅDA skärmarna (delad starttid). */
@@ -198,6 +250,27 @@ export const useGameStore = defineStore('forhandlingen', () => {
     if (onbReady.value[vault]) return
     onbReady.value = { ...onbReady.value, [vault]: true }
     adapters.value?.transport.send({ kind: 'onbReady', payload: { vault } })
+  }
+
+  /** Facilitator-paus (synkad). Vid resume förskjuts aktiv nedräkning framåt så
+   *  ingen tid gått förlorad. */
+  function setPaused(p: boolean) {
+    if (p === paused.value) return
+    if (p) {
+      paused.value = true
+      pausedSince.value = Date.now()
+    } else {
+      const delta = Date.now() - pausedSince.value
+      if (delta > 0) dispatch({ type: 'shiftTimer', deltaMs: delta })
+      paused.value = false
+    }
+    adapters.value?.transport.send({
+      kind: 'pause',
+      payload: { paused: paused.value, since: pausedSince.value },
+    })
+  }
+  function togglePause() {
+    setPaused(!paused.value)
   }
 
   /** Dispatch: applicera lokalt, broadcasta, kör sidoeffekter. */
@@ -284,17 +357,25 @@ export const useGameStore = defineStore('forhandlingen', () => {
   function submitGuess(team: TeamId, resource: string) {
     dispatch({ type: 'submitGuess', team, resource })
   }
-  function reset() {
+  /** Nollställ hela sessionen (spel + onboarding + paus). `broadcastReset`
+   *  false när anropet kommer FRÅN en peer (undviker eko-loop). */
+  function reset(broadcastReset = true) {
     resultSent = false
     prevPhase = 'intro'
     prevStep = 'negotiating'
     prevResultCount = 0
     adapters.value?.lights.reset()
     introStartedAt.value = null
+    paused.value = false
+    pausedSince.value = 0
+    sessionActive.value = false
     onbStage.value = 'headset'
     onbEpoch.value = null
     onbReady.value = { lag1: false, lag2: false }
     dispatch({ type: 'reset', members: defaultRoster() })
+    lastActivityAt.value = Date.now()
+    resetSignal.value += 1
+    if (broadcastReset) adapters.value?.transport.send({ kind: 'sessionReset', payload: null })
   }
 
   function setView(v: ViewSide) {
@@ -337,11 +418,16 @@ export const useGameStore = defineStore('forhandlingen', () => {
       now.value = Date.now()
       if (adapters.value) adapters.value.lights.set(lights.value)
       const s = state.value
-      // Nedräkningar: reveal → getready → förhandling → avräkning.
-      if (s.phase === 'bidding' && s.hatchTimerEndsAt != null && now.value >= s.hatchTimerEndsAt) {
+      // Nedräkningar: reveal → getready → förhandling → avräkning. Fryst vid paus.
+      if (!paused.value && s.phase === 'bidding' && s.hatchTimerEndsAt != null && now.value >= s.hatchTimerEndsAt) {
         if (s.step === 'reveal') finishReveal()
         else if (s.step === 'getready') beginNegotiation()
         else if (s.step === 'negotiating') finishNegotiation()
+      }
+      // Idle-återstart: ingen aktivitet på länge → ledaren nollställer (synkat).
+      const leaderView = view.value === 'shared' || view.value === 'lag1'
+      if (sessionActive.value && !paused.value && IDLE_MS > 0 && leaderView && now.value - lastActivityAt.value >= IDLE_MS) {
+        reset()
       }
     }, 250)
   }
@@ -373,10 +459,20 @@ export const useGameStore = defineStore('forhandlingen', () => {
     onbStage,
     onbEpoch,
     onbReady,
+    paused,
+    resetSignal,
+    now,
+    lastActivityAt,
+    idleWarn,
+    idleSecondsLeft,
     // actions
     beginIntro,
     onbGoto,
     onbMarkReady,
+    setPaused,
+    togglePause,
+    notifyActivity,
+    setSessionActive,
     start,
     startTest1,
     startTest2,

@@ -39,6 +39,7 @@ export type Action =
     }
   | { type: 'finishReveal'; now: number } // intro-popup (kritisk → pengar) klar
   | { type: 'armGetReady'; seconds: number; now: number } // starta pausad getready-nedräkning
+  | { type: 'shiftTimer'; deltaMs: number } // förskjut aktiv nedräkning (facilitator-paus)
   | { type: 'beginNegotiation'; now: number } // getready-nedräkning klar
   | { type: 'finishNegotiation'; now: number } // KLAR eller timer 0
   | { type: 'chooseWinner'; winner: TeamId }
@@ -177,6 +178,14 @@ export function reduce(state: GameState, action: Action): GameState {
       if (state.phase !== 'bidding' || state.step !== 'getready') return state
       const next = clone(state)
       next.hatchTimerEndsAt = action.now + action.seconds * 1000
+      next.version += 1
+      return next
+    }
+
+    case 'shiftTimer': {
+      if (state.hatchTimerEndsAt == null || action.deltaMs === 0) return state
+      const next = clone(state)
+      next.hatchTimerEndsAt = state.hatchTimerEndsAt + action.deltaMs
       next.version += 1
       return next
     }

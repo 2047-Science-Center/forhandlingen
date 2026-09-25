@@ -16,6 +16,9 @@ import { useI18n } from '@/station-kit/i18n'
 import ReporterConsole from './components/ReporterConsole.vue'
 import ResultView from './components/ResultView.vue'
 import PilotPanel from './components/PilotPanel.vue'
+import FacilitatorControls from './components/FacilitatorControls.vue'
+import PauseOverlay from './components/PauseOverlay.vue'
+import IdleWarning from './components/IdleWarning.vue'
 import Onboarding from './onboarding/Onboarding.vue'
 import type { TeamId } from './engine/types'
 
@@ -38,8 +41,26 @@ watch(onboarded, (v) => {
   if (v && leader.value && store.state.datasetId !== LIVE_DATASET_ID) store.startLive()
 })
 
-onMounted(() => store.init())
-onUnmounted(() => store.dispose())
+// --- Idle-återstart: logiken bor i storet (tickens reaktivitet). Appen sätter
+//     bara "körning pågår" vid enter och återgår till attract vid reset. ---
+watch(entered, (v) => store.setSessionActive(v))
+// Reset (manuell, idle eller från peer) → tillbaka till attract.
+watch(() => store.resetSignal, () => {
+  entered.value = false
+})
+
+function onActivity() {
+  store.notifyActivity()
+}
+const ACTIVITY_EVENTS = ['pointerdown', 'mousedown', 'click', 'keydown', 'touchstart', 'wheel'] as const
+onMounted(() => {
+  store.init()
+  ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, onActivity, { passive: true }))
+})
+onUnmounted(() => {
+  ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, onActivity))
+  store.dispose()
+})
 </script>
 
 <template>
@@ -80,6 +101,11 @@ onUnmounted(() => store.dispose())
         </CrtScreen>
       </div>
     </template>
+
+    <!-- Facilitator-kontroller (paus/starta om) — i både pilot och drift -->
+    <FacilitatorControls v-if="entered" />
+    <PauseOverlay v-if="entered && store.paused" />
+    <IdleWarning v-if="store.idleWarn" :seconds="store.idleSecondsLeft" />
 
     <PilotPanel v-if="isPilot && entered" />
   </div>

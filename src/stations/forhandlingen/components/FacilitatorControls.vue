@@ -1,0 +1,81 @@
+<script setup lang="ts">
+/**
+ * Diskret facilitator-kontroll i ett hörn — finns i BÅDE pilot och drift (till
+ * skillnad från PilotPanel). Två saker facilitatorn (Madde) behöver mitt i en
+ * körning:
+ *   - Paus: fryser nedräkningen och lägger paus-overlay på båda skärmarna.
+ *   - Starta om: nollställer hela stationen (med bekräftelse mot råkade klick).
+ * Ligger ovanför paus-overlayen så pausen alltid kan hävas.
+ */
+import { ref } from 'vue'
+import { useGameStore } from '../store/gameStore'
+import { useI18n } from '@/station-kit/i18n'
+
+const store = useGameStore()
+const { t } = useI18n()
+const confirming = ref(false)
+
+function doReset() {
+  confirming.value = false
+  store.reset()
+}
+</script>
+
+<template>
+  <div class="facil">
+    <div v-if="confirming" class="facil__confirm">
+      <span class="facil__confirm-q">{{ t('facil.reset_confirm') }}</span>
+      <div class="facil__confirm-row">
+        <button class="crt-button crt-button--danger facil__btn" @click="doReset">{{ t('facil.reset_yes') }}</button>
+        <button class="crt-button facil__btn" @click="confirming = false">{{ t('facil.cancel') }}</button>
+      </div>
+    </div>
+    <div v-else class="facil__row">
+      <button class="crt-button facil__btn" :class="{ 'crt-button--strong': store.paused }" @click="store.togglePause()">
+        {{ store.paused ? '▶ ' + t('facil.resume') : '⏸ ' + t('facil.pause') }}
+      </button>
+      <button class="crt-button facil__btn facil__reset" @click="confirming = true">⟲ {{ t('facil.reset') }}</button>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.facil {
+  position: fixed;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 300; /* över paus-overlayen (200) */
+  font-family: var(--font-retro);
+}
+.facil__row,
+.facil__confirm-row {
+  display: flex;
+  gap: 0.4rem;
+}
+.facil__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: var(--color-background-2);
+  border: 1px solid var(--color-primary);
+  border-radius: 8px;
+  padding: 0.6rem;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+.facil__confirm-q {
+  color: var(--color-ink-strong);
+  font-size: 0.95rem;
+}
+.facil__btn {
+  font-size: 0.9rem;
+  padding: 0.25em 0.7em;
+  opacity: 0.82;
+}
+.facil__btn:hover {
+  opacity: 1;
+}
+.facil__reset {
+  color: var(--color-ink-muted);
+  border-color: var(--color-primary-dim);
+}
+</style>

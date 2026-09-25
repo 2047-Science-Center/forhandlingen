@@ -142,6 +142,23 @@ export const ROUND_TIMERS = {
 } as const
 
 /**
+ * Hoppa över Test 1 (öva-att-buda-omgången). Den förvirrade mer än den hjälpte
+ * i test — sekvensen går då block1 → block2 direkt. Sätt false för att få
+ * tillbaka den.
+ */
+export const SKIP_TEST1 = true
+
+/**
+ * Drift: om ingen rör stationen på så här länge återställs den till början
+ * (attract) så nästa grupp möter en ren station. 0 = av. `warnSeconds` = hur
+ * länge en "återställs strax"-varning visas innan.
+ */
+export const IDLE_RESTART = {
+  minutes: 8,
+  warnSeconds: 20,
+} as const
+
+/**
  * Bygger en url till en fil i public/ som funkar oavsett bas-sökväg:
  * `/` i dev och på NUC-hosten, `/forhandlingen/` på GitHub Pages. Utan detta
  * 404:ar ljud/foton/undertext på Pages (de pekar på fel rot). Filnamn med

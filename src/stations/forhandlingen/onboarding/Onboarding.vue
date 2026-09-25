@@ -12,7 +12,7 @@
 import { ref, computed, watch } from 'vue'
 import type { TeamId } from '../engine/types'
 import { useGameStore } from '../store/gameStore'
-import { TRIAL_DATASET, TEST1_DATASET, ROUND_TIMERS, TEAMS } from '@/config'
+import { TRIAL_DATASET, TEST1_DATASET, ROUND_TIMERS, TEAMS, SKIP_TEST1 } from '@/config'
 import { useI18n } from '@/station-kit/i18n'
 
 import CrtScreen from '@/station-kit/components/CrtScreen.vue'
@@ -62,7 +62,8 @@ watch([bothReady, stage], () => {
 // --- Block → nästa steg ---
 function blockDone() {
   const map: Record<string, string> = {
-    block1: 'test1',
+    // Test 1 (öva-att-buda) hoppas över när SKIP_TEST1 → block1 går rakt på block2.
+    block1: SKIP_TEST1 ? 'block2' : 'test1',
     block2: 'test2',
     block3: 'test3',
     block4: 'live',

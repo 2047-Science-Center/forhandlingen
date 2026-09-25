@@ -198,3 +198,21 @@ describe('roster', () => {
     expect(s.members.lag2).toHaveLength(2)
   })
 })
+
+describe('shiftTimer (facilitator-paus)', () => {
+  it('förskjuter aktiv nedräkning framåt', () => {
+    const s = started() // getready, hatchTimerEndsAt satt
+    const end = s.hatchTimerEndsAt!
+    expect(end).not.toBeNull()
+    const shifted = reduce(s, { type: 'shiftTimer', deltaMs: 5000 })
+    expect(shifted.hatchTimerEndsAt).toBe(end + 5000)
+    expect(shifted.version).toBe(s.version + 1)
+  })
+
+  it('gör inget när ingen nedräkning är igång eller delta = 0', () => {
+    const idle = initialState(roster) // hatchTimerEndsAt = null
+    expect(reduce(idle, { type: 'shiftTimer', deltaMs: 5000 })).toBe(idle)
+    const s = started()
+    expect(reduce(s, { type: 'shiftTimer', deltaMs: 0 })).toBe(s)
+  })
+})
