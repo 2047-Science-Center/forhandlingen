@@ -75,6 +75,8 @@ OZONE="${OZONE:-x11}"
 common_flags=(
   "--ozone-platform=$OZONE"
   --start-fullscreen
+  --no-first-run
+  --no-default-browser-check
   --noerrdialogs
   --disable-infobars
   --disable-session-crashed-bubble
