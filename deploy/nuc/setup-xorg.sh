@@ -30,14 +30,36 @@ fi
 # --- 1) Paket: Xorg-server, fönsterhanterare, input-verktyg, dbus, webbläsare -
 say "Installerar Xorg + openbox + verktyg"
 sudo apt update
-sudo apt install -y --no-install-recommends \
-  xserver-xorg xserver-xorg-input-libinput xinit openbox x11-xserver-utils xinput dbus-x11 || true
+# INTE "|| true": om detta misslyckas ska vi stanna INNAN vi rör GDM/autologin,
+# annars bootar NUC:en in i en textkonsol utan X.
+if ! sudo apt install -y --no-install-recommends \
+  xserver-xorg xserver-xorg-core xserver-xorg-input-libinput xinit openbox \
+  x11-xserver-utils xinput dbus-x11; then
+  echo "FEL: kunde inte installera X-paketen. Åtgärda nätverk/apt och kör om skriptet." >&2
+  exit 1
+fi
+# Tillåt att X startas från en konsol-login (annars: "Only console users are
+# allowed to run the X server").
+sudo tee /etc/X11/Xwrapper.config >/dev/null <<'EOF'
+allowed_users=anybody
+needs_root_rights=yes
+EOF
 # Webbläsare: använd den som redan finns, annars installera chromium.
 if ! command -v chromium >/dev/null 2>&1 \
    && ! command -v chromium-browser >/dev/null 2>&1 \
    && ! command -v google-chrome >/dev/null 2>&1 \
    && ! command -v google-chrome-stable >/dev/null 2>&1; then
   sudo apt install -y chromium || sudo apt install -y chromium-browser || true
+fi
+
+# Kontrollera att det nödvändiga faktiskt finns innan vi ändrar boot-läget.
+for bin in startx openbox Xorg; do
+  command -v "$bin" >/dev/null 2>&1 || { echo "FEL: '$bin' saknas trots install — avbryter." >&2; exit 1; }
+done
+if ! command -v chromium >/dev/null 2>&1 && ! command -v chromium-browser >/dev/null 2>&1 \
+   && ! command -v google-chrome >/dev/null 2>&1 && ! command -v google-chrome-stable >/dev/null 2>&1; then
+  echo "FEL: ingen webbläsare (chromium) hittades — avbryter." >&2
+  exit 1
 fi
 
 # --- 2) Stäng av GDM/grafisk inloggning — vi bootar in i vår egen X-session ---
