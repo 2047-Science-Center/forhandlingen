@@ -21,7 +21,16 @@ sudo apt install -y nodejs
 Rekommenderat för en kiosk som ska resa sig själv:
 - **Autologin** till skrivbordet (t.ex. via GNOME/LightDM-inställningar).
 - **X11**, inte Wayland (krävs för två oberoende muspekare och touch-mappning).
-  Välj "Ubuntu on Xorg" vid inloggning, eller sätt `WaylandEnable=false`.
+
+### Ubuntu Desktop kör Wayland — byt till en ren Xorg-kiosk
+Ubuntu 24.04 Desktop kör GNOME på Wayland, där Chromium inte kan placeras på rätt
+skärm och två möss (MPX) inte fungerar; ofta saknas dessutom ett Xorg-val i GDM.
+Kör då `deploy/nuc/setup-xorg.sh` **efter** `install.sh` — det byter NUC:en till
+en minimal Xorg-session (openbox) som bootar rakt in i de två kioskfönstren
+(stänger av GDM, autologin på tty1, arrangerar skärmarna vänster→höger,
+`~/.xinitrc` → openbox + `kiosk.sh`). Sedan `sudo reboot`. Verifiera med
+`echo $XDG_SESSION_TYPE` (ska bli `x11`). Skriptet skriver också hur man
+återställer till vanligt skrivbord. Bryt ur kiosken med **Ctrl+Alt+F2**.
 
 ## 2. Hämta och installera
 ```bash

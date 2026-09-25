@@ -31,7 +31,7 @@ fi
 say "Installerar Xorg + openbox + verktyg"
 sudo apt update
 sudo apt install -y --no-install-recommends \
-  xserver-xorg xinit openbox x11-xserver-utils xinput dbus-x11 || true
+  xserver-xorg xserver-xorg-input-libinput xinit openbox x11-xserver-utils xinput dbus-x11 || true
 # Webbläsare: använd den som redan finns, annars installera chromium.
 if ! command -v chromium >/dev/null 2>&1 \
    && ! command -v chromium-browser >/dev/null 2>&1 \
@@ -69,15 +69,29 @@ EOF
 fi
 
 # --- 5) X-sessionen: openbox + kiosk-skriptet (via dbus-session) ---
-say "Skriver ~/.xinitrc (openbox + kiosk)"
-cat > "$HOME_DIR/.xinitrc" <<EOF
+say "Skriver ~/.xinitrc (openbox + skärmarrangering + kiosk)"
+# Del 1 (variabler expanderas nu): bake in kiosk-skriptets absoluta väg.
+cat > "$HOME_DIR/.xinitrc" <<XINITRC
 #!/bin/sh
+KIOSK="$HERE/kiosk.sh"
+XINITRC
+# Del 2 (citerad heredoc → allt $ blir literalt i den genererade filen).
+cat >> "$HOME_DIR/.xinitrc" <<'XINITRC'
 # Ingen skärmsläckning / strömsparläge på skärmarna.
 xset s off -dpms
 xset s noblank
+# Arrangera de två skärmarna sida vid sida (vänster = primär, höger till höger om).
+# Sätter också SCREEN_W = vänsterskärmens bredd så höger fönster hamnar rätt.
+OUTS=$(xrandr --query 2>/dev/null | awk '/ connected/{print $1}')
+set -- $OUTS
+if [ $# -ge 2 ]; then
+  xrandr --output "$1" --auto --pos 0x0 --primary --output "$2" --auto --right-of "$1" || true
+  LW=$(xrandr --query 2>/dev/null | awk -v o="$1" '$1==o{for(i=1;i<=NF;i++) if($i ~ /^[0-9]+x[0-9]+\+0\+0$/){split($i,a,"x"); print a[1]; exit}}')
+  [ -n "$LW" ] && export SCREEN_W="$LW"
+fi
 # Kör kiosken i en egen dbus-session (behövs av webbläsaren).
-exec dbus-run-session -- /bin/sh -c 'openbox & exec "$HERE/kiosk.sh"'
-EOF
+exec dbus-run-session -- /bin/sh -c "openbox & exec \"$KIOSK\""
+XINITRC
 chmod +x "$HOME_DIR/.xinitrc"
 
 # --- 6) Se till att en kiosk.env finns (för skärmbredd/andra musen/touch) ----
