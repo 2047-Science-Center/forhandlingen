@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Förhandlingen
+Comment=Starta stationen (två skärmar)
+# @EXEC@ ersätts av install-launcher.sh med rätt sökväg till kiosk.sh.
+Exec=@EXEC@
+Icon=input-gaming
+Terminal=false
+Categories=Game;
+StartupNotify=false

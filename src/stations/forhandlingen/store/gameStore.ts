@@ -206,7 +206,23 @@ export const useGameStore = defineStore('forhandlingen', () => {
       reset(false)
     } else if (msg.kind === 'activity') {
       notifyActivity(false)
+    } else if (msg.kind === 'quit') {
+      closeWindow()
     }
+  }
+
+  /** Stäng detta webbläsarfönster (fungerar i kiosk-/app-fönster). */
+  function closeWindow() {
+    try {
+      window.close()
+    } catch {
+      /* i vanlig flik gör webbläsaren inget — ofarligt */
+    }
+  }
+  /** Facilitator "Avsluta": stäng BÅDA valvens fönster → tillbaka till skrivbordet. */
+  function quitStation() {
+    adapters.value?.transport.send({ kind: 'quit', payload: null })
+    setTimeout(closeWindow, 150)
   }
 
   /** Registrera aktivitet (för idle-återstart). Lokala anrop pingas till andra
@@ -473,6 +489,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
     togglePause,
     notifyActivity,
     setSessionActive,
+    quitStation,
     start,
     startTest1,
     startTest2,

@@ -57,9 +57,15 @@ if command -v xinput >/dev/null 2>&1; then
   [ -n "$TOUCH_RIGHT" ] && [ -n "$OUTPUT_RIGHT" ] && xinput map-to-output "$TOUCH_RIGHT" "$OUTPUT_RIGHT" || true
 fi
 
-# --- Gemensamma kioskflaggor ---
+# --- Gemensamma flaggor ---
+# OZONE=x11 tvingar Chromium via XWayland → --window-position funkar även på en
+# Wayland-session (och är native på Xorg). Sätt OZONE=wayland för ren Wayland.
+# INTE --kiosk: vi vill att appens "Avsluta"-knapp (window.close) ska kunna
+# stänga fönstren tillbaka till skrivbordet. --start-fullscreen + --app ger ändå
+# ett rent helskärmsfönster utan flikar/adressfält.
+OZONE="${OZONE:-x11}"
 common_flags=(
-  --kiosk
+  "--ozone-platform=$OZONE"
   --start-fullscreen
   --noerrdialogs
   --disable-infobars

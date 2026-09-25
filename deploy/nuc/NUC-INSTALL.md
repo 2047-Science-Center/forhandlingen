@@ -7,6 +7,24 @@ same-origin-relä, så ingen internetuppkoppling behövs under körning.
 > Detta är pilot-/testläget (`config.mode = 'pilot'`). Kopplingen mot riggens
 > MQTT-ljus/RFID/resultat är förberedd men inte inkopplad — se sista avsnittet.
 
+## Körklart för facilitatorn (utan terminal) — enklaste vägen
+
+Vill du **inte** pilla med boot/Xorg finns ett tryggt läge som inte kan låsa sig:
+kör på vanliga skrivbordet, starta med en ikon, avsluta med en knapp.
+
+1. Installera server-tjänsten en gång: `deploy/nuc/install.sh --server-only`
+   (appen finns då alltid på `http://localhost:8080`).
+2. Lägg en startikon på skrivbordet: `bash deploy/nuc/install-launcher.sh`.
+3. **Start:** dubbelklicka ikonen **Förhandlingen** → två helskärmsfönster
+   (Valv Syd + Valv Nord). Ingen terminal.
+4. **Avsluta:** knappen **✕ Avsluta** nere till vänster i appen (med bekräftelse)
+   stänger **båda** skärmarna och tar dig tillbaka till skrivbordet.
+
+Fönstren körs via XWayland (`OZONE=x11` i `kiosk.sh`) så de kan placeras på var
+sin skärm även på en Wayland-session. **Två oberoende möss** kräver dock en
+riktig Xorg-session (`setup-xorg.sh` nedan); för en operatör/turas-om eller touch
+räcker det här läget.
+
 ## 1. Förbered NUC:en (en gång)
 Ubuntu (eller liknande) med en grafisk **X11**-session. Installera:
 

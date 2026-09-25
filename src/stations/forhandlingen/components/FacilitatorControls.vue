@@ -13,28 +13,41 @@ import { useI18n } from '@/station-kit/i18n'
 
 const store = useGameStore()
 const { t } = useI18n()
-const confirming = ref(false)
+/** '' = inga knappar bekräftas, annars vilken åtgärd som väntar på bekräftelse. */
+const confirm = ref<'' | 'reset' | 'exit'>('')
 
 function doReset() {
-  confirming.value = false
+  confirm.value = ''
   store.reset()
+}
+function doExit() {
+  confirm.value = ''
+  store.quitStation()
 }
 </script>
 
 <template>
   <div class="facil">
-    <div v-if="confirming" class="facil__confirm">
+    <div v-if="confirm === 'reset'" class="facil__confirm">
       <span class="facil__confirm-q">{{ t('facil.reset_confirm') }}</span>
       <div class="facil__confirm-row">
         <button class="crt-button crt-button--danger facil__btn" @click="doReset">{{ t('facil.reset_yes') }}</button>
-        <button class="crt-button facil__btn" @click="confirming = false">{{ t('facil.cancel') }}</button>
+        <button class="crt-button facil__btn" @click="confirm = ''">{{ t('facil.cancel') }}</button>
+      </div>
+    </div>
+    <div v-else-if="confirm === 'exit'" class="facil__confirm">
+      <span class="facil__confirm-q">{{ t('facil.exit_confirm') }}</span>
+      <div class="facil__confirm-row">
+        <button class="crt-button crt-button--danger facil__btn" @click="doExit">{{ t('facil.exit_yes') }}</button>
+        <button class="crt-button facil__btn" @click="confirm = ''">{{ t('facil.cancel') }}</button>
       </div>
     </div>
     <div v-else class="facil__row">
       <button class="crt-button facil__btn" :class="{ 'crt-button--strong': store.paused }" @click="store.togglePause()">
         {{ store.paused ? '▶ ' + t('facil.resume') : '⏸ ' + t('facil.pause') }}
       </button>
-      <button class="crt-button facil__btn facil__reset" @click="confirming = true">⟲ {{ t('facil.reset') }}</button>
+      <button class="crt-button facil__btn facil__reset" @click="confirm = 'reset'">⟲ {{ t('facil.reset') }}</button>
+      <button class="crt-button facil__btn facil__reset" @click="confirm = 'exit'">✕ {{ t('facil.exit') }}</button>
     </div>
   </div>
 </template>
