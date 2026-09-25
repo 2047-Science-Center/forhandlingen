@@ -80,18 +80,52 @@ common_flags=(
 )
 
 launch() {
-  local hash="$1" pos="$2" prof="$3" sink="$4"
-  local pre=()
-  [ -n "$sink" ] && pre=(env "PULSE_SINK=$sink")
+  local hash="$1" pos="$2" prof="$3" sink="$4" tag="$5"
+  # Tagga strömmen (application.name) så vi kan flytta rätt ström nedan, och
+  # sätt PULSE_SINK som förstahandsval.
+  local pre=(env "PULSE_PROP=application.name=$tag")
+  [ -n "$sink" ] && pre+=("PULSE_SINK=$sink")
   "${pre[@]}" "$BROWSER" "${common_flags[@]}" \
     --user-data-dir="$PROFILE_DIR/$prof" \
     --window-position="$pos" \
     --app="$URL_BASE/#$hash" &
 }
 
+# Robust ljud-routing: flytta varje valvs ljudström till sin sink när den dyker
+# upp. Fallback ifall PULSE_SINK ignoreras (t.ex. snap-Chromium på PipeWire).
+route_audio() {
+  local tag="$1" sink="$2"
+  [ -z "$sink" ] && return 0
+  command -v pactl >/dev/null 2>&1 || return 0
+  command -v python3 >/dev/null 2>&1 || return 0
+  (
+    set +e
+    for _ in $(seq 1 20); do
+      id=$(pactl -f json list sink-inputs 2>/dev/null | python3 -c '
+import sys, json
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+for si in data:
+    if si.get("properties", {}).get("application.name") == sys.argv[1]:
+        print(si.get("index", "")); break
+' "$tag" 2>/dev/null)
+      if [ -n "${id:-}" ] && pactl move-sink-input "$id" "$sink" >/dev/null 2>&1; then
+        echo "kiosk.sh: $tag → $sink"
+        exit 0
+      fi
+      sleep 1
+    done
+  ) &
+}
+
 echo "kiosk.sh: startar Valv Syd (#lag1) och Valv Nord (#lag2)"
-launch lag1 "$LEFT_POS" syd "$SINK_LEFT"
+launch lag1 "$LEFT_POS" syd "$SINK_LEFT" ValvSyd
 sleep 1
-launch lag2 "$RIGHT_POS" nord "$SINK_RIGHT"
+launch lag2 "$RIGHT_POS" nord "$SINK_RIGHT" ValvNord
+
+route_audio ValvSyd "$SINK_LEFT"
+route_audio ValvNord "$SINK_RIGHT"
 
 wait
