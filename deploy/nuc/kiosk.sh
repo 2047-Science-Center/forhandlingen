@@ -21,6 +21,9 @@ RIGHT_POS="${RIGHT_POS:-${SCREEN_W},0}"
 PROFILE_DIR="${PROFILE_DIR:-$HOME/.forhandlingen-kiosk}"
 # Valfritt: andra musen (namn/id ur `xinput list`) → egen pekare för höger skärm.
 SECOND_MOUSE="${SECOND_MOUSE:-}"
+# Valfritt: ljud per valv - peka varje valv till sin ljudutgang (pactl list short sinks).
+SINK_LEFT="${SINK_LEFT:-}"
+SINK_RIGHT="${SINK_RIGHT:-}"
 # Valfritt (för touch senare): mappa touch-enheter till rätt HDMI-utgång.
 TOUCH_LEFT="${TOUCH_LEFT:-}"    ; OUTPUT_LEFT="${OUTPUT_LEFT:-}"
 TOUCH_RIGHT="${TOUCH_RIGHT:-}"  ; OUTPUT_RIGHT="${OUTPUT_RIGHT:-}"
@@ -77,16 +80,18 @@ common_flags=(
 )
 
 launch() {
-  local hash="$1" pos="$2" prof="$3"
-  "$BROWSER" "${common_flags[@]}" \
+  local hash="$1" pos="$2" prof="$3" sink="$4"
+  local pre=()
+  [ -n "$sink" ] && pre=(env "PULSE_SINK=$sink")
+  "${pre[@]}" "$BROWSER" "${common_flags[@]}" \
     --user-data-dir="$PROFILE_DIR/$prof" \
     --window-position="$pos" \
     --app="$URL_BASE/#$hash" &
 }
 
 echo "kiosk.sh: startar Valv Syd (#lag1) och Valv Nord (#lag2)"
-launch lag1 "$LEFT_POS"  syd
+launch lag1 "$LEFT_POS" syd "$SINK_LEFT"
 sleep 1
-launch lag2 "$RIGHT_POS" nord
+launch lag2 "$RIGHT_POS" nord "$SINK_RIGHT"
 
 wait
