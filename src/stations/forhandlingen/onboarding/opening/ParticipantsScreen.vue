@@ -44,7 +44,6 @@ const isMine = (id: TeamId) => props.me == null || props.me === id
         </div>
       </div>
     </div>
-    <p class="pt__market">{{ t('opening.market') }}</p>
     <span class="pt__start crt-caret">{{ t('opening.tap_start') }} ▸</span>
   </button>
 </template>
@@ -137,22 +136,10 @@ const isMine = (id: TeamId) => props.me == null || props.me === id
   font-size: clamp(1.2rem, 2.4vw, 1.8rem);
   letter-spacing: 0.04em;
 }
-.pt__market {
-  position: relative;
-  align-self: center;
-  max-width: 46rem;
-  margin: 1.6rem auto 0;
-  padding: 0 1rem;
-  text-align: center;
-  font-family: var(--font-retro);
-  font-size: clamp(1rem, 2vw, 1.25rem);
-  line-height: 1.4;
-  color: var(--color-ink-strong);
-}
 .pt__start {
   position: relative;
   align-self: center;
-  margin-top: 1rem;
+  margin-top: 2rem;
   font-family: var(--font-retro);
   font-size: 1.4rem;
   color: var(--color-ink-strong);

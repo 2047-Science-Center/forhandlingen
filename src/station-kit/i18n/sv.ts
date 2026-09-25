@@ -45,6 +45,10 @@ export const sv: Record<string, string> = {
   'idle.tap_to_stay': 'Rör skärmen för att fortsätta',
   'opening.waiting_valv': 'Väntar på Valv {valv} …',
   // Överblicks-pop-ups (hur man vinner)
+  'overview.market': 'Ni byter inte resurser med varandra – båda valven budar om samma resurser.',
+  'overview.market_label': 'MARKNAD',
+  'overview.no_owner': 'Ingen äger dem',
+  'overview.bid': 'bud',
   'overview.p1': 'Det viktigaste är att få tag på er livsviktiga resurs — annars får ni 0 poäng.',
   'overview.p2': 'Spendera så lite pengar som möjligt. De pengar ni har kvar i slutet blir er poäng.',
   'overview.p3': 'Gissar ni rätt på motståndarens livsviktiga resurs — dubbel poäng.',

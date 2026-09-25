@@ -35,19 +35,22 @@ function sfxOnce(id: string, at: number, sfx: Parameters<typeof audio.play>[0]) 
 
 function tick(now: number) {
   elapsed.value = (now - t0) / 1000
-  // Per scen: fyra ljud-beats.
+  // Per scen: ljud-beats. Steg 0 = marknad, 1 = livsviktig, 2 = spendera, 3 = gissa.
   if (step.value === 0) {
-    sfxOnce('s0-stamp', 0.6, 'render')
-    sfxOnce('s0-ok', 1.3, 'win')
-    sfxOnce('s0-zero', 2.3, 'deny')
+    sfxOnce('s0-cards', 0.15, 'hatch')
+    sfxOnce('s0-bid', 1.0, 'blip')
   } else if (step.value === 1) {
-    sfxOnce('s1-buy', 0.8, 'confirm')
-    sfxOnce('s1-kvar', 1.6, 'blip')
-    sfxOnce('s1-eq', 2.6, 'confirm')
+    sfxOnce('s1-stamp', 0.6, 'render')
+    sfxOnce('s1-ok', 1.3, 'win')
+    sfxOnce('s1-zero', 2.3, 'deny')
   } else if (step.value === 2) {
-    sfxOnce('s2-scan', 0.6, 'blip')
-    sfxOnce('s2-right', 1.5, 'win')
-    sfxOnce('s2-x2', 2.1, 'win')
+    sfxOnce('s2-buy', 0.8, 'confirm')
+    sfxOnce('s2-kvar', 1.6, 'blip')
+    sfxOnce('s2-eq', 2.6, 'confirm')
+  } else if (step.value === 3) {
+    sfxOnce('s3-scan', 0.6, 'blip')
+    sfxOnce('s3-right', 1.5, 'win')
+    sfxOnce('s3-x2', 2.1, 'win')
   }
   raf = requestAnimationFrame(tick)
 }
@@ -64,7 +67,7 @@ onMounted(restart)
 onUnmounted(() => cancelAnimationFrame(raf))
 
 function next() {
-  if (step.value >= 2) emit('finish')
+  if (step.value >= 3) emit('finish')
   else step.value += 1
 }
 
@@ -83,8 +86,30 @@ function wallet(): number {
   <div class="ov">
     <div class="ov__backdrop" />
     <div class="ov__card" :key="step">
-      <!-- SCEN 1: livsviktig resurs → SÄKRAD vs 0 -->
+      <!-- SCEN 0: marknad — båda valven budar om samma resurser, ingen äger dem -->
       <section v-if="step === 0" class="ov__scene">
+        <span class="ov__market-label">{{ t('overview.market_label') }}</span>
+        <div class="ov__market">
+          <span class="ov__bidder" :class="{ 'ov__bidder--in': at(1.0) }">VALV SYD ▶ {{ t('overview.bid') }}</span>
+          <div class="ov__cards">
+            <div
+              v-for="(id, i) in RESOURCES"
+              :key="id"
+              class="ov__mini amber-frame"
+              :class="{ 'ov__mini--in': at(0.1) }"
+              :style="{ transitionDelay: i * 0.08 + 's' }"
+            >
+              <span class="ov__icon">{{ resourceIcon(id) }}</span>
+            </div>
+          </div>
+          <span class="ov__bidder" :class="{ 'ov__bidder--in': at(1.0) }">{{ t('overview.bid') }} ◀ VALV NORD</span>
+        </div>
+        <span class="ov__market-note">{{ t('overview.no_owner') }}</span>
+        <p class="ov__text">{{ t('overview.market') }}</p>
+      </section>
+
+      <!-- SCEN 1: livsviktig resurs → SÄKRAD vs 0 -->
+      <section v-else-if="step === 1" class="ov__scene">
         <div class="ov__cards">
           <div
             v-for="(id, i) in RESOURCES"
@@ -111,7 +136,7 @@ function wallet(): number {
       </section>
 
       <!-- SCEN 2: spendera lite → KVAR = POÄNG -->
-      <section v-else-if="step === 1" class="ov__scene">
+      <section v-else-if="step === 2" class="ov__scene">
         <div class="ov__wallet">
           <span class="ov__wallet-label">💰</span>
           <span class="ov__wallet-num mono ink-strong">{{ wallet() }}<small> kr</small></span>
@@ -175,7 +200,7 @@ function wallet(): number {
         {{ t('onboarding.next') }} ▸
       </button>
       <div class="ov__dots">
-        <span v-for="n in 3" :key="n" class="ov__dot" :class="{ 'ov__dot--now': n - 1 === step }" />
+        <span v-for="n in 4" :key="n" class="ov__dot" :class="{ 'ov__dot--now': n - 1 === step }" />
       </div>
     </div>
   </div>
@@ -359,6 +384,48 @@ function wallet(): number {
 .ov__cmp-num { font-size: 1.8rem; }
 .ov__cmp--good .ov__cmp-num { color: #78ffa0; }
 /* Scen 3 gissning */
+/* Scen 0: marknad */
+.ov__market-label {
+  font-family: var(--font-retro);
+  font-size: 0.95rem;
+  letter-spacing: 0.18em;
+  color: var(--color-primary);
+  opacity: 0.85;
+}
+.ov__market {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.ov__bidder {
+  font-family: var(--font-retro);
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  color: var(--color-ink-strong);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.ov__bidder--in {
+  opacity: 1;
+  transform: none;
+  animation: ov-bid 1.3s ease-in-out infinite;
+}
+.ov__market-note {
+  font-family: var(--font-retro);
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  opacity: 0.85;
+}
+@keyframes ov-bid {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
 .ov__scene--guess { justify-content: flex-start; padding-top: 0.5rem; }
 .ov__guess { display: flex; gap: 2.2rem; align-items: flex-start; }
 .ov__col { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; position: relative; }
@@ -408,5 +475,6 @@ function wallet(): number {
 @media (prefers-reduced-motion: reduce) {
   .ov__mini, .ov__out, .ov__eq, .ov__compare { transition: none; }
   .ov__mini--scan, .ov__redflash, .ov__coins, .ov__x2 { animation: none; }
+  .ov__bidder--in { animation: none; }
 }
 </style>
