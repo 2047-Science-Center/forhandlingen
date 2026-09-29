@@ -24,9 +24,16 @@ SECOND_MOUSE="${SECOND_MOUSE:-}"
 # Valfritt: ljud per valv - peka varje valv till sin ljudutgang (pactl list short sinks).
 SINK_LEFT="${SINK_LEFT:-}"
 SINK_RIGHT="${SINK_RIGHT:-}"
-# Valfritt (för touch senare): mappa touch-enheter till rätt HDMI-utgång.
-TOUCH_LEFT="${TOUCH_LEFT:-}"    ; OUTPUT_LEFT="${OUTPUT_LEFT:-}"
-TOUCH_RIGHT="${TOUCH_RIGHT:-}"  ; OUTPUT_RIGHT="${OUTPUT_RIGHT:-}"
+# Touch → skärm-mappning. Två sätt:
+#  - Olika paneler: sätt TOUCH_LEFT/RIGHT = enhetsnamn ur `xinput list`.
+#  - IDENTISKA paneler (samma namn): sätt TOUCH_PATH_LEFT/RIGHT = USB-portens
+#    ID_PATH (ur `udevadm info -q property <node> | grep ID_PATH`), så mappningen
+#    binds till fysisk USB-port och håller över omstart.
+# OUTPUT_* = skärmnamn ur `xrandr --listmonitors` (t.ex. DP-1 / DP-3 / HDMI-1).
+TOUCH_LEFT="${TOUCH_LEFT:-}"            ; OUTPUT_LEFT="${OUTPUT_LEFT:-}"
+TOUCH_RIGHT="${TOUCH_RIGHT:-}"         ; OUTPUT_RIGHT="${OUTPUT_RIGHT:-}"
+TOUCH_PATH_LEFT="${TOUCH_PATH_LEFT:-}"
+TOUCH_PATH_RIGHT="${TOUCH_PATH_RIGHT:-}"
 
 # --- Hitta Chromium/Chrome ---
 # Föredra icke-snap (Google Chrome .deb): snap-Chromium struntar ofta i
@@ -59,10 +66,38 @@ if [ -n "$SECOND_MOUSE" ] && command -v xinput >/dev/null 2>&1; then
     echo "kiosk.sh: kunde inte koppla mus '$SECOND_MOUSE' — kolla namnet med 'xinput list'." >&2
 fi
 
-# --- Valfritt: touch → skärm-mappning (för touchskärmar senare) ---
+# --- Touch → skärm-mappning ---
+# Matcha en panel på dess USB-port (ID_PATH) och mappa till rätt skärm. Binds
+# till fysisk port → håller över omstart även för IDENTISKA paneler (samma namn,
+# där xinput-id kan byta plats mellan boots).
+map_touch_by_path() {
+  local want="$1" output="$2" id node path
+  [ -n "$want" ] && [ -n "$output" ] || return 0
+  for id in $(xinput list --id-only 2>/dev/null); do
+    node=$(xinput list-props "$id" 2>/dev/null | sed -n 's/.*Device Node[^"]*"\([^"]*\)".*/\1/p')
+    [ -n "$node" ] || continue
+    path=$(udevadm info -q property "$node" 2>/dev/null | sed -n 's/^ID_PATH=//p')
+    if [ "$path" = "$want" ]; then
+      if xinput map-to-output "$id" "$output"; then echo "kiosk.sh: touch $want → $output"; fi
+      return 0
+    fi
+  done
+  echo "kiosk.sh: touch-panel $want hittades inte (rätt USB-port ikopplad?)" >&2
+}
 if command -v xinput >/dev/null 2>&1; then
-  [ -n "$TOUCH_LEFT" ]  && [ -n "$OUTPUT_LEFT" ]  && xinput map-to-output "$TOUCH_LEFT"  "$OUTPUT_LEFT"  || true
-  [ -n "$TOUCH_RIGHT" ] && [ -n "$OUTPUT_RIGHT" ] && xinput map-to-output "$TOUCH_RIGHT" "$OUTPUT_RIGHT" || true
+  if [ -n "$TOUCH_PATH_LEFT" ] || [ -n "$TOUCH_PATH_RIGHT" ]; then
+    # Port-baserat (identiska paneler)
+    if command -v udevadm >/dev/null 2>&1; then
+      map_touch_by_path "$TOUCH_PATH_LEFT"  "$OUTPUT_LEFT"
+      map_touch_by_path "$TOUCH_PATH_RIGHT" "$OUTPUT_RIGHT"
+    else
+      echo "kiosk.sh: udevadm saknas — kan inte port-mappa touch." >&2
+    fi
+  else
+    # Namn-baserat (olika paneler)
+    [ -n "$TOUCH_LEFT" ]  && [ -n "$OUTPUT_LEFT" ]  && xinput map-to-output "$TOUCH_LEFT"  "$OUTPUT_LEFT"  || true
+    [ -n "$TOUCH_RIGHT" ] && [ -n "$OUTPUT_RIGHT" ] && xinput map-to-output "$TOUCH_RIGHT" "$OUTPUT_RIGHT" || true
+  fi
 fi
 
 # --- Gemensamma flaggor ---
