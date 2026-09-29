@@ -14,9 +14,14 @@
 #   node=$(xinput list-props <id> | sed -n 's/.*Device Node[^"]*"\([^"]*\)".*/\1/p')
 #   udevadm info -q property "$node" | grep ID_PATH
 #
-# Valfri fördröjning innan mappning (t.ex. vid autostart): MAP_TOUCH_DELAY=5
+# Miljövariabler:
+#   MAP_TOUCH_DELAY=5   vänta N sek innan första mappning (för autostart)
+#   MAP_TOUCH_WATCH=5   SJÄLVLÄKANDE: applicera om var N:e sek för alltid, så
+#                       mappningen läker sig själv efter inloggnings-reset,
+#                       display-hotplug eller strömblink. Rekommenderas för drift.
 
-[ "${MAP_TOUCH_DELAY:-0}" -gt 0 ] 2>/dev/null && sleep "${MAP_TOUCH_DELAY}"
+# Spara panel-paren (argumenten) så watch-läget kan applicera om dem.
+ARGS=("$@")
 
 map_one() {
   want="$1"
@@ -27,15 +32,32 @@ map_one() {
     path=$(udevadm info -q property "$node" 2>/dev/null | sed -n 's/^ID_PATH=//p')
     if [ "$path" = "$want" ]; then
       if xinput map-to-output "$id" "$output"; then
-        echo "map-touch: $want -> $output (id $id)"
+        [ "${QUIET:-0}" = 1 ] || echo "map-touch: $want -> $output (id $id)"
       fi
       return 0
     fi
   done
-  echo "map-touch: hittade ingen enhet på USB-port $want" >&2
+  [ "${QUIET:-0}" = 1 ] || echo "map-touch: hittade ingen enhet på USB-port $want" >&2
 }
 
-while [ "$#" -ge 2 ]; do
-  map_one "$1" "$2"
-  shift 2
-done
+apply_all() {
+  set -- "${ARGS[@]}"
+  while [ "$#" -ge 2 ]; do
+    map_one "$1" "$2"
+    shift 2
+  done
+}
+
+[ "${MAP_TOUCH_DELAY:-0}" -gt 0 ] 2>/dev/null && sleep "${MAP_TOUCH_DELAY}"
+
+if [ "${MAP_TOUCH_WATCH:-0}" -gt 0 ] 2>/dev/null; then
+  # Självläkande: håll mappningen aktiv. Tyst efter första varvet.
+  apply_all
+  QUIET=1
+  while true; do
+    sleep "${MAP_TOUCH_WATCH}"
+    apply_all >/dev/null 2>&1
+  done
+else
+  apply_all
+fi
