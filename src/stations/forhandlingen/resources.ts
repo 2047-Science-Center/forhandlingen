@@ -4,7 +4,7 @@ export const RESOURCE_ICONS: Record<string, string> = {
   branslecell: '🔋',
   styrkort: '🎛️',
   radiosandare: '📡',
-  membranfilter: '🚰',
+  membranfilter: '💧',
 }
 
 export function resourceIcon(id: string): string {

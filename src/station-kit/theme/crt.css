@@ -46,6 +46,12 @@
   box-sizing: border-box;
 }
 
+/* Global textskala — större, läsbar text på panelerna (allt rem-baserat följer med).
+   Måttlig nivå så täta vyer (budgivning) ryms utan att spilla över. */
+html {
+  font-size: 115%;
+}
+
 html,
 body {
   margin: 0;
