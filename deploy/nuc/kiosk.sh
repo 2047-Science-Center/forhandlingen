@@ -172,7 +172,9 @@ for si in data:
 
 echo "kiosk.sh: startar Valv Syd (#lag1) och Valv Nord (#lag2)"
 launch lag1 "$LEFT_POS" syd "$SINK_LEFT" ValvSyd
-sleep 1
+# Låt första fönstret bli klart innan det andra startas (annars kan andra bli
+# tomt/vitt vid start). Justera med LAUNCH_GAP i kiosk.env vid behov.
+sleep "${LAUNCH_GAP:-4}"
 launch lag2 "$RIGHT_POS" nord "$SINK_RIGHT" ValvNord
 
 route_audio ValvSyd "$SINK_LEFT" syd
