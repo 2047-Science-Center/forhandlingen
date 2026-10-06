@@ -235,6 +235,8 @@ export const sv: Record<string, string> = {
 
   // Steg 7 — trial → live
   'onboarding.trial.watermark': 'ÖVNINGSOMGÅNG',
+  // Konstant band under HELA tutorialen (öppning + ljudblock + tester).
+  'onboarding.practice_band': 'ÖVNING — vi tränar först',
   'onboarding.trial.go': 'KÖR',
 
   // Karaktärsmanus (utbytbara narration-slots — text-läge nu)

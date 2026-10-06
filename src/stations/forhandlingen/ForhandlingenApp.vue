@@ -72,8 +72,16 @@ onUnmounted(() => {
     <template v-else>
       <div class="app__chrome">
         <span class="app__title">{{ t('app.title') }}</span>
-        <span v-if="store.isTest" class="app__trial">{{ t('onboarding.trial.watermark') }}</span>
         <MuteButton />
+      </div>
+
+      <!-- Övningsband: syns HELA tutorialen (öppning + ljudblock + tester) och
+           försvinner i samma stund spelet blir skarpt — själva försvinnandet
+           är signalen "nu kör vi på riktigt". Kall cyan skiljer det från den
+           varma bärnstenen i skarpt läge. -->
+      <div v-if="!onboarded" class="app__practice" role="status">
+        <span class="app__practice-dot" aria-hidden="true"></span>
+        {{ t('onboarding.practice_band') }}
       </div>
 
       <!-- Onboarding (headset → 4 block → 3 tester) före skarp körning -->
@@ -131,15 +139,42 @@ onUnmounted(() => {
   letter-spacing: 0.15em;
   color: var(--color-primary);
 }
-.app__trial {
-  margin-left: auto;
-  margin-right: 1rem;
+.app__practice {
+  position: fixed;
+  top: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.3em 1.2em;
   font-family: var(--font-retro);
-  letter-spacing: 0.2em;
-  color: var(--color-ink-muted);
-  border: 1px solid var(--color-primary-dim);
-  border-radius: 6px;
-  padding: 0.1em 0.6em;
+  font-size: 1.4rem;
+  letter-spacing: 0.14em;
+  color: var(--color-lag1);
+  background: var(--color-background-2);
+  border: 1px solid var(--color-lag1);
+  border-radius: 999px;
+  box-shadow: 0 0 18px rgba(53, 224, 208, 0.35);
+  text-shadow: 0 0 6px rgba(53, 224, 208, 0.5);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.app__practice-dot {
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 50%;
+  background: var(--color-lag1);
+  box-shadow: 0 0 10px var(--color-lag1);
+  animation: practice-throb 1.4s ease-in-out infinite;
+}
+@keyframes practice-throb {
+  0%, 100% { opacity: 0.4; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app__practice-dot { animation: none; }
 }
 .app__split {
   flex: 1;
