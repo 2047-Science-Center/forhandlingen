@@ -202,11 +202,14 @@ const isTestPlay = computed(() => stage.value === 'test1' || stage.value === 'te
 
     <!-- TEST 1 / TEST 2 / RESULTAT: grund-UI bakom, popupar över -->
     <div v-else-if="showConsole" class="ob__stage">
+      <!-- allow-guess=false: gissningen sker ENBART i test3 (efter tjejens
+           ljudblock), aldrig i test2-konsolen. Annars läcker en gissning in här
+           och låser test3-barriären. -->
       <div v-if="shared" class="ob__split">
-        <CrtScreen><ReporterConsole team="lag1" /></CrtScreen>
-        <CrtScreen><ReporterConsole team="lag2" /></CrtScreen>
+        <CrtScreen><ReporterConsole team="lag1" :allow-guess="false" /></CrtScreen>
+        <CrtScreen><ReporterConsole team="lag2" :allow-guess="false" /></CrtScreen>
       </div>
-      <ReporterConsole v-else :team="me" />
+      <ReporterConsole v-else :team="me" :allow-guess="false" />
 
       <!-- Test-popupar (över UI) -->
       <PopupSequence

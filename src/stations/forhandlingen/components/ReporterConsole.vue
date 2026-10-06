@@ -19,7 +19,14 @@ import BiddingZone from './BiddingZone.vue'
 import GuessView from './GuessView.vue'
 import RevealSequence from './RevealSequence.vue'
 
-const props = defineProps<{ team: TeamId }>()
+// allowGuess=false i tutorialen: där får gissningen bara ske i det dedikerade
+// test3-steget (efter ljudblocket där tjejen talar), aldrig i test2-konsolen.
+// Motorn går till fasen 'guessing' redan när test2-budgivningen är klar; utan
+// denna grind skulle konsolen visa en gissningsruta där, och den kvarvarande
+// gissningen låste sedan test3-barriären (båda valv fastnade på "väntar").
+const props = withDefaults(defineProps<{ team: TeamId; allowGuess?: boolean }>(), {
+  allowGuess: true,
+})
 const store = useGameStore()
 const { t } = useI18n()
 
@@ -100,7 +107,7 @@ watch(capital, (nv, ov) => {
         :team="team"
       />
       <BiddingZone v-else-if="store.phase === 'bidding'" :team="team" />
-      <GuessView v-else-if="store.phase === 'guessing'" :team="team" />
+      <GuessView v-else-if="store.phase === 'guessing' && allowGuess" :team="team" />
     </template>
   </div>
 </template>
