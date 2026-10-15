@@ -8,9 +8,10 @@
  *   3) "Så går en budgivning till": bud → neka/höj → fram och tillbaka → lås in
  *      (textstöd/struktur; introklippet kan bytas senare).
  *
- * Rollerna färgmarkeras via --role-negotiator / --role-reporter (egna tokens,
- * förberedda för att matcha de fysiska headseten). Gruppstorlek antas aldrig —
- * vyn beskriver rollerna, inte individerna, så den funkar oavsett antal.
+ * Rollerna skiljs via IKON + ETIKETT + POSITION (inte färg — paletten hålls
+ * till orange + mint; mikrofon-rollens tagg är dessutom FYLLD mot rapportörens
+ * konturade, för en form-skillnad). Gruppstorlek antas aldrig — vyn beskriver
+ * rollerna, inte individerna, så den funkar oavsett antal.
  */
 import { ref } from 'vue'
 import { useI18n } from '@/station-kit/i18n'
@@ -163,8 +164,14 @@ const bidFlow = [
   padding: 0.15em 0.7em;
   border-radius: 999px;
 }
-.ri__tag--reporter { color: var(--role-reporter); border: 1px solid var(--role-reporter); }
-.ri__tag--negotiator { color: var(--role-negotiator); border: 1px solid var(--role-negotiator); }
+/* Rapportör = konturad tagg, mikrofon-rollen = FYLLD (form-skillnad, ej färg). */
+.ri__tag--reporter { color: var(--color-primary); border: 1px solid var(--color-primary); }
+.ri__tag--negotiator {
+  color: var(--color-background);
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  font-weight: 600;
+}
 .ri__sub { font-size: 1.05rem; color: var(--color-ink-muted); }
 .ri__note {
   margin: 0;

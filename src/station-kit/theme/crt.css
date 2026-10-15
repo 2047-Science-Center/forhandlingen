@@ -41,12 +41,15 @@
   --color-lag1: #35e0d0; /* kall cyan mot den varma bärnstenen */
   --color-lag2: #7ad14f; /* dämpad fosforgrön */
 
-  /* Roll-identitet (förhandlare/sändebud vs rapportör). Egna tokens så att
-     samma färg senare kan matcha de fysiska headseten. Oberoende av läget. */
-  --role-negotiator: #ff9f45; /* FÖRHANDLARE / sändebud (har mikrofon) */
-  --role-negotiator-rgb: 255, 159, 69;
-  --role-reporter: #5ac8fa; /* RAPPORTÖR (sköter konsolen) */
-  --role-reporter-rgb: 90, 200, 250;
+  /* Roll-identitet (förhandlare/sändebud vs rapportör). Rollerna skiljs via
+     IKON + ETIKETT + POSITION — INTE färg (paletten hålls till orange + mint;
+     ev. färgkodning mot fysiska headset beslutas senare). Båda rollerna
+     använder därför den aktiva accenten; tokens behålls så en senare
+     färgkodning bara behöver ändras här. */
+  --role-negotiator: var(--color-primary); /* FÖRHANDLARE / sändebud (har mikrofon) */
+  --role-negotiator-rgb: var(--mode-accent-rgb);
+  --role-reporter: var(--color-primary); /* RAPPORTÖR (sköter konsolen) */
+  --role-reporter-rgb: var(--mode-accent-rgb);
 
   /* --- Typografi --- */
   --font-retro: 'VT323', 'Courier New', ui-monospace, monospace;
