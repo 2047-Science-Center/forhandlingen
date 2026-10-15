@@ -18,6 +18,7 @@ import { useI18n } from '@/station-kit/i18n'
 import CrtScreen from '@/station-kit/components/CrtScreen.vue'
 import TitleScreen from './opening/TitleScreen.vue'
 import ParticipantsScreen from './opening/ParticipantsScreen.vue'
+import RolesIntro from './opening/RolesIntro.vue'
 import OverviewPopups from './opening/OverviewPopups.vue'
 import IntroBlock from '../intro/IntroBlock.vue'
 import PopupSequence, { type PopupSpec } from './PopupSequence.vue'
@@ -42,7 +43,7 @@ const bothReady = computed(
 
 // --- Öppningssekvens (lokalt, självtempo per valv) medan delad stage = 'headset':
 //   title → participants → overview → gate (klar-gate = sync-barriär till block1). ---
-const openingStep = ref<'title' | 'participants' | 'overview' | 'gate'>('title')
+const openingStep = ref<'title' | 'participants' | 'roles' | 'overview' | 'gate'>('title')
 const participantsMe = computed(() => (shared.value ? null : me.value))
 const otherValvName = computed(() => TEAMS[me.value === 'lag1' ? 'lag2' : 'lag1'].name)
 const iAmReady = computed(() => store.onbReady[me.value])
@@ -172,8 +173,9 @@ const isTestPlay = computed(() => stage.value === 'test1' || stage.value === 'te
       <ParticipantsScreen
         v-else-if="openingStep === 'participants'"
         :me="participantsMe"
-        @next="openingStep = 'overview'"
+        @next="openingStep = 'roles'"
       />
+      <RolesIntro v-else-if="openingStep === 'roles'" @next="openingStep = 'overview'" />
       <OverviewPopups v-else-if="openingStep === 'overview'" @finish="openingStep = 'gate'" />
 
       <!-- Klar-gate (modifierad headset-ruta: ingen mic, fri klick, sync-barriär) -->

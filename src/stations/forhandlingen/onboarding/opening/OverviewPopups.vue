@@ -67,9 +67,17 @@ onMounted(restart)
 onUnmounted(() => cancelAnimationFrame(raf))
 
 function next() {
-  if (step.value >= 3) emit('finish')
+  if (step.value >= 4) emit('finish')
   else step.value += 1
 }
+
+// De tre vinstvillkoren (recap, scen 4). Samma formulering återkommer i
+// resultatet (ResultView) så besökaren känner igen dem.
+const winConds = [
+  { num: 1, text: 'win.cond1', emph: 'win.cond1_emph', tag: 'win.cond1_tag', key: true },
+  { num: 2, text: 'win.cond2', emph: 'win.cond2_emph', tag: null, key: false },
+  { num: 3, text: 'win.cond3', emph: 'win.cond3_emph', tag: null, key: false },
+]
 
 // Hjälpare: har elapsed passerat t?
 const at = (s: number) => elapsed.value >= s
@@ -161,7 +169,7 @@ function wallet(): number {
       </section>
 
       <!-- SCEN 3: gissa rätt → ×2 (och dölj din egen) -->
-      <section v-else class="ov__scene ov__scene--guess">
+      <section v-else-if="step === 3" class="ov__scene ov__scene--guess">
         <div class="ov__guess">
           <!-- Motståndaren: 5 kort med ? → skanna → RÄTT! -->
           <div class="ov__col">
@@ -196,11 +204,31 @@ function wallet(): number {
         <p class="ov__text">{{ t('overview.p3') }}</p>
       </section>
 
+      <!-- SCEN 4: recap — de TRE vinstvillkoren samlade, #1 lyft som viktigast -->
+      <section v-else class="ov__scene ov__scene--win">
+        <h3 class="ov__wintitle">{{ t('win.title') }}</h3>
+        <ul class="ov__winlist">
+          <li
+            v-for="c in winConds"
+            :key="c.num"
+            class="ov__wincond"
+            :class="{ 'ov__wincond--key': c.key }"
+          >
+            <span class="ov__winnum">{{ c.num }}</span>
+            <span class="ov__wintext">
+              <span class="ink-strong">{{ t(c.text) }}</span>
+              <span class="ov__winemph"> — {{ t(c.emph) }}</span>
+            </span>
+            <span v-if="c.tag" class="ov__wintag">{{ t(c.tag) }}</span>
+          </li>
+        </ul>
+      </section>
+
       <button class="crt-button crt-button--strong ov__btn" @click="next">
         {{ t('onboarding.next') }} ▸
       </button>
       <div class="ov__dots">
-        <span v-for="n in 4" :key="n" class="ov__dot" :class="{ 'ov__dot--now': n - 1 === step }" />
+        <span v-for="n in 5" :key="n" class="ov__dot" :class="{ 'ov__dot--now': n - 1 === step }" />
       </div>
     </div>
   </div>
@@ -445,6 +473,71 @@ function wallet(): number {
   animation: ov-pop 0.5s ease-out both;
 }
 .ov__hide { font-family: var(--font-retro); font-size: 0.9rem; color: var(--color-primary); opacity: 0.85; }
+/* Scen 4: recap av de tre vinstvillkoren */
+.ov__scene--win { justify-content: flex-start; padding-top: 0.5rem; gap: 1rem; }
+.ov__wintitle {
+  font-family: var(--font-retro);
+  font-size: 1.6rem;
+  letter-spacing: 0.1em;
+  color: var(--color-ink-strong);
+  text-shadow: var(--glow-soft);
+  margin: 0;
+}
+.ov__winlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  width: min(46rem, 96%);
+}
+.ov__wincond {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.8rem 1.1rem;
+  border-radius: 10px;
+  background: var(--color-background-2);
+  border: 1px solid var(--color-primary-dim);
+  text-align: left;
+}
+.ov__wincond--key {
+  border: 2px solid var(--color-primary);
+  box-shadow: var(--glow-soft);
+}
+.ov__winnum {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
+  font-family: var(--font-retro);
+  font-size: 1.2rem;
+}
+.ov__wincond--key .ov__winnum {
+  background: var(--color-primary);
+  color: var(--color-background);
+}
+.ov__wintext { font-family: var(--font-retro); font-size: 1.25rem; line-height: 1.3; }
+.ov__winemph { color: var(--color-ink-muted); }
+.ov__wincond--key .ov__winemph { color: var(--color-danger); }
+.ov__wintag {
+  margin-left: auto;
+  flex: none;
+  font-family: var(--font-retro);
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  color: var(--color-background);
+  background: var(--color-primary);
+  padding: 0.1em 0.6em;
+  border-radius: 999px;
+}
 /* Knapp + dots */
 .ov__btn { font-size: 1.2rem; }
 .ov__dots { display: flex; gap: 0.5rem; }
