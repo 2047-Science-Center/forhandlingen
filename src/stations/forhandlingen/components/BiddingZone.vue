@@ -38,8 +38,22 @@ const price = ref(0)
 const maxPrice = computed(() =>
   s.value.draftWinner ? s.value.capital[s.value.draftWinner] : s.value.capital[props.team],
 )
+/** Snäpp-steg för +/- -knapparna (gör reglaget lättare att träffa). */
+const PRICE_STEP = 5
+function decPrice() {
+  price.value = Math.max(0, price.value - PRICE_STEP)
+}
+function incPrice() {
+  price.value = Math.min(maxPrice.value, price.value + PRICE_STEP)
+}
+
+// "Ingen köpte" kräver ett bekräftelsesteg (trycktes av misstag i testomgång 1).
+const confirmNoBuy = ref(false)
+
 watch(step, (v) => {
   if (v === 'entry_price') price.value = Math.min(20, maxPrice.value)
+  // Nollställ bekräftelse-läget vid varje stegbyte.
+  confirmNoBuy.value = false
 })
 
 function label(id: TeamId): string {
@@ -86,18 +100,35 @@ function label(id: TeamId): string {
     <!-- STEG: vem vann -->
     <template v-else-if="step === 'entry_winner'">
       <template v-if="isEntry">
-        <p class="bz__q">{{ t('bidding.who_won') }}</p>
-        <div class="bz__choices">
-          <button class="crt-button bz__choice" @click="store.chooseWinner(props.team)">
-            {{ label(props.team) }}
-          </button>
-          <button class="crt-button bz__choice" @click="store.chooseWinner(opponent)">
-            {{ label(opponent) }}
-          </button>
-        </div>
-        <button class="crt-button bz__nobuy" @click="store.noBuy()">
-          {{ t('bidding.no_buy') }}
-        </button>
+        <!-- Bekräftelse-läge för "ingen köpte" (separerat så det inte trycks fel) -->
+        <template v-if="confirmNoBuy">
+          <p class="bz__q">{{ t('bidding.no_buy_confirm') }}</p>
+          <div class="bz__actions">
+            <button class="crt-button crt-button--strong bz__big" @click="store.noBuy()">
+              {{ t('bidding.no_buy_yes') }}
+            </button>
+            <button class="crt-button bz__nobuy" @click="confirmNoBuy = false">
+              {{ t('bidding.no_buy_back') }}
+            </button>
+          </div>
+        </template>
+        <template v-else>
+          <p class="bz__q">{{ t('bidding.who_won') }}</p>
+          <div class="bz__choices">
+            <button class="crt-button bz__choice" @click="store.chooseWinner(props.team)">
+              {{ label(props.team) }}
+            </button>
+            <button class="crt-button bz__choice" @click="store.chooseWinner(opponent)">
+              {{ label(opponent) }}
+            </button>
+          </div>
+          <!-- Tydligt avskilt från huvudvalet: egen rad, under en skiljelinje. -->
+          <div class="bz__nobuy-sep">
+            <button class="bz__nobuy-link" @click="confirmNoBuy = true">
+              {{ t('bidding.no_buy_link') }}
+            </button>
+          </div>
+        </template>
       </template>
       <p v-else class="bz__wait crt-caret">
         {{ t('bidding.entry_at', { team: label(entryTeam!) }) }}
@@ -108,7 +139,25 @@ function label(id: TeamId): string {
     <template v-else-if="step === 'entry_price'">
       <template v-if="isEntry">
         <p class="bz__q">{{ t('bidding.price_for', { team: label(s.draftWinner!) }) }}</p>
-        <div class="bz__price mono ink-strong">{{ price }} kr</div>
+        <div class="bz__pricerow">
+          <button
+            class="bz__step"
+            :disabled="price <= 0"
+            :aria-label="t('bidding.price_dec')"
+            @click="decPrice"
+          >
+            −
+          </button>
+          <div class="bz__price mono ink-strong">{{ price }} kr</div>
+          <button
+            class="bz__step"
+            :disabled="price >= maxPrice"
+            :aria-label="t('bidding.price_inc')"
+            @click="incPrice"
+          >
+            +
+          </button>
+        </div>
         <input
           class="bz__slider"
           type="range"
@@ -121,11 +170,8 @@ function label(id: TeamId): string {
           <span>0</span><span>{{ maxPrice }} kr</span>
         </div>
         <div class="bz__actions">
-          <button class="crt-button crt-button--strong" @click="store.enterPrice(price)">
+          <button class="crt-button crt-button--strong bz__big" @click="store.enterPrice(price)">
             {{ t('bidding.submit') }}
-          </button>
-          <button class="crt-button bz__nobuy" @click="store.noBuy()">
-            {{ t('bidding.no_buy') }}
           </button>
         </div>
       </template>
@@ -325,15 +371,92 @@ function label(id: TeamId): string {
   border-color: var(--color-primary-dim);
   box-shadow: none;
 }
+/* "Ingen köpte" tydligt avskilt från vinnarvalet: egen rad under en linje,
+   diskret länkstil + bekräftelsesteg → kan inte tryckas av misstag. */
+.bz__nobuy-sep {
+  margin-top: 1.4rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--color-primary-dim);
+  width: min(26rem, 80%);
+  display: flex;
+  justify-content: center;
+}
+.bz__nobuy-link {
+  background: transparent;
+  border: none;
+  color: var(--color-ink-muted);
+  font-family: var(--font-retro);
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  padding: 0.3em 0.6em;
+}
+.bz__nobuy-link:hover {
+  color: var(--color-primary);
+}
 .bz__price {
   font-size: 3rem;
   line-height: 1;
   color: var(--color-ink-strong);
 }
+/* Prisrad med stora +/- -knappar (lättare än att dra reglaget exakt). */
+.bz__pricerow {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+.bz__step {
+  width: 3.4rem;
+  height: 3.4rem;
+  flex: none;
+  font-family: var(--font-retro);
+  font-size: 2.4rem;
+  line-height: 1;
+  color: var(--color-ink-strong);
+  background: var(--color-background-2);
+  border: 2px solid var(--color-primary);
+  border-radius: 12px;
+  box-shadow: var(--glow-soft);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bz__step:hover:not(:disabled) {
+  background: rgba(var(--mode-accent-rgb), 0.14);
+}
+.bz__step:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
 .bz__slider {
-  width: min(28rem, 80%);
+  width: min(30rem, 86%);
   accent-color: var(--color-primary);
-  height: 2.2rem;
+  height: 2.6rem;
+  cursor: pointer;
+}
+/* Stort handtag så reglaget går lätt att dra (enkätfel: "svårt att dra"). */
+.bz__slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 2px solid var(--color-ink-strong);
+  box-shadow: var(--glow-strong);
+  cursor: pointer;
+}
+.bz__slider::-moz-range-thumb {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 2px solid var(--color-ink-strong);
+  box-shadow: var(--glow-strong);
+  cursor: pointer;
 }
 .bz__slider-ends {
   width: min(28rem, 80%);
