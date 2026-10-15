@@ -62,10 +62,24 @@ if ! command -v chromium >/dev/null 2>&1 && ! command -v chromium-browser >/dev/
   exit 1
 fi
 
-# --- 2) Stäng av GDM/grafisk inloggning — vi bootar in i vår egen X-session ---
-say "Stänger av den grafiska inloggningen (GDM)"
+# --- 2) Stäng av den grafiska inloggningen — vi bootar in i vår egen X-session ---
+# Vilken inloggningshanterare? Ubuntu = gdm3, Linux Mint = lightdm. Vi läser det
+# ur systemet i stället för att anta GDM (annars lämnas LightDM påslagen på Mint).
+DM_SVC=""
+if [ -e /etc/systemd/system/display-manager.service ]; then
+  DM_SVC="$(basename "$(readlink -f /etc/systemd/system/display-manager.service)" .service)"
+fi
+if [ -z "$DM_SVC" ] && [ -r /etc/X11/default-display-manager ]; then
+  DM_SVC="$(basename "$(cat /etc/X11/default-display-manager)")"
+fi
+[ -n "$DM_SVC" ] || DM_SVC="gdm3"
+say "Stänger av den grafiska inloggningen ($DM_SVC)"
+if [ "$DM_SVC" = "lightdm" ]; then
+  echo "OBS: du kör Linux Mint/LightDM. Cinnamon kör redan X11, så detta skript behövs normalt INTE —"
+  echo "     använd deploy/nuc/MINT.md (skrivbordsikoner). Fortsätter ändå om du vet vad du gör."
+fi
 sudo systemctl set-default multi-user.target
-sudo systemctl disable gdm3 2>/dev/null || sudo systemctl disable gdm 2>/dev/null || true
+sudo systemctl disable "$DM_SVC" 2>/dev/null || true
 
 # --- 3) Autologin på tty1 för denna användare ---
 say "Autologin på tty1 för $USER_NAME"
@@ -135,9 +149,9 @@ Bra att veta:
   • Efter ändring i kiosk.env: starta om (sudo reboot) — eller döda webbläsaren
     (pkill chrom) så startar sessionen om sig själv.
 
-Återställ till vanligt Ubuntu-skrivbord (om du vill ångra allt):
+Återställ till vanligt skrivbord (om du vill ångra allt):
   sudo systemctl set-default graphical.target
-  sudo systemctl enable gdm3
+  sudo systemctl enable $DM_SVC
   sudo rm /etc/systemd/system/getty@tty1.service.d/override.conf
   (ta även bort raderna under FORHANDLINGEN-KIOSK-AUTOSTART i ~/.bash_profile)
   sudo reboot

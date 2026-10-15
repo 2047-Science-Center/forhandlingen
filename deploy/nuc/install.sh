@@ -82,8 +82,12 @@ Nästa steg / bra att veta:
   • Autologin till en X11-session krävs för att kiosken ska starta av sig själv
     (se deploy/nuc/NUC-INSTALL.md).
   • Skärmar: vänster = Valv Syd (#lag1), höger = Valv Nord (#lag2).
-  • Uppdatera stationen senare:  git pull && npm run build:relay && \\
-        sudo systemctl restart forhandlingen-server
+  • Linux Mint (Cinnamon/X11): kör  install.sh --server-only  och sedan
+        bash deploy/nuc/mint-setup.sh      (ikoner Starta / Starta om / Uppdatera)
+    Se deploy/nuc/MINT.md. Kiosk-tjänsten ovan behövs inte på Mint.
+  • Uppdatera stationen senare:  bash deploy/nuc/update.sh   (eller skrivbordsikonen)
+  • Starta om spelet utan omstart av datorn:  bash deploy/nuc/restart.sh
   • Loggar:  sudo journalctl -u forhandlingen-server -f
              systemctl --user status forhandlingen-kiosk
+             ~/.forhandlingen-kiosk/kiosk.log   (start via ikon/start.sh)
 EOF
