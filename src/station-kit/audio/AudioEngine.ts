@@ -33,7 +33,7 @@ export type Sfx =
  * UTANFÖR: den avfyras per tecken i Teletype och ska alltid vara syntes
  * (noll latens, ingen upprepad sampel-känsla).
  */
-export const SAMPLES_ENABLED = false
+export const SAMPLES_ENABLED = true
 export const SAMPLE_FILES: Partial<Record<Sfx, string>> = {
   boot: 'sfx-boot.mp3',
   hatch: 'sfx-hatch-open.mp3',

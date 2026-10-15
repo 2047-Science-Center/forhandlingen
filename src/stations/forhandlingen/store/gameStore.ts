@@ -8,7 +8,7 @@
  */
 
 import { defineStore } from 'pinia'
-import { ref, computed, shallowRef } from 'vue'
+import { ref, computed, shallowRef, watch } from 'vue'
 
 import { reduce, initialState, hatchLights, opponentOf } from '../engine/gameEngine'
 import type { Action } from '../engine/gameEngine'
@@ -111,6 +111,25 @@ export const useGameStore = defineStore('forhandlingen', () => {
   const idleSecondsLeft = computed(() =>
     Math.max(0, Math.ceil((IDLE_MS - (now.value - lastActivityAt.value)) / 1000)),
   )
+
+  // --- Ljud (per skärm): nedräknings-tick sista 5 s + "GO" + idle-varning ---
+  let lastTick = -1
+  watch(secondsLeft, (nv) => {
+    if (step.value === 'negotiating' && nv != null) {
+      if (nv > 0 && nv <= 5 && nv !== lastTick) {
+        audio.play('tick')
+        lastTick = nv
+      } else if (nv === 0 && lastTick !== 0) {
+        audio.play('tickfinal')
+        lastTick = 0
+      }
+    } else {
+      lastTick = -1
+    }
+  })
+  watch(idleWarn, (v) => {
+    if (v) audio.play('idlewarn')
+  })
 
   /** Luckrad som anonyma thumbnails: resurs avslöjas bara för avgjorda luckor. */
   const hatchCells = computed<HatchCell[]>(() =>
@@ -360,6 +379,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
     dispatch({ type: 'enterPrice', price })
   }
   function noBuy() {
+    audio.play('nobuy')
     dispatch({ type: 'noBuy', now: Date.now() })
   }
   function cancelEntry() {
@@ -367,6 +387,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
     dispatch({ type: 'cancelEntry' })
   }
   function confirmPurchase() {
+    audio.play('lockin')
     holdActiveUntil.value = Date.now() + config.nextHatchDelayMs
     dispatch({ type: 'confirmPurchase', now: Date.now() })
   }

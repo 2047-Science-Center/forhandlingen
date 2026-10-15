@@ -1,8 +1,11 @@
 # Förhandlingen — ljud-identitet, genereringsprompter och kopplingskarta
 
-STATUS: **Assets är INTE genererade.** `ELEVENLABS_API_KEY` saknades i miljön där
-detta gjordes (och påhittade filer är uteslutet). Allt nedan är färdigt att köra
-av Josef; motorn är förberedd så att filerna bara behöver läggas på plats.
+STATUS: **Assets genererade och inkopplade (2026-10-15).** De 15 ljuden ligger i
+`public/Sound/sfx/` (ElevenLabs text-to-sound-effects v2, normaliserade: UI −10 dBFS,
+vinst/live −6 dBFS, attract-loop −18 dBFS). `SAMPLES_ENABLED = true`. Alla ljud i
+kopplingskartan nedan är inkopplade UTOM `sfx-attract-loop` (kräver loop-stöd i
+motorn — ej gjort). Prompterna nedan sparas som referens för omgenerering.
+Nyckeln användes bara transient vid generering och finns ingenstans i repot.
 
 ## 1. Ljud-identitetsanalys (utifrån det som redan finns)
 

@@ -40,8 +40,8 @@ function tick(now: number) {
     sfxOnce('s0-cards', 0.15, 'hatch')
     sfxOnce('s0-bid', 1.0, 'blip')
   } else if (step.value === 1) {
-    sfxOnce('s1-stamp', 0.6, 'render')
-    sfxOnce('s1-ok', 1.3, 'win')
+    sfxOnce('s1-stamp', 0.6, 'stamp')
+    sfxOnce('s1-ok', 1.3, 'confirm')
     sfxOnce('s1-zero', 2.3, 'deny')
   } else if (step.value === 2) {
     sfxOnce('s2-buy', 0.8, 'confirm')
@@ -49,8 +49,8 @@ function tick(now: number) {
     sfxOnce('s2-eq', 2.6, 'confirm')
   } else if (step.value === 3) {
     sfxOnce('s3-scan', 0.6, 'blip')
-    sfxOnce('s3-right', 1.5, 'win')
-    sfxOnce('s3-x2', 2.1, 'win')
+    sfxOnce('s3-right', 1.5, 'confirm')
+    sfxOnce('s3-x2', 2.1, 'confirm')
   }
   raf = requestAnimationFrame(tick)
 }

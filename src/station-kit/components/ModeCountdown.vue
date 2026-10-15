@@ -29,6 +29,8 @@ const count = ref<number | null>(null)
 const timers: ReturnType<typeof setTimeout>[] = []
 
 onMounted(() => {
+  // Dramatiskt "nu blir det skarpt"-svep när overlayn dyker upp.
+  audio.play('live')
   timers.push(
     setTimeout(() => {
       runCount(props.from)
@@ -39,7 +41,7 @@ onUnmounted(() => timers.forEach(clearTimeout))
 
 function runCount(n: number) {
   if (n <= 0) {
-    audio.play('win')
+    // Inget eget "go"-ljud här — live-svepet (ovan) bär övergången.
     emit('done')
     return
   }
