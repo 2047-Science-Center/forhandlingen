@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Starta om Förhandlingen
+Comment=Stäng och öppna skärmarna igen (utan att starta om datorn)
+# @EXEC@ ersätts av install-launcher.sh med rätt sökväg till restart.sh.
+Exec=@EXEC@
+Icon=view-refresh
+Terminal=false
+Categories=Game;
+StartupNotify=false

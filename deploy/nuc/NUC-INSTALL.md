@@ -7,6 +7,11 @@ same-origin-relä, så ingen internetuppkoppling behövs under körning.
 > Detta är pilot-/testläget (`config.mode = 'pilot'`). Kopplingen mot riggens
 > MQTT-ljus/RFID/resultat är förberedd men inte inkopplad — se sista avsnittet.
 
+> **Kör du Linux Mint (Cinnamon)?** Följ i stället **[MINT.md](MINT.md)** — den
+> har numrerade steg, tre skrivbordsikoner (**Starta / Starta om / Uppdatera**) och
+> en kontroll (`mint-check.sh`). Resten av den här filen beskriver Ubuntu-vägen
+> och gäller fortfarande oförändrad.
+
 ## Körklart för facilitatorn (utan terminal) — enklaste vägen
 
 Vill du **inte** pilla med boot/Xorg finns ett tryggt läge som inte kan låsa sig:
@@ -14,9 +19,11 @@ kör på vanliga skrivbordet, starta med en ikon, avsluta med en knapp.
 
 1. Installera server-tjänsten en gång: `deploy/nuc/install.sh --server-only`
    (appen finns då alltid på `http://localhost:8080`).
-2. Lägg en startikon på skrivbordet: `bash deploy/nuc/install-launcher.sh`.
-3. **Start:** dubbelklicka ikonen **Förhandlingen** → två helskärmsfönster
-   (Valv Syd + Valv Nord). Ingen terminal.
+2. Lägg ikonerna på skrivbordet: `bash deploy/nuc/install-launcher.sh`
+   (**Starta Förhandlingen**, **Starta om Förhandlingen**, **Uppdatera Förhandlingen**).
+3. **Start:** dubbelklicka **Starta Förhandlingen** → två helskärmsfönster
+   (Valv Syd + Valv Nord). Ingen terminal. Hänger något: **Starta om
+   Förhandlingen** (stänger/öppnar fönstren, datorn startas inte om).
 4. **Avsluta:** knappen **✕ Avsluta** nere till vänster i appen (med bekräftelse)
    stänger **båda** skärmarna och tar dig tillbaka till skrivbordet.
 
@@ -97,12 +104,17 @@ bekräftelse). Utan aktivitet på 8 minuter startar stationen om automatiskt til
 startskärmen (med 20 s varning). Tiderna ligger i `IDLE_RESTART` i `src/config.ts`.
 
 ## 6. Uppdatera stationen senare
+Enklast: skrivbordsikonen **Uppdatera Förhandlingen**, eller
 ```bash
 cd forhandlingen
-git pull
-npm run build:relay
-sudo systemctl restart forhandlingen-server
-# (kiosken behöver oftast bara laddas om:)
+bash deploy/nuc/update.sh          # git pull, bygg i dist.next (byts in först när det lyckats),
+                                   # starta om servern vid behov, ladda om skärmarna
+bash deploy/nuc/update.sh --force  # bygg om och starta om även om inget nytt hämtades
+bash deploy/nuc/restart.sh         # bara ladda om skärmarna (datorn startas inte om)
+```
+Manuellt (som förr) går också:
+```bash
+git pull && npm run build:relay && sudo systemctl restart forhandlingen-server
 systemctl --user restart forhandlingen-kiosk
 ```
 

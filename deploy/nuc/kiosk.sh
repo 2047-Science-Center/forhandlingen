@@ -5,20 +5,57 @@
 # Fönstren synkas via same-origin-reläet (bygget använder VITE_RELAY_PATH=/ws),
 # så de behöver inte dela webbläsarprofil.
 #
-# Körs i en grafisk session (X11). Konfig via miljövariabler (se nedan) eller
-# en valfri deploy/nuc/kiosk.env bredvid detta skript.
+# Körs i en grafisk session (X11; på Linux Mint = Cinnamon, INTE "Cinnamon on
+# Wayland"). Konfig via miljövariabler (se nedan) eller en valfri
+# deploy/nuc/kiosk.env bredvid detta skript.
+#
+# Starta/starta om/uppdatera från skrivbordet: använd start.sh / restart.sh /
+# update.sh (de sköter att inte få dubbla fönster). Det här skriptet är själva
+# motorn — kör det direkt bara för felsökning.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Ladda lokal konfig om den finns (skapa från kiosk.env.example vid behov).
-[ -f "$HERE/kiosk.env" ] && . "$HERE/kiosk.env"
+# load_kiosk_env städar bort CR/icke-brytbara blanksteg innan filen läses.
+. "$HERE/_common.sh"
+load_kiosk_env
+
+if [ "${XDG_SESSION_TYPE:-}" = "wayland" ]; then
+  echo "kiosk.sh: VARNING: Wayland-session. Touch-mappning och exakt fönsterplacering" >&2
+  echo "          funkar inte pålitligt. Logga ut och välj sessionen 'Cinnamon' (X11)." >&2
+fi
 
 # --- Konfig (miljövariabler med rimliga defaults) ---
 URL_BASE="${URL_BASE:-http://localhost:8080}"   # servern (systemd-tjänsten)
+PROFILE_DIR="${PROFILE_DIR:-$HOME/.forhandlingen-kiosk}"
+# Vilka valv som startas: both (default) | syd | nord. syd/nord = ETT fönster —
+# praktiskt när man testar på en enda skärm.
+VALV="${VALV:-both}"
+WATCH_PID=""    # pid för självläkande touch-bevakning (om TOUCH_WATCH satt)
+
+# Fönsterpositioner. Sätter du inget explicit (SCREEN_W / LEFT_POS / RIGHT_POS)
+# läser vi skärmarna ur `xrandr --listmonitors`: vänstraste = Valv Syd, högraste
+# = Valv Nord. Hittas bara EN skärm (eller xrandr saknas) används gamla defaulten:
+# vänster 0,0 och höger 1920,0.
+# Utskrift: en rad "x y" per unik skärmposition, sorterad från vänster till höger.
+monitor_positions() {
+  command -v xrandr >/dev/null 2>&1 || return 0
+  xrandr --listmonitors 2>/dev/null | awk 'NR>1 {
+      s=$3; sub(/^[0-9]+\/[0-9]+x[0-9]+\/[0-9]+/, "", s)
+      n=split(s, a, "+"); if (n>=3) print a[2], a[3]
+    }' | sort -n -u
+}
+if [ -z "${SCREEN_W:-}" ] && [ -z "${LEFT_POS:-}" ] && [ -z "${RIGHT_POS:-}" ]; then
+  _mp="$(monitor_positions || true)"
+  if [ "$(printf '%s\n' "$_mp" | grep -c .)" -ge 2 ]; then
+    LEFT_POS="$(printf '%s\n' "$_mp" | head -1 | awk '{print $1","$2}')"
+    RIGHT_POS="$(printf '%s\n' "$_mp" | tail -1 | awk '{print $1","$2}')"
+    echo "kiosk.sh: skärmar auto-upptäckta: vänster=$LEFT_POS höger=$RIGHT_POS"
+  fi
+fi
 SCREEN_W="${SCREEN_W:-1920}"                     # vänster skärms bredd (px) → höger fönstrets x
 LEFT_POS="${LEFT_POS:-0,0}"
 RIGHT_POS="${RIGHT_POS:-${SCREEN_W},0}"
-PROFILE_DIR="${PROFILE_DIR:-$HOME/.forhandlingen-kiosk}"
 # Valfritt: andra musen (namn/id ur `xinput list`) → egen pekare för höger skärm.
 SECOND_MOUSE="${SECOND_MOUSE:-}"
 # Valfritt: ljud per valv - peka varje valv till sin ljudutgang (pactl list short sinks).
@@ -88,8 +125,26 @@ if command -v xinput >/dev/null 2>&1; then
   if [ -n "$TOUCH_PATH_LEFT" ] || [ -n "$TOUCH_PATH_RIGHT" ]; then
     # Port-baserat (identiska paneler)
     if command -v udevadm >/dev/null 2>&1; then
-      map_touch_by_path "$TOUCH_PATH_LEFT"  "$OUTPUT_LEFT"
-      map_touch_by_path "$TOUCH_PATH_RIGHT" "$OUTPUT_RIGHT"
+      if [ "${TOUCH_WATCH:-0}" -gt 0 ] 2>/dev/null; then
+        # SJÄLVLÄKANDE: map-touch.sh applicerar om mappningen var N:e sekund
+        # (läker efter inloggnings-reset, skärm-hotplug, strömblink). Stoppas
+        # av restart.sh/start.sh tillsammans med kiosken.
+        touch_args=()
+        if [ -n "$TOUCH_PATH_LEFT" ] && [ -n "$OUTPUT_LEFT" ]; then
+          touch_args+=("$TOUCH_PATH_LEFT" "$OUTPUT_LEFT")
+        fi
+        if [ -n "$TOUCH_PATH_RIGHT" ] && [ -n "$OUTPUT_RIGHT" ]; then
+          touch_args+=("$TOUCH_PATH_RIGHT" "$OUTPUT_RIGHT")
+        fi
+        if [ "${#touch_args[@]}" -gt 0 ]; then
+          MAP_TOUCH_WATCH="$TOUCH_WATCH" MAP_TOUCH_DELAY=0 bash "$HERE/map-touch.sh" "${touch_args[@]}" &
+          WATCH_PID=$!
+          echo "kiosk.sh: touch-mappning i självläkande läge (var ${TOUCH_WATCH}:e sek)"
+        fi
+      else
+        map_touch_by_path "$TOUCH_PATH_LEFT"  "$OUTPUT_LEFT"
+        map_touch_by_path "$TOUCH_PATH_RIGHT" "$OUTPUT_RIGHT"
+      fi
     else
       echo "kiosk.sh: udevadm saknas — kan inte port-mappa touch." >&2
     fi
@@ -121,6 +176,7 @@ common_flags=(
   --check-for-update-interval=31536000
 )
 
+LAUNCH_PIDS=()
 launch() {
   local hash="$1" pos="$2" prof="$3" sink="$4" tag="$5"
   # Tagga strömmen (application.name) så vi kan flytta rätt ström nedan, och
@@ -131,6 +187,7 @@ launch() {
     --user-data-dir="$PROFILE_DIR/$prof" \
     --window-position="$pos" \
     --app="$URL_BASE/#$hash" &
+  LAUNCH_PIDS+=("$!")
 }
 
 # Robust ljud-routing: håll ALLA av ett valvs ljudströmmar på rätt utgång så
@@ -170,14 +227,29 @@ for si in data:
   ) &
 }
 
-echo "kiosk.sh: startar Valv Syd (#lag1) och Valv Nord (#lag2)"
-launch lag1 "$LEFT_POS" syd "$SINK_LEFT" ValvSyd
-# Låt första fönstret bli klart innan det andra startas (annars kan andra bli
-# tomt/vitt vid start). Justera med LAUNCH_GAP i kiosk.env vid behov.
-sleep "${LAUNCH_GAP:-4}"
-launch lag2 "$RIGHT_POS" nord "$SINK_RIGHT" ValvNord
+echo "kiosk.sh: startar Valv Syd (#lag1) och Valv Nord (#lag2)  [VALV=$VALV, webbläsare: $BROWSER]"
+case "$VALV" in
+  syd)
+    launch lag1 "$LEFT_POS" syd "$SINK_LEFT" ValvSyd
+    route_audio ValvSyd "$SINK_LEFT" syd
+    ;;
+  nord)
+    launch lag2 "$RIGHT_POS" nord "$SINK_RIGHT" ValvNord
+    route_audio ValvNord "$SINK_RIGHT" nord
+    ;;
+  *)
+    launch lag1 "$LEFT_POS" syd "$SINK_LEFT" ValvSyd
+    # Låt första fönstret bli klart innan det andra startas (annars kan andra bli
+    # tomt/vitt vid start). Justera med LAUNCH_GAP i kiosk.env vid behov.
+    sleep "${LAUNCH_GAP:-4}"
+    launch lag2 "$RIGHT_POS" nord "$SINK_RIGHT" ValvNord
+    route_audio ValvSyd "$SINK_LEFT" syd
+    route_audio ValvNord "$SINK_RIGHT" nord
+    ;;
+esac
 
-route_audio ValvSyd "$SINK_LEFT" syd
-route_audio ValvNord "$SINK_RIGHT" nord
-
-wait
+# Vänta tills fönstren stängs (✕ Avsluta i appen, eller restart.sh). Städa sedan
+# touch-bevakningen så inget bakgrundsskräp blir kvar.
+wait "${LAUNCH_PIDS[@]}" 2>/dev/null || true
+[ -z "$WATCH_PID" ] || kill "$WATCH_PID" 2>/dev/null || true
+echo "kiosk.sh: fönstren stängda — klart."
