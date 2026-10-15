@@ -18,6 +18,41 @@ export const sv: Record<string, string> = {
   'common.waiting': 'VÄNTAR …',
   'common.team': 'LAG',
 
+  // --- Läges-system (tutorial/live) — gemensamt i station-kit ---
+  'mode.legend_tutorial': 'När skärmen är BLÅ övar vi',
+  'mode.legend_live': 'När den blir skarp kör vi på riktigt',
+  'mode.testomgang': 'TESTOMGÅNG',
+  'mode.practice_sub': 'Vi övar — inga poäng räknas än',
+  'mode.golive_title': 'NU KÖR VI PÅ RIKTIGT',
+
+  // --- Roller (sändebud/förhandlare = A med mikrofon, rapportör = B vid skärmen) ---
+  'roles.stand_title': 'STÄLL ER RÄTT',
+  'roles.stand_reporter': 'sitter vid skärmen',
+  'roles.stand_negotiator': 'står med mikrofonen',
+  'roles.stand_sub': 'Varje valv har en av varje. Ställ er så här innan ni börjar.',
+  'roles.has_console': 'SKÖTER SKÄRMEN',
+  'roles.has_mic': 'HAR MIKROFONEN',
+  'roles.diff_title': 'VEM GÖR VAD?',
+  'roles.diff_negotiator': 'Sändebudet pratar — all förhandling sker genom headsetet.',
+  'roles.diff_reporter': 'Rapportören är tyst, sköter skärmen och gissar motståndarens livsviktiga.',
+  'roles.why_mic_title': 'Varför bara en mikrofon?',
+  'roles.why_mic': 'Bara sändebudet pratar. Då maskeras rösten och motståndaren vet inte vem som förhandlar.',
+  'roles.example_title': 'SÅ GÅR EN BUDGIVNING TILL',
+  'roles.example_bid': 'Sändebudet lägger ett bud',
+  'roles.example_counter': 'Motparten nekar eller höjer',
+  'roles.example_back': 'Buden går fram och tillbaka',
+  'roles.example_lock': 'Ni kommer överens — rapportören låser priset',
+
+  // --- De tre vinstvillkoren (används i starten OCH i resultatet) ---
+  'win.title': 'SÅ VINNER NI',
+  'win.cond1': 'Säkra er livsviktiga resurs',
+  'win.cond1_emph': 'annars 0 poäng',
+  'win.cond1_tag': 'VIKTIGAST',
+  'win.cond2': 'Spendera så lite som möjligt',
+  'win.cond2_emph': 'pengar kvar = poäng',
+  'win.cond3': 'Gissa motståndarens livsviktiga',
+  'win.cond3_emph': 'rätt gissning = dubbel poäng',
+
   // --- Intro-klipp ---
   'intro.skip': 'Hoppa över',
   'intro.begin': 'BÖRJA',
@@ -134,6 +169,12 @@ export const sv: Record<string, string> = {
   'bidding.who_won': 'Vem vann?',
   'bidding.final_price': 'Slutpris (kr)',
   'bidding.no_buy': 'INGEN KÖPTE',
+  'bidding.no_buy_link': 'Ingen köpte den här',
+  'bidding.no_buy_confirm': 'Ingen köpte den här resursen — stämmer det?',
+  'bidding.no_buy_yes': 'JA, INGEN KÖPTE',
+  'bidding.no_buy_back': 'AVBRYT',
+  'bidding.price_dec': 'Minska priset',
+  'bidding.price_inc': 'Öka priset',
   'bidding.submit': 'BEKRÄFTA',
   'bidding.confirm_prompt': 'Bekräfta: {team} köpte {resource} för {price} kr?',
   'bidding.awaiting_confirm': 'Väntar på att vinnaren bekräftar …',
@@ -157,6 +198,17 @@ export const sv: Record<string, string> = {
   'reveal.team_score': 'Lagpoäng: {n}',
   'reveal.round_lost': 'Förlorad omgång — livsviktig ej säkrad.',
   'reveal.play_again': 'NOLLSTÄLL',
+  // Vinnar-avräkning (tydligt vem som vann + varför)
+  'reveal.winner_is': 'VINNARE: {team}',
+  'reveal.draw': 'OAVGJORT',
+  'reveal.points': '{n} poäng',
+  'reveal.why': 'Varför:',
+  'reveal.paid_for_critical': 'Betalade {n} kr för sin livsviktiga',
+  'reveal.cond_secured': 'Livsviktig säkrad',
+  'reveal.cond_not_secured': 'Livsviktig EJ säkrad → 0 poäng',
+  'reveal.cond_capital': '{n} kr kvar = {n} poäng',
+  'reveal.cond_guess_right': 'Rätt gissning → poängen dubblas',
+  'reveal.cond_guess_wrong': 'Fel gissning → ingen dubbling',
 
   // --- Intro-reveal (popup innan första förhandlingen) ---
   'reveal.your_critical_is': 'ER LIVSVIKTIGA RESURS ÄR',

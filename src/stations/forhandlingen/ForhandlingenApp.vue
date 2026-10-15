@@ -11,7 +11,9 @@ import { config, LIVE_DATASET_ID } from '@/config'
 import CrtScreen from '@/station-kit/components/CrtScreen.vue'
 import AttractScreen from '@/station-kit/components/AttractScreen.vue'
 import MuteButton from '@/station-kit/components/MuteButton.vue'
+import ModeCountdown from '@/station-kit/components/ModeCountdown.vue'
 import { useI18n } from '@/station-kit/i18n'
+import { useStationMode } from '@/station-kit/mode/useStationMode'
 
 import ReporterConsole from './components/ReporterConsole.vue'
 import ResultView from './components/ResultView.vue'
@@ -41,6 +43,21 @@ watch(onboarded, (v) => {
   if (v && leader.value && store.state.datasetId !== LIVE_DATASET_ID) store.startLive()
 })
 
+// --- Läges-system (gemensamt station-kit): HELA UI:t är i tutorial-tema (blått)
+//     under hela onboardingen, skarpt tema annars. data-mode på app-roten sätter
+//     tokens; komponenterna ärver färg. Attract visas i skarp identitetsfärg. ---
+const { setMode } = useStationMode()
+const stationMode = computed<'tutorial' | 'live'>(() =>
+  entered.value && !onboarded.value ? 'tutorial' : 'live',
+)
+watch(stationMode, (m) => setMode(m), { immediate: true })
+
+// Go-live-nedräkning: helskärmsanimation vid övergången tutorial → live.
+const showGoLive = ref(false)
+watch(onboarded, (v, old) => {
+  if (v && !old) showGoLive.value = true
+})
+
 // --- Idle-återstart: logiken bor i storet (tickens reaktivitet). Appen sätter
 //     bara "körning pågår" vid enter och återgår till attract vid reset. ---
 watch(entered, (v) => store.setSessionActive(v))
@@ -64,7 +81,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app">
+  <div class="app" :data-mode="stationMode">
     <div v-if="!entered" class="app__single">
       <CrtScreen><AttractScreen @start="entered = true" /></CrtScreen>
     </div>
@@ -75,13 +92,14 @@ onUnmounted(() => {
         <MuteButton />
       </div>
 
-      <!-- Övningsband: syns HELA tutorialen (öppning + ljudblock + tester) och
-           försvinner i samma stund spelet blir skarpt — själva försvinnandet
-           är signalen "nu kör vi på riktigt". Kall cyan skiljer det från den
-           varma bärnstenen i skarpt läge. -->
+      <!-- Övningsmärkning: egen in-flow-rad högst upp (ALDRIG position:fixed över
+           innehållet — det var därför lag-/valv-skyltar kunde täcka texten i test
+           1). Syns HELA tutorialen och försvinner i samma stund spelet blir
+           skarpt. Blå --mode-tutorial oavsett tema. -->
       <div v-if="!onboarded" class="app__practice" role="status">
         <span class="app__practice-dot" aria-hidden="true"></span>
-        {{ t('onboarding.practice_band') }}
+        <span class="app__practice-main">{{ t('mode.testomgang') }}</span>
+        <span class="app__practice-sub">{{ t('mode.practice_sub') }}</span>
       </div>
 
       <!-- Onboarding (headset → 4 block → 3 tester) före skarp körning -->
@@ -116,8 +134,17 @@ onUnmounted(() => {
     <IdleWarning v-if="store.idleWarn" :seconds="store.idleSecondsLeft" />
 
     <PilotPanel v-if="isPilot && entered" />
+
+    <!-- Go-live: helskärms-nedräkning vid tutorial → live -->
+    <ModeCountdown
+      v-if="showGoLive"
+      :title="t('mode.golive_title')"
+      :from="3"
+      @done="showGoLive = false"
+    />
   </div>
 </template>
+
 
 <style scoped>
 .app {
@@ -139,34 +166,42 @@ onUnmounted(() => {
   letter-spacing: 0.15em;
   color: var(--color-primary);
 }
+/* In-flow banner (ingen position:fixed) → kan per konstruktion aldrig täckas
+   av eller täcka skyltar/overlays. Full bredd högst upp, under app-chrome. */
 .app__practice {
-  position: fixed;
-  top: 0.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 200;
+  flex: none;
   display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.3em 1.2em;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.7rem;
+  padding: 0.35em 1.2em;
   font-family: var(--font-retro);
-  font-size: 1.4rem;
-  letter-spacing: 0.14em;
-  color: var(--color-lag1);
+  color: var(--mode-tutorial);
   background: var(--color-background-2);
-  border: 1px solid var(--color-lag1);
-  border-radius: 999px;
-  box-shadow: 0 0 18px rgba(53, 224, 208, 0.35);
-  text-shadow: 0 0 6px rgba(53, 224, 208, 0.5);
-  pointer-events: none;
-  white-space: nowrap;
+  border: 2px solid var(--mode-tutorial);
+  border-radius: 10px;
+  box-shadow: 0 0 18px rgba(var(--mode-tutorial-rgb), 0.35);
+  text-shadow: 0 0 6px rgba(var(--mode-tutorial-rgb), 0.5);
+  flex-wrap: wrap;
+}
+.app__practice-main {
+  font-size: 1.8rem;
+  letter-spacing: 0.18em;
+  line-height: 1;
+}
+.app__practice-sub {
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  color: var(--mode-tutorial);
+  opacity: 0.85;
 }
 .app__practice-dot {
-  width: 0.7em;
-  height: 0.7em;
+  align-self: center;
+  width: 0.8em;
+  height: 0.8em;
   border-radius: 50%;
-  background: var(--color-lag1);
-  box-shadow: 0 0 10px var(--color-lag1);
+  background: var(--mode-tutorial);
+  box-shadow: 0 0 10px var(--mode-tutorial);
   animation: practice-throb 1.4s ease-in-out infinite;
 }
 @keyframes practice-throb {

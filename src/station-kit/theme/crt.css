@@ -11,10 +11,26 @@
 @import url('https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;600&display=swap');
 
 :root {
+  /* === GEMENSAMT LÄGES-/FÄRGSYSTEM (återanvänds av alla fyra X&Y-stationer) ===
+     En station har två lägen: tutorial (övning) och live (skarpt). Sätts via
+     attributet data-mode="tutorial|live" på app-roten (se useStationMode.ts).
+     Komponenter ärver färg via --color-primary + glöd-tokens nedan — de pekas
+     om per läge här, så ingen komponent ska hårdkoda läges-färg. */
+
+  /* Tutorial = BLÅ. Skarp färg (live) beslutas av Josef. */
+  --mode-tutorial: #35e0d0; /* BLÅ/cyan: övningsläge */
+  --mode-tutorial-rgb: 53, 224, 208;
+  /* slutgiltig skarp färg (gul/orange/bärnsten) beslutas av Josef – ändra HÄR */
+  --mode-live: #ff9500;
+  --mode-live-rgb: 255, 149, 0;
+  /* Aktiv accent (rgb-komponenter för glödande rgba()). Pekas om under
+     [data-mode="tutorial"] så alla glöd-tokens följer med till blått. */
+  --mode-accent-rgb: var(--mode-live-rgb);
+
   /* --- Palett --- */
   --color-background: #05100b; /* mörk, nästan svart med en aning grönt */
   --color-background-2: #08170f; /* panelbotten, en aning ljusare */
-  --color-primary: #ff9500; /* bärnsten: text, titlar, ramar, glow */
+  --color-primary: var(--mode-live); /* aktiv accent: text, titlar, ramar, glow */
   --color-primary-dim: #b8690f; /* dämpad bärnsten */
   --color-ink-strong: #f5f5f0; /* vit för nyckelrader/betoning */
   --color-ink-muted: #c99a5b; /* dämpad bärnsten-text */
@@ -25,6 +41,13 @@
   --color-lag1: #35e0d0; /* kall cyan mot den varma bärnstenen */
   --color-lag2: #7ad14f; /* dämpad fosforgrön */
 
+  /* Roll-identitet (förhandlare/sändebud vs rapportör). Egna tokens så att
+     samma färg senare kan matcha de fysiska headseten. Oberoende av läget. */
+  --role-negotiator: #ff9f45; /* FÖRHANDLARE / sändebud (har mikrofon) */
+  --role-negotiator-rgb: 255, 159, 69;
+  --role-reporter: #5ac8fa; /* RAPPORTÖR (sköter konsolen) */
+  --role-reporter-rgb: 90, 200, 250;
+
   /* --- Typografi --- */
   --font-retro: 'VT323', 'Courier New', ui-monospace, monospace;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
@@ -32,14 +55,26 @@
   /* --- CRT-chrome-intensitet (0 = av, 1 = full) --- */
   --crt-intensity: 1;
 
-  /* Härledda glow-nivåer */
-  --glow-strong: 0 0 8px rgba(255, 149, 0, calc(0.55 * var(--crt-intensity)));
-  --glow-soft: 0 0 4px rgba(255, 149, 0, calc(0.35 * var(--crt-intensity)));
+  /* Härledda glow-nivåer — använder --mode-accent-rgb så de följer läget. */
+  --glow-strong: 0 0 8px rgba(var(--mode-accent-rgb), calc(0.55 * var(--crt-intensity)));
+  --glow-soft: 0 0 4px rgba(var(--mode-accent-rgb), calc(0.35 * var(--crt-intensity)));
 
   --radius: 14px;
-  --frame-glow: 0 0 40px rgba(255, 149, 0, calc(0.28 * var(--crt-intensity)));
+  --frame-glow: 0 0 40px rgba(var(--mode-accent-rgb), calc(0.28 * var(--crt-intensity)));
 
   color-scheme: dark;
+}
+
+/* === Läges-tema: tutorial (blått) ===
+   Pekar om den aktiva accenten + dämpade nyanser till blått. Allt som ärver
+   --color-primary / glöd-tokens följer med. Live-läget använder :root-värdena
+   (bärnsten). Sätts av data-mode på app-roten; --mode-tutorial/--mode-live är
+   oförändrade så BLÅTT-vs-SKARPT-jämförelsen (ModeLegend) alltid stämmer. */
+[data-mode='tutorial'] {
+  --mode-accent-rgb: var(--mode-tutorial-rgb);
+  --color-primary: var(--mode-tutorial);
+  --color-primary-dim: #1f9f95; /* dämpad blå */
+  --color-ink-muted: #8fcfc8; /* dämpad blå-text */
 }
 
 * {

@@ -6,6 +6,7 @@
 import { onMounted } from 'vue'
 import { useI18n } from '@/station-kit/i18n'
 import { audio } from '@/station-kit/audio/AudioEngine'
+import ModeLegend from '@/station-kit/components/ModeLegend.vue'
 
 const emit = defineEmits<{ next: [] }>()
 const { t } = useI18n()
@@ -16,6 +17,8 @@ onMounted(() => audio.play('boot'))
 <template>
   <button class="ts" @click="emit('next')" :aria-label="t('opening.tap_continue')">
     <h1 class="ts__title">{{ t('app.title') }}</h1>
+    <!-- Startruta: lär ut blått=övning vs skarpt=på riktigt redan på titeln. -->
+    <ModeLegend class="ts__legend" />
     <span class="ts__hint crt-caret">{{ t('opening.tap_continue') }}</span>
   </button>
 </template>

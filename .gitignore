@@ -5,6 +5,7 @@ dist-ssr
 .DS_Store
 .vite
 coverage
+.claude/worktrees/
 
 # Original-assets (dubbletter — de använda kopiorna ligger i public/)
 /assets/
