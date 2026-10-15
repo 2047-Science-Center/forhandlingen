@@ -69,12 +69,20 @@ watch(() => store.resetSignal, () => {
 function onActivity() {
   store.notifyActivity()
 }
+// Kiosk: långtryck på en touchskärm fyrar webbläsarens contextmenu (ser ut som
+// ett högerklick → meny med Ladda om/Bakåt osv.). Spärra den helt — stationen
+// har inget eget behov av högerklick. Funkar oavsett OS/skärm.
+function onContextMenu(e: Event) {
+  e.preventDefault()
+}
 const ACTIVITY_EVENTS = ['pointerdown', 'mousedown', 'click', 'keydown', 'touchstart', 'wheel'] as const
 onMounted(() => {
   store.init()
+  window.addEventListener('contextmenu', onContextMenu)
   ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, onActivity, { passive: true }))
 })
 onUnmounted(() => {
+  window.removeEventListener('contextmenu', onContextMenu)
   ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, onActivity))
   store.dispose()
 })

@@ -84,6 +84,14 @@
   box-sizing: border-box;
 }
 
+/* Kiosk/touch: inget långtrycks-callout eller textmarkering (långtryck ska inte
+   markera text eller öppna callout). Högerklicksmenyn spärras i app-koden. */
+html {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* Global textskala — större, läsbar text på panelerna (allt rem-baserat följer med).
    Måttlig nivå så täta vyer (budgivning) ryms utan att spilla över. */
 html {

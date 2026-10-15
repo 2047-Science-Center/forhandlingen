@@ -25,11 +25,13 @@ function next() {
   else step.value++
 }
 
+// talk=true → rörlig prat-ikon + "(prata på riktigt)": det är ett riktigt
+// samtal mellan valven, inte bara skärmtryck.
 const bidFlow = [
-  'roles.example_bid',
-  'roles.example_counter',
-  'roles.example_back',
-  'roles.example_lock',
+  { key: 'roles.example_bid', talk: true },
+  { key: 'roles.example_counter', talk: true },
+  { key: 'roles.example_back', talk: true },
+  { key: 'roles.example_lock', talk: false },
 ]
 </script>
 
@@ -83,10 +85,18 @@ const bidFlow = [
     <!-- STEG 3: Budgivningsexempel (bud → neka/höj → fram/tillbaka → lås) -->
     <section v-else class="ri__scene" :key="2">
       <h2 class="ri__title">{{ t('roles.example_title') }}</h2>
+      <p class="ri__note ri__note--talk">
+        <span class="ri__talkicon ri__talkicon--lead" aria-hidden="true">💬</span>
+        {{ t('roles.example_sub') }}
+      </p>
       <ol class="ri__flow">
-        <li v-for="(k, i) in bidFlow" :key="k" class="ri__flowitem">
+        <li v-for="(item, i) in bidFlow" :key="item.key" class="ri__flowitem">
           <span class="ri__flownum">{{ i + 1 }}</span>
-          <span class="ri__flowtext">{{ t(k) }}</span>
+          <span class="ri__flowtext">{{ t(item.key) }}</span>
+          <span v-if="item.talk" class="ri__flowtalk">
+            <span class="ri__talkicon" aria-hidden="true">💬</span>
+            <span class="ri__talknote">{{ t('roles.example_talk_note') }}</span>
+          </span>
         </li>
       </ol>
     </section>
@@ -254,6 +264,34 @@ const bidFlow = [
   font-size: 1.3rem;
 }
 .ri__flowtext { font-size: 1.25rem; color: var(--color-ink-strong); }
+/* Prat-markör: rörlig ikon + "(prata på riktigt)" på de talande stegen. */
+.ri__note--talk {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--color-ink-strong);
+  font-size: 1.2rem;
+}
+.ri__flowtalk {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  flex: none;
+}
+.ri__talknote { font-size: 0.95rem; color: var(--color-ink-muted); white-space: nowrap; }
+.ri__talkicon {
+  font-size: 1.4rem;
+  line-height: 1;
+  display: inline-block;
+  animation: ri-talk 1.4s ease-in-out infinite;
+}
+.ri__talkicon--lead { font-size: 1.6rem; }
+@keyframes ri-talk {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50% { transform: translateY(-3px) rotate(5deg); }
+}
 /* Knapp + dots */
 .ri__btn { font-size: 1.3rem; padding: 0.5em 2em; }
 .ri__dots { display: flex; gap: 0.5rem; }
@@ -264,5 +302,6 @@ const bidFlow = [
 }
 @media (prefers-reduced-motion: reduce) {
   .ri__scene { animation: none; }
+  .ri__talkicon { animation: none; }
 }
 </style>

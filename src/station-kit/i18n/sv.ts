@@ -25,20 +25,22 @@ export const sv: Record<string, string> = {
   'mode.practice_sub': 'Vi övar — inga poäng räknas än',
   'mode.golive_title': 'NU KÖR VI PÅ RIKTIGT',
 
-  // --- Roller (sändebud/förhandlare = A med mikrofon, rapportör = B vid skärmen) ---
+  // --- Roller (sändebud = A, pratar i headset; rapportör = B, vid skärmen) ---
   'roles.stand_title': 'STÄLL ER RÄTT',
   'roles.stand_reporter': 'sitter vid skärmen',
-  'roles.stand_negotiator': 'står med mikrofonen',
-  'roles.stand_sub': 'Varje valv har en av varje. Ställ er så här innan ni börjar.',
+  'roles.stand_negotiator': 'pratar i headset',
+  'roles.stand_sub': 'Sändebuden pratar, rapportören sköter skärmen. Ställ er så här innan ni börjar.',
   'roles.has_console': 'SKÖTER SKÄRMEN',
-  'roles.has_mic': 'HAR MIKROFONEN',
+  'roles.has_mic': 'PRATAR',
   'roles.diff_title': 'VEM GÖR VAD?',
-  'roles.diff_negotiator': 'Sändebudet pratar — all förhandling sker genom headsetet.',
+  'roles.diff_negotiator': 'Sändebuden pratar — all förhandling sker genom headseten.',
   'roles.diff_reporter': 'Rapportören är tyst, sköter skärmen och gissar motståndarens livsviktiga.',
-  'roles.why_mic_title': 'Varför bara en mikrofon?',
-  'roles.why_mic': 'Bara sändebudet pratar. Då maskeras rösten och motståndaren vet inte vem som förhandlar.',
+  'roles.why_mic_title': 'Varför bara sändebuden pratar?',
+  'roles.why_mic': 'Bara sändebuden pratar. Då maskeras rösten och motståndaren vet inte vem som förhandlar.',
   'roles.example_title': 'SÅ GÅR EN BUDGIVNING TILL',
-  'roles.example_bid': 'Sändebudet lägger ett bud',
+  'roles.example_sub': 'Valven förhandlar med varandra – på riktigt, genom headseten.',
+  'roles.example_talk_note': '(prata på riktigt)',
+  'roles.example_bid': 'Sändebuden lägger ett bud',
   'roles.example_counter': 'Motparten nekar eller höjer',
   'roles.example_back': 'Buden går fram och tillbaka',
   'roles.example_lock': 'Ni kommer överens — rapportören låser priset',
@@ -130,7 +132,7 @@ export const sv: Record<string, string> = {
   'attract.tagline': 'En budgivning om resurser. Röster maskeras. Minst spenderat vinner.',
 
   // --- Roller ---
-  'role.A': 'FÖRHANDLARE',
+  'role.A': 'SÄNDEBUD',
   'role.B': 'RAPPORTÖR',
   'role.A.desc': 'Sköter allt prat genom headsetet. Rör aldrig skärmen — budar bara med rösten.',
   'role.B.desc': 'Tyst under förhandlingen. Operatör av lagets skärm. Sköter avräkning och slutgissning.',
@@ -148,7 +150,7 @@ export const sv: Record<string, string> = {
   'intro.your_critical': 'ER LIVSVIKTIGA RESURS',
   'intro.critical_hint': 'Denna MÅSTE säkras. Avslöja den inte — motståndaren budar upp den.',
   'intro.start_round': 'STARTA RUNDAN',
-  'intro.negotiator_goal': 'Förhandlare: spendera så lite som möjligt.',
+  'intro.negotiator_goal': 'Sändebud: spendera så lite som möjligt.',
   'intro.reporter_goal': 'Rapportör: lista ut motståndarens livsviktiga resurs.',
 
   // --- Bidding ---
@@ -303,7 +305,7 @@ export const sv: Record<string, string> = {
   'narr.hide.mentor1':
     'Jo. Annars ser motståndaren direkt vilken som är er. Ni måste få det att verka som om ni vill ha allt.',
   'narr.roles.mentor1':
-    'Förhandlaren pratar. Rapportören lyssnar — och gissar vilken deras livsviktiga var. Rätt gissning: dubbla poäng.',
+    'Sändebuden pratar. Rapportören lyssnar — och gissar vilken deras livsviktiga var. Rätt gissning: dubbla poäng.',
   'narr.trial.before': 'Kör en övning. Ingen räknar poängen än.',
   'narr.trial.after': 'Nu kan ni det. Redo?',
 
