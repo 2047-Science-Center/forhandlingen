@@ -48,11 +48,10 @@ Ska skriva `x11`.
 sudo apt update && sudo apt install -y git curl
 git clone https://github.com/2047-Science-Center/forhandlingen.git ~/forhandlingen
 cd ~/forhandlingen
-git checkout testomgang-1-uppdatering
 ```
-(Grenen måste vara pushad till GitHub först. Frågar git efter inloggning: ange
-ditt GitHub-användarnamn och en personlig åtkomsttoken — spara den inte i någon
-fil.) Efter detta följer `update.sh` den gren du checkat ut.
+Allt ligger på `main` (publikt repo) — ingen gren-utcheckning behövs. Senare
+uppdateringar hämtas med `update.sh` (git pull + bygg) eller
+skrivbordsikonen **Uppdatera Förhandlingen**.
 
 ### 2. Node 20+ (hoppa över om `node -v` redan visar v20 eller högre)
 ```bash
