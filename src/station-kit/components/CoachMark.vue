@@ -48,27 +48,41 @@ interface Rect {
   h: number
 }
 const rect = ref<Rect | null>(null)
+const bubbleRef = ref<HTMLElement | null>(null)
+const bubbleH = ref(220)
 const vw = ref(typeof window !== 'undefined' ? window.innerWidth : 1280)
 const vh = ref(typeof window !== 'undefined' ? window.innerHeight : 720)
 
 function measure() {
   vw.value = window.innerWidth
   vh.value = window.innerHeight
+  if (bubbleRef.value) bubbleH.value = bubbleRef.value.offsetHeight
   if (!props.target) {
     rect.value = null
     return
   }
-  const el = document.querySelector(props.target)
-  if (!el) {
+  // Union av ALLA matchande element → kan spotlighta samma rad i båda lagens
+  // kort samtidigt (t.ex. [data-tut="res-capital"] i resultat-genomgången).
+  const els = document.querySelectorAll(props.target)
+  let x0 = Infinity,
+    y0 = Infinity,
+    x1 = -Infinity,
+    y1 = -Infinity
+  let found = false
+  els.forEach((el) => {
+    const r = el.getBoundingClientRect()
+    if (r.width === 0 && r.height === 0) return
+    found = true
+    x0 = Math.min(x0, r.left)
+    y0 = Math.min(y0, r.top)
+    x1 = Math.max(x1, r.right)
+    y1 = Math.max(y1, r.bottom)
+  })
+  if (!found) {
     rect.value = null
     return
   }
-  const r = el.getBoundingClientRect()
-  if (r.width === 0 && r.height === 0) {
-    rect.value = null
-    return
-  }
-  rect.value = { x: r.left, y: r.top, w: r.width, h: r.height }
+  rect.value = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
 }
 
 let ro: ResizeObserver | null = null
@@ -120,26 +134,32 @@ const hole = computed<Rect | null>(() => {
   return { x, y, w, h }
 })
 
-// Bubbelplacering: under målet om det ligger i övre halvan, annars ovanför.
+// Bubbelplacering: väljs så att HELA bubblan ryms i viewporten (mäter dess
+// höjd). Under målet om det får plats, annars ovanför, annars vertikalt klampad.
 const MARGIN = 16
 const BUBBLE_W = 360
+const GAP = 14
 const bubbleStyle = computed(() => {
   const h = hole.value
   if (!h || props.placement === 'center') {
-    return {
-      left: '50%',
-      top: '50%',
-      transform: 'translate(-50%, -50%)',
-    }
+    return { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }
   }
   const centerX = h.x + h.w / 2
   let left = centerX - BUBBLE_W / 2
   left = Math.max(MARGIN, Math.min(left, vw.value - BUBBLE_W - MARGIN))
-  const below = props.placement === 'bottom' || (props.placement === 'auto' && h.y + h.h / 2 < vh.value / 2)
-  if (below) {
-    return { left: `${left}px`, top: `${Math.min(h.y + h.h + 14, vh.value - 80)}px` }
-  }
-  return { left: `${left}px`, top: `${Math.max(h.y - 14, 80)}px`, transform: 'translateY(-100%)' }
+
+  const bh = bubbleH.value
+  const belowTop = h.y + h.h + GAP
+  const aboveTop = h.y - GAP - bh
+  let top: number
+  if (props.placement === 'bottom') top = belowTop
+  else if (props.placement === 'top') top = aboveTop
+  else if (belowTop + bh <= vh.value - MARGIN) top = belowTop
+  else if (aboveTop >= MARGIN) top = aboveTop
+  else top = (vh.value - bh) / 2
+  // Håll alltid hela bubblan inom skärmen.
+  top = Math.max(MARGIN, Math.min(top, vh.value - bh - MARGIN))
+  return { left: `${left}px`, top: `${top}px` }
 })
 
 const holeStyle = computed(() => {
@@ -167,9 +187,13 @@ function advance() {
     <div v-else class="cm__hole" :style="holeStyle" />
 
     <!-- Bubbla (fångar klick själv, men klick utanför/på knappen går vidare). -->
-    <div class="cm__bubble" :style="bubbleStyle" @click.stop>
+    <div ref="bubbleRef" class="cm__bubble" :style="bubbleStyle" @click.stop>
       <p v-if="title" class="cm__title">{{ title }}</p>
       <p v-if="body" class="cm__body">{{ body }}</p>
+
+      <!-- Liten animation som illustrerar begreppet (återanvänder intro-
+           animationsvokabulären: stämpel, pengar→poäng, ×2). -->
+      <div v-if="$slots.visual" class="cm__visual"><slot name="visual" /></div>
 
       <!-- Förstärknings-ruta (valfri): roll-ikon-slot + kort uppdragstext. -->
       <div v-if="$slots.reinforce || reinforce" class="cm__reinforce">
@@ -254,6 +278,13 @@ function advance() {
   font-size: 1.15rem;
   line-height: 1.4;
   color: var(--color-ink-muted);
+}
+.cm__visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 4.5rem;
 }
 .cm__reinforce {
   display: flex;
