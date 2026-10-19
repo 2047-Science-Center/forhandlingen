@@ -1,32 +1,44 @@
 <script setup lang="ts">
 /**
- * Onboarding-koordinator (per skärm/valv). Sekvens (synkad via storet):
- *   headset → block1 → test1 → block2 → test2 → test2res → block3 → test3
- *   → test3res → block4 → live.
- * Ljudblock startar synkat. Tester i egen takt med barriär ("väntar på andra
- * valvet"). Testernas popupar ligger som MODALER över grund-UI:t; getready-
- * nedräkningen är PAUSAD tills båda valv klickat klart popuparna (armas då).
- * Result-popuparna (test2res/test3res) visar säkrad-status/poäng resp. gissning/
- * totalpoäng. Inga roller i testerna. Vid 'live' → skarp körning.
+ * Onboarding-koordinator (per skärm/valv) — NY MODELL (härmar Eco Loco).
+ *
+ * Grund-UI:t (den riktiga ReporterConsole) syns så fort det lär ut något; en
+ * coach-mark/spotlight-overlay dimmar allt utom det aktuella elementet och visar
+ * en kort bubbla. Progressivt, en sak i taget, visa-gör-förklara, minimal text.
+ * De gamla 4 ljudblocken + illustrationsscenerna är borta — bara förhandlings-
+ * klippet (NegotiateClip, klipp #2) är kvar.
+ *
+ * Sekvens:
+ *   Opening (självtempo per valv, onbStage='headset'):
+ *     1 title → 2 participants → 3 "vem gör vad" (RolesSplit) →
+ *     4 coach-marks över demo-konsolen (marknad → livsviktig → pengar → gissning)
+ *     → 5 klipp #2 (NegotiateClip) → klar-gate (sync-barriär)
+ *   Test (onbStage='test'): riktig budgivnings-övning på trial-datasetet, sedan
+ *     gissning — allt på grund-UI:t.
+ *   Testresultat (onbStage='testresult'): ResultWalkthrough (mode='test').
+ *   → live.
+ *
+ * Steg-numreringen i uppdraget: 1=participants, 2=RolesSplit, 3–6=coach-marks,
+ * 7=klipp, 8=test, 9=ResultWalkthrough.
  */
 import { ref, computed, watch } from 'vue'
 import type { TeamId } from '../engine/types'
 import { useGameStore } from '../store/gameStore'
-import { TRIAL_DATASET, TEST1_DATASET, ROUND_TIMERS, TEAMS, SKIP_TEST1 } from '@/config'
+import { TRIAL_DATASET, ROUND_TIMERS, TEAMS, RESOURCES } from '@/config'
 import { useI18n } from '@/station-kit/i18n'
+import { audio } from '@/station-kit/audio/AudioEngine'
 
 import CrtScreen from '@/station-kit/components/CrtScreen.vue'
+import CoachMark from '@/station-kit/components/CoachMark.vue'
+import RoleIcon from '../components/RoleIcon.vue'
 import TitleScreen from './opening/TitleScreen.vue'
 import ParticipantsScreen from './opening/ParticipantsScreen.vue'
-import RolesIntro from './opening/RolesIntro.vue'
-import OverviewPopups from './opening/OverviewPopups.vue'
-import IntroBlock from '../intro/IntroBlock.vue'
+import RolesSplit from './opening/RolesSplit.vue'
+import NegotiateClip from '../intro/NegotiateClip.vue'
 import PopupSequence, { type PopupSpec } from './PopupSequence.vue'
-import ResultPopups from './ResultPopups.vue'
+import ResultWalkthrough from '../components/ResultWalkthrough.vue'
 import BarrierWait from './BarrierWait.vue'
 import ReporterConsole from '../components/ReporterConsole.vue'
-import GuessView from '../components/GuessView.vue'
-import { BLOCKS } from './blocks'
 
 const props = defineProps<{ team: TeamId }>()
 const emit = defineEmits<{ complete: [] }>()
@@ -37,120 +49,143 @@ const me = computed(() => props.team)
 const shared = computed(() => store.view === 'shared')
 const leader = computed(() => shared.value || me.value === 'lag1')
 const stage = computed(() => store.onbStage)
+const other = computed<TeamId>(() => (me.value === 'lag1' ? 'lag2' : 'lag1'))
 const bothReady = computed(
-  () => store.onbReady[me.value] && (shared.value || store.onbReady[me.value === 'lag1' ? 'lag2' : 'lag1']),
+  () => store.onbReady[me.value] && (shared.value || store.onbReady[other.value]),
 )
-
-// --- Öppningssekvens (lokalt, självtempo per valv) medan delad stage = 'headset':
-//   title → participants → overview → gate (klar-gate = sync-barriär till block1). ---
-const openingStep = ref<'title' | 'participants' | 'roles' | 'overview' | 'gate'>('title')
-const participantsMe = computed(() => (shared.value ? null : me.value))
-const otherValvName = computed(() => TEAMS[me.value === 'lag1' ? 'lag2' : 'lag1'].name)
+const otherValvName = computed(() => TEAMS[other.value].name)
 const iAmReady = computed(() => store.onbReady[me.value])
 
-// Klar-gaten: markera redo (fri klick, ingen mic). Barriären startar block1.
+// ======================= OPENING (onbStage='headset') =======================
+const openingStep = ref<'title' | 'participants' | 'roles' | 'coach' | 'clip' | 'gate'>('title')
+const participantsMe = computed(() => (shared.value ? null : me.value))
+
+// --- Coach-marks (steg 3–6): spotlight över demo-konsolen ---
+const coachStep = ref(0)
+// Demo-värden (driver INGET spel-state; bara en lugn kuliss bakom overlayn).
+const demoCapital = 100
+const demoResource = 'styrkort'
+const demoCritical = computed(() =>
+  me.value === 'lag1' ? TRIAL_DATASET.kritisk_lag1 : TRIAL_DATASET.kritisk_lag2,
+)
+const demoOppCritical = computed(() =>
+  me.value === 'lag1' ? TRIAL_DATASET.kritisk_lag2 : TRIAL_DATASET.kritisk_lag1,
+)
+const demoOptions = RESOURCES.map((r) => r.id)
+
+interface CoachSpec {
+  target: string
+  title: string
+  body: string
+  role?: 'A' | 'B'
+  reinforce?: string
+  demo: 'resource' | 'guess'
+}
+const coachSpecs = computed<CoachSpec[]>(() => [
+  // 3 · marknad / aktuell resurs
+  {
+    target: '[data-tut="resource"]',
+    title: t('coach.market_title'),
+    body: t('coach.market_body'),
+    role: 'A',
+    reinforce: t('coach.mission_negotiator'),
+    demo: 'resource',
+  },
+  // 4 · livsviktig resurs (övre höger)
+  {
+    target: '[data-tut="critical"]',
+    title: t('coach.critical_title'),
+    body: t('coach.critical_body'),
+    demo: 'resource',
+  },
+  // 5 · pengar kvar = poäng
+  {
+    target: '[data-tut="capital"]',
+    title: t('coach.capital_title'),
+    body: t('coach.capital_body'),
+    demo: 'resource',
+  },
+  // 6 · gissa motståndarens (GuessView, mockup-tryck + ×2)
+  {
+    target: '[data-tut="guess"]',
+    title: t('coach.guess_title'),
+    body: t('coach.guess_body'),
+    role: 'B',
+    reinforce: t('coach.mission_reporter'),
+    demo: 'guess',
+  },
+])
+const coach = computed(() => coachSpecs.value[coachStep.value])
+
+function enterCoach() {
+  coachStep.value = 0
+  openingStep.value = 'coach'
+}
+function coachNext() {
+  audio.play('blip')
+  if (coachStep.value >= coachSpecs.value.length - 1) openingStep.value = 'clip'
+  else coachStep.value += 1
+}
+
+// --- Klar-gate (sync-barriär → test) ---
 function markReadyToStart() {
   store.onbMarkReady(me.value)
 }
-
-// När BÅDA valv klickat "Börja" → synkad start av block1 (leder sätter epoken).
 watch([bothReady, stage], () => {
-  if (bothReady.value && stage.value === 'headset' && leader.value) {
-    store.onbGoto('block1', Date.now())
-  }
+  if (bothReady.value && stage.value === 'headset' && leader.value) store.onbGoto('test', null)
 })
 
-// --- Block → nästa steg ---
-function blockDone() {
-  const map: Record<string, string> = {
-    // Test 1 (öva-att-buda) hoppas över när SKIP_TEST1 → block1 går rakt på block2.
-    block1: SKIP_TEST1 ? 'block2' : 'test1',
-    block2: 'test2',
-    block3: 'test3',
-    block4: 'live',
-  }
-  const next = map[stage.value]
-  if (next) store.onbGoto(next, next === 'live' ? Date.now() : null)
-}
-
-// --- Lokala popup-flaggor (nollställs vid stage-byte) ---
-const popupsDone = ref(false)
-const resDone = ref(false)
-watch(stage, (s) => {
-  popupsDone.value = false
-  resDone.value = false
-  if (s === 'headset') openingStep.value = 'title'
-})
-
-// Test 1/2: klar med intro-popupar → markera redo (popup-barriär).
-function onPopupsFinish() {
-  popupsDone.value = true
-  if (stage.value !== 'test3') store.onbMarkReady(me.value)
-}
-// Result-popupar klara → markera redo (result-barriär).
-function onResFinish() {
-  resDone.value = true
-  store.onbMarkReady(me.value)
-}
-
-const myCritical = computed(() =>
-  me.value === 'lag1' ? TRIAL_DATASET.kritisk_lag1 : TRIAL_DATASET.kritisk_lag2,
-)
-const test1Popups: PopupSpec[] = [
-  { title: t('test1.pop1'), resource: 'styrkort' },
-  { title: t('test1.pop2'), icon: '🤫' },
-  { title: t('test1.pop3'), money: TEST1_DATASET.kapital },
-]
-const test2Popups = computed<PopupSpec[]>(() => [
-  { title: t('reveal.your_critical_is'), resource: myCritical.value },
-  { title: t('reveal.here_is_money'), money: TRIAL_DATASET.kapital },
-])
-const test3Popups: PopupSpec[] = [{ body: t('test3.instruction') }]
-
-// --- Leder: starta testomgången (PAUSAD) vid stage-enter ---
+// ======================= TEST (onbStage='test') =======================
+// Leder startar trial-datasetet (PAUSAT) vid stage-enter.
 watch(
   stage,
   (s) => {
-    if (!leader.value) return
-    if (s === 'test1' && store.state.datasetId !== 'test1') store.startTest1()
-    else if (s === 'test2' && store.state.datasetId !== 'trial') store.startTest2()
+    if (leader.value && s === 'test' && store.state.datasetId !== 'trial') store.startTest2()
   },
   { immediate: true },
 )
 
-// --- Leder: arma getready-nedräkningen när båda klickat klart popuparna ---
+const testPopupsDone = ref(false)
+const myCritical = computed(() => store.state.critical[me.value])
+const testPopups = computed<PopupSpec[]>(() => [
+  { title: t('test.intro_title'), icon: '🎧' },
+  { title: t('reveal.your_critical_is'), resource: myCritical.value },
+  { title: t('reveal.here_is_money'), money: TRIAL_DATASET.kapital },
+])
+function onTestPopupsFinish() {
+  testPopupsDone.value = true
+  store.onbMarkReady(me.value)
+}
+
+// Leder: arma getready-nedräkningen när BÅDA valv klickat klart popuparna.
 watch([bothReady, stage], () => {
   if (!bothReady.value || !leader.value) return
-  if ((stage.value === 'test1' || stage.value === 'test2') && store.step === 'getready' && store.state.hatchTimerEndsAt == null) {
-    const gf = stage.value === 'test1' ? ROUND_TIMERS.test1.getReadyFirst : ROUND_TIMERS.test2.getReadyFirst
-    store.armGetReady(gf)
+  if (stage.value === 'test' && store.step === 'getready' && store.state.hatchTimerEndsAt == null) {
+    store.armGetReady(ROUND_TIMERS.test2.getReadyFirst)
   }
 })
 
-// --- Testomgång klar (fas 'guessing') → resultat/nästa steg ---
-watch(
-  () => store.phase,
-  (p) => {
-    if (p !== 'guessing' || !leader.value) return
-    if (stage.value === 'test1') store.onbGoto('block2', null)
-    else if (stage.value === 'test2') store.onbGoto('test2res', null)
-  },
+// Budgivning klar → gissningsfas (GuessView visas i konsolen). När BÅDA gissat
+// (synkat state) → resultat-genomgången.
+const bothGuessed = computed(
+  () => store.state.guesses.lag1 != null && store.state.guesses.lag2 != null,
 )
-
-// --- Result-barriärer → nästa block ---
-watch([bothReady, stage], () => {
-  if (!bothReady.value || !leader.value) return
-  if (stage.value === 'test2res') store.onbGoto('block3', null)
-  else if (stage.value === 'test3res') store.onbGoto('block4', null)
+watch([bothGuessed, stage], () => {
+  if (stage.value === 'test' && bothGuessed.value && leader.value) store.onbGoto('testresult', null)
 })
 
-// --- Test 3: gissning låst → barriär → test3res ---
-const guessLocked = computed(() => store.state.guesses[me.value] != null)
-watch(guessLocked, (v) => {
-  if (v && stage.value === 'test3') store.onbMarkReady(me.value)
-})
-watch([bothReady, stage], () => {
-  if (bothReady.value && stage.value === 'test3' && leader.value) store.onbGoto('test3res', null)
+// ======================= TESTRESULTAT (onbStage='testresult') =======================
+function onTestResultFinish() {
+  store.onbGoto('live', null)
+}
+
+// Nollställ lokala flaggor vid stage-byte.
+watch(stage, (s) => {
+  testPopupsDone.value = false
+  if (s === 'headset') {
+    openingStep.value = 'title'
+    coachStep.value = 0
+  }
 })
 
 // --- Live ---
@@ -158,16 +193,13 @@ watch(stage, (s) => {
   if (s === 'live') emit('complete')
 })
 
-// Visar spel-konsolen (grund-UI bakom popuparna)?
-const showConsole = computed(() =>
-  ['test1', 'test2', 'test2res'].includes(stage.value) && store.phase !== 'intro',
-)
-const isTestPlay = computed(() => stage.value === 'test1' || stage.value === 'test2')
+// Visar budgivnings-konsolen (grund-UI) i testet?
+const showTestConsole = computed(() => stage.value === 'test' && store.phase !== 'intro')
 </script>
 
 <template>
   <div class="ob">
-    <!-- ÖPPNING: Titel → Deltagare → 3 pop-ups → Klar-gate -->
+    <!-- ================= OPENING ================= -->
     <template v-if="stage === 'headset'">
       <TitleScreen v-if="openingStep === 'title'" @next="openingStep = 'participants'" />
       <ParticipantsScreen
@@ -175,10 +207,38 @@ const isTestPlay = computed(() => stage.value === 'test1' || stage.value === 'te
         :me="participantsMe"
         @next="openingStep = 'roles'"
       />
-      <RolesIntro v-else-if="openingStep === 'roles'" @next="openingStep = 'overview'" />
-      <OverviewPopups v-else-if="openingStep === 'overview'" @finish="openingStep = 'gate'" />
+      <RolesSplit v-else-if="openingStep === 'roles'" @next="enterCoach" />
 
-      <!-- Klar-gate (modifierad headset-ruta: ingen mic, fri klick, sync-barriär) -->
+      <!-- Steg 3–6: demo-konsol BAKOM + coach-mark-overlay -->
+      <div v-else-if="openingStep === 'coach'" class="ob__stage">
+        <ReporterConsole
+          :team="me"
+          :demo="coach.demo"
+          :demo-capital="demoCapital"
+          :demo-critical="demoCritical"
+          :demo-resource="demoResource"
+          :demo-guess-pick="demoOppCritical"
+          :demo-options="demoOptions"
+        />
+        <CoachMark
+          :target="coach.target"
+          :title="coach.title"
+          :body="coach.body"
+          :reinforce="coach.reinforce"
+          :step="coachStep"
+          :steps="coachSpecs.length"
+          @next="coachNext"
+        >
+          <template v-if="coach.role" #reinforce>
+            <RoleIcon :role="coach.role" :size="40" />
+          </template>
+        </CoachMark>
+      </div>
+
+      <!-- Steg 7: förhandlingsklippet -->
+      <NegotiateClip v-else-if="openingStep === 'clip'" @next="openingStep = 'gate'" />
+
+      <!-- Klar-gate (sync-barriär) -->
       <div v-else class="ob__headset">
         <template v-if="!iAmReady">
           <span class="ob__headset-icon" aria-hidden="true">🎧</span>
@@ -194,55 +254,22 @@ const isTestPlay = computed(() => stage.value === 'test1' || stage.value === 'te
       </div>
     </template>
 
-    <!-- LJUDBLOCK -->
-    <IntroBlock
-      v-else-if="stage.startsWith('block')"
-      :block="BLOCKS[stage as keyof typeof BLOCKS]"
-      :start-epoch="store.onbEpoch ?? undefined"
-      @done="blockDone"
-    />
-
-    <!-- TEST 1 / TEST 2 / RESULTAT: grund-UI bakom, popupar över -->
-    <div v-else-if="showConsole" class="ob__stage">
-      <!-- allow-guess=false: gissningen sker ENBART i test3 (efter tjejens
-           ljudblock), aldrig i test2-konsolen. Annars läcker en gissning in här
-           och låser test3-barriären. -->
+    <!-- ================= TEST (steg 8) ================= -->
+    <div v-else-if="showTestConsole" class="ob__stage">
       <div v-if="shared" class="ob__split">
-        <CrtScreen><ReporterConsole team="lag1" :allow-guess="false" /></CrtScreen>
-        <CrtScreen><ReporterConsole team="lag2" :allow-guess="false" /></CrtScreen>
+        <CrtScreen><ReporterConsole team="lag1" :allow-guess="true" /></CrtScreen>
+        <CrtScreen><ReporterConsole team="lag2" :allow-guess="true" /></CrtScreen>
       </div>
-      <ReporterConsole v-else :team="me" :allow-guess="false" />
+      <ReporterConsole v-else :team="me" :allow-guess="true" />
 
-      <!-- Test-popupar (över UI) -->
-      <PopupSequence
-        v-if="isTestPlay && !popupsDone"
-        :popups="stage === 'test1' ? test1Popups : test2Popups"
-        @finish="onPopupsFinish"
-      />
-      <BarrierWait v-else-if="isTestPlay && !bothReady" />
-
-      <!-- Result-popupar efter test 2 -->
-      <ResultPopups v-if="stage === 'test2res' && !resDone" mode="test2" :team="me" @finish="onResFinish" />
-      <BarrierWait v-else-if="stage === 'test2res'" />
+      <!-- Intro-popupar (livsviktig + pengar) → barriär → budgivning -->
+      <PopupSequence v-if="!testPopupsDone" :popups="testPopups" @finish="onTestPopupsFinish" />
+      <BarrierWait v-else-if="!bothReady" />
     </div>
 
-    <!-- TEST 3: gissning + instruktions-popup -->
-    <template v-else-if="stage === 'test3'">
-      <PopupSequence v-if="!popupsDone" :popups="test3Popups" @finish="onPopupsFinish" />
-      <BarrierWait v-else-if="guessLocked" />
-      <template v-else>
-        <div v-if="shared" class="ob__split">
-          <CrtScreen><GuessView team="lag1" /></CrtScreen>
-          <CrtScreen><GuessView team="lag2" /></CrtScreen>
-        </div>
-        <GuessView v-else :team="me" />
-      </template>
-    </template>
-
-    <!-- TEST 3 RESULTAT -->
-    <div v-else-if="stage === 'test3res'" class="ob__stage">
-      <ResultPopups v-if="!resDone" mode="test3" :team="me" @finish="onResFinish" />
-      <BarrierWait v-else />
+    <!-- ================= TESTRESULTAT (steg 9) ================= -->
+    <div v-else-if="stage === 'testresult'" class="ob__stage ob__stage--result">
+      <ResultWalkthrough mode="test" @finish="onTestResultFinish" />
     </div>
   </div>
 </template>
@@ -305,6 +332,9 @@ const isTestPlay = computed(() => stage.value === 'test1' || stage.value === 'te
 .ob__stage {
   position: relative;
   height: 100%;
+}
+.ob__stage--result {
+  overflow: auto;
 }
 .ob__split {
   height: 100%;
