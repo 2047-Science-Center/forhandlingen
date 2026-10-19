@@ -1,20 +1,17 @@
 <script setup lang="ts">
 /**
- * Result-genomgång — stegar EN beat i taget över det RIKTIGA resultat-UI:t
- * (samma kort/layout som förr låg i ResultView). Återanvänds på TVÅ ställen:
- *   - efter testomgången (mode="test" → knappen leder till skarpt spel),
- *   - efter det skarpa spelet (mode="live" → knappen nollställer stationen).
+ * Result-genomgång — fungerar EXAKT som tutorial-coach-marks fast över det
+ * RIKTIGA resultat-UI:t: en spotlight/CoachMark belyser EN del i taget
+ * (säkrad/ej säkrad livsviktig → pengar kvar=poäng → gissning rätt/fel ×2 →
+ * vinnare), med en bubbla som säger HUR det gick och VARFÖR + en liten
+ * animation (CoachAnim: stämpel, pengar→poäng, ×2 — samma vokabulär som introt).
  *
- * Beats (ackumulerande — tidigare rader står kvar):
- *   0 · "Fick ni tag på er livsviktiga?"  → säkrad/ej säkrad (ej säkrad = 0 p)
- *   1 · "Hur mycket pengar har ni kvar?"  → kapital kvar = poäng
- *   2 · "Gissade ni rätt?"                → rätt/fel gissning (×2 vid rätt)
- *   3 · "Och vinnaren …"                  → vinnar-rubrik + lagpoäng
+ * Återanvänds på TVÅ ställen: efter testomgången (mode='test' → till skarpt
+ * spel) och efter det SKARPA spelet (mode='live' → nollställ).
  *
- * Varje beat exponerar ett NAMNGIVET reveal-ögonblick för ljud: komponenten
- * emit:ar `reveal` med beat-namnet OCH spelar en SFX-platshållare. Agent 3 kan
- * lyssna på `@reveal` (namnen: 'secured' | 'capital' | 'guess' | 'winner') och
- * haka i röst/ljud utan att röra denna komponent.
+ * Varje beat exponerar ett NAMNGIVET reveal-ögonblick: emit('reveal', <namn>)
+ * + SFX-platshållare, så Agent 3 kan haka i röst utan att röra komponenten
+ * (namn: secured | capital | guess | winner).
  */
 import { ref, computed, watch, onMounted } from 'vue'
 import type { TeamId } from '../engine/types'
@@ -23,8 +20,10 @@ import { scoreAll } from '../engine/scoring'
 import { resourceIcon } from '../resources'
 import { useI18n } from '@/station-kit/i18n'
 import { audio } from '@/station-kit/audio/AudioEngine'
+import CoachMark from '@/station-kit/components/CoachMark.vue'
+import CoachAnim from './CoachAnim.vue'
 
-defineProps<{ mode: 'test' | 'live' }>()
+const props = defineProps<{ mode: 'test' | 'live' }>()
 const emit = defineEmits<{ finish: []; reveal: [name: string] }>()
 const store = useGameStore()
 const { t } = useI18n()
@@ -48,16 +47,42 @@ function paidForCritical(id: TeamId): number | null {
   return r ? r.price : null
 }
 
-// --- Beats (ett namngivet reveal-ögonblick per steg) ---
-const BEATS = ['secured', 'capital', 'guess', 'winner'] as const
-const CAPTIONS = ['walk.step_secured', 'walk.step_capital', 'walk.step_guess', 'walk.step_winner']
+// --- Beats: ett namngivet reveal-ögonblick som spotlightar ETT element ---
+type AnimKind = 'critical' | 'capital' | 'guess'
+interface Beat {
+  name: string
+  target: string
+  title: string
+  body: string
+  anim: AnimKind | null
+}
+const BEATS: Beat[] = [
+  { name: 'secured', target: '[data-tut="res-secured"]', title: 'walk.step_secured', body: 'walk.body_secured', anim: 'critical' },
+  { name: 'capital', target: '[data-tut="res-capital"]', title: 'walk.step_capital', body: 'walk.body_capital', anim: 'capital' },
+  { name: 'guess', target: '[data-tut="res-guess"]', title: 'walk.step_guess', body: 'walk.body_guess', anim: 'guess' },
+  { name: 'winner', target: '[data-tut="res-winner"]', title: 'walk.step_winner', body: 'walk.body_winner', anim: null },
+]
 const SFX = { secured: 'stamp', capital: 'blip', guess: 'confirm', winner: 'win' } as const
 
 const beat = ref(0)
+const spec = computed(() => BEATS[beat.value])
 const last = computed(() => beat.value >= BEATS.length - 1)
 
+// Representativ resurs för animationen (en säkrad livsviktig resp. en gissning).
+const animCritical = computed(
+  () => store.state.critical.lag1 || store.state.critical.lag2 || 'insulin',
+)
+const animGuess = computed(
+  () => store.state.critical.lag2 || store.state.critical.lag1 || 'membranfilter',
+)
+const animRes = computed(() => (spec.value.anim === 'guess' ? animGuess.value : animCritical.value))
+
+const ctaLabel = computed(() =>
+  last.value ? (props.mode === 'test' ? t('reveal.to_live') : t('reveal.play_again')) : undefined,
+)
+
 function fire(i: number) {
-  const name = BEATS[i]
+  const name = BEATS[i].name as keyof typeof SFX
   emit('reveal', name)
   audio.play(SFX[name])
 }
@@ -73,10 +98,14 @@ function next() {
 <template>
   <div class="rw">
     <h2 class="rw__title ink-strong">{{ t('reveal.title') }}</h2>
-    <p class="rw__caption">{{ t(CAPTIONS[beat]) }}</p>
 
-    <!-- Vinnare: avslöjas sist (beat 3) -->
-    <div v-if="beat >= 3" class="rw__winner" :class="{ 'is-draw': winner === 'draw' }">
+    <!-- Vinnar-rubrik: avslöjas på sista beaten (spotlightas då). -->
+    <div
+      v-if="beat >= 3"
+      class="rw__winner"
+      :class="{ 'is-draw': winner === 'draw' }"
+      data-tut="res-winner"
+    >
       <template v-if="winner === 'draw'">{{ t('reveal.draw') }}</template>
       <template v-else>
         {{ t('reveal.winner_is', { team: teamLabel(winner) }) }}
@@ -102,53 +131,54 @@ function next() {
         </p>
 
         <ul class="rw__why">
-          <!-- beat 0: säkrad / ej säkrad -->
-          <li
-            v-if="beat >= 0"
-            class="rw__cond rw__cond--in"
-            :class="scores[id].securedCritical ? 'ok' : 'bad'"
-          >
+          <!-- säkrad / ej säkrad -->
+          <li class="rw__cond" :class="scores[id].securedCritical ? 'ok' : 'bad'" data-tut="res-secured">
             <span class="rw__mark">{{ scores[id].securedCritical ? '✓' : '✗' }}</span>
             <span>{{ scores[id].securedCritical ? t('reveal.cond_secured') : t('reveal.cond_not_secured') }}</span>
           </li>
 
           <template v-if="scores[id].securedCritical">
-            <!-- beat 1: kapital kvar = poäng -->
-            <template v-if="beat >= 1">
-              <li v-if="paidForCritical(id) != null" class="rw__cond rw__cond--in neutral">
+            <!-- pengar kvar = poäng (paid + kept grupperat) -->
+            <li class="rw__cond rw__cond--group" data-tut="res-capital">
+              <span v-if="paidForCritical(id) != null" class="rw__subline neutral">
                 <span class="rw__mark">💰</span>
                 <span>{{ t('reveal.paid_for_critical', { n: paidForCritical(id) }) }}</span>
-              </li>
-              <li class="rw__cond rw__cond--in ok">
+              </span>
+              <span class="rw__subline ok">
                 <span class="rw__mark">✓</span>
                 <span>{{ t('reveal.cond_capital', { n: scores[id].capitalLeft }) }}</span>
-              </li>
-            </template>
+              </span>
+            </li>
 
-            <!-- beat 2: gissning → ×2 -->
-            <li
-              v-if="beat >= 2"
-              class="rw__cond rw__cond--in"
-              :class="scores[id].guessedRight ? 'ok' : 'bad'"
-            >
+            <!-- gissning → ×2 -->
+            <li class="rw__cond" :class="scores[id].guessedRight ? 'ok' : 'bad'" data-tut="res-guess">
               <span class="rw__mark">{{ scores[id].guessedRight ? '×2' : '✗' }}</span>
               <span>{{ scores[id].guessedRight ? t('reveal.cond_guess_right') : t('reveal.cond_guess_wrong') }}</span>
             </li>
           </template>
         </ul>
 
-        <!-- Lagpoäng avslöjas med vinnaren (beat 3) -->
-        <p v-if="beat >= 3" class="rw__score mono ink-strong rw__cond--in">
+        <!-- Lagpoäng avslöjas med vinnaren (beat 3). -->
+        <p v-if="beat >= 3" class="rw__score mono ink-strong">
           {{ t('reveal.points', { n: scores[id].teamScore }) }}
         </p>
       </section>
     </div>
 
-    <button class="crt-button crt-button--strong rw__btn" @click="next">
-      <template v-if="!last">{{ t('onboarding.next') }} ▸</template>
-      <template v-else-if="mode === 'test'">{{ t('reveal.to_live') }} ▸</template>
-      <template v-else>{{ t('reveal.play_again') }}</template>
-    </button>
+    <!-- Spotlight-overlay: belyser EN del i taget med bubbla + animation. -->
+    <CoachMark
+      :target="spec.target"
+      :title="t(spec.title)"
+      :body="t(spec.body)"
+      :cta="ctaLabel"
+      :step="beat"
+      :steps="BEATS.length"
+      @next="next"
+    >
+      <template v-if="spec.anim" #visual>
+        <CoachAnim :key="spec.anim" :kind="spec.anim" :resource="animRes" />
+      </template>
+    </CoachMark>
   </div>
 </template>
 
@@ -163,15 +193,6 @@ function next() {
   font-size: 2rem;
   margin: 0;
   letter-spacing: 0.08em;
-}
-.rw__caption {
-  margin: 0;
-  font-family: var(--font-retro);
-  font-size: 1.4rem;
-  letter-spacing: 0.04em;
-  color: var(--color-primary);
-  text-shadow: var(--glow-soft);
-  text-align: center;
 }
 .rw__winner {
   font-family: var(--font-retro);
@@ -189,7 +210,6 @@ function next() {
   flex-wrap: wrap;
   justify-content: center;
   text-align: center;
-  animation: rw-in 0.4s ease-out;
 }
 .rw__winner.is-draw {
   color: var(--color-ink-muted);
@@ -253,9 +273,16 @@ function next() {
   gap: 0.6rem;
   font-size: 1.05rem;
   line-height: 1.3;
+  border-radius: 8px;
 }
-.rw__cond--in {
-  animation: rw-in 0.35s ease-out;
+.rw__cond--group {
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.rw__subline {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
 }
 .rw__mark {
   flex: none;
@@ -263,10 +290,12 @@ function next() {
   font-family: var(--font-retro);
   text-align: center;
 }
-.rw__cond.ok {
+.rw__cond.ok,
+.rw__subline.ok {
   color: var(--color-ink-strong);
 }
-.rw__cond.ok .rw__mark {
+.rw__cond.ok .rw__mark,
+.rw__subline.ok .rw__mark {
   color: var(--color-primary);
 }
 .rw__cond.bad {
@@ -275,23 +304,11 @@ function next() {
 .rw__cond.bad .rw__mark {
   color: var(--color-danger);
 }
-.rw__cond.neutral {
+.rw__subline.neutral {
   color: var(--color-ink-muted);
 }
 .rw__score {
   font-size: 1.8rem;
   margin: 0.2rem 0 0;
-}
-.rw__btn {
-  margin-top: 0.5rem;
-}
-@keyframes rw-in {
-  from { opacity: 0; transform: translateY(6px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .rw__winner,
-  .rw__cond--in {
-    animation: none;
-  }
 }
 </style>
