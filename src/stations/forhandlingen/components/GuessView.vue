@@ -9,10 +9,24 @@ import { useGameStore } from '../store/gameStore'
 import { resourceIcon } from '../resources'
 import { useI18n } from '@/station-kit/i18n'
 
-const props = defineProps<{ team: TeamId }>()
+// demoPick: tutorial-läge (coach-mark steg 6). Visar gissningsrutan som i det
+// riktiga UI:t men med EN resurs förvald (mockup-tryck) och ×2-badge — ej
+// interaktiv, skickar aldrig in något. Driver inget spel-state.
+const props = defineProps<{
+  team: TeamId
+  demoPick?: string
+  demoDouble?: boolean
+  /** Alternativ att visa i demo-läget (store.order är tomt innan spelet). */
+  demoOptions?: string[]
+}>()
 const store = useGameStore()
 const { t } = useI18n()
 
+const demo = computed(() => props.demoPick != null)
+/** Rutnätets alternativ: riktiga auktionsordningen, eller demo-listan i demo-läget. */
+const options = computed(() =>
+  demo.value && props.demoOptions?.length ? props.demoOptions : store.state.order,
+)
 const pick = ref<string | null>(null)
 const locked = computed(() => store.state.guesses[props.team] != null)
 
@@ -25,7 +39,24 @@ function submit() {
   <div class="guess">
     <h3 class="guess__title">{{ t('guess.title') }}</h3>
 
-    <template v-if="!locked">
+    <!-- DEMO (coach-mark): förvald rätt gissning + ×2-badge, ej interaktiv. -->
+    <template v-if="demo">
+      <p class="guess__prompt">{{ t('guess.prompt') }}</p>
+      <div class="guess__grid">
+        <div
+          v-for="res in options"
+          :key="res"
+          class="guess__opt amber-frame"
+          :class="{ 'guess__opt--sel': res === demoPick }"
+        >
+          <span class="guess__icon">{{ resourceIcon(res) }}</span>
+          <span>{{ t('resource.' + res) }}</span>
+          <span v-if="res === demoPick && demoDouble" class="guess__x2">×2</span>
+        </div>
+      </div>
+    </template>
+
+    <template v-else-if="!locked">
       <p class="guess__prompt">{{ t('guess.prompt') }}</p>
       <div class="guess__grid">
         <button
@@ -54,13 +85,17 @@ function submit() {
   flex-direction: column;
   gap: 1rem;
 }
+/* Explicit färg (ej ärvd från body) så läges-temat följer med: blått i
+   tutorial, bärnsten i skarpt — annars ärvs body:s skarpa färg även i övning. */
 .guess__title {
   font-size: 1.6rem;
   margin: 0;
+  color: var(--color-primary);
 }
 .guess__prompt {
   font-size: 1.2rem;
   margin: 0;
+  color: var(--color-ink-muted);
 }
 .guess__grid {
   display: grid;
@@ -68,6 +103,7 @@ function submit() {
   gap: 0.6rem;
 }
 .guess__opt {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -77,6 +113,19 @@ function submit() {
   color: var(--color-primary);
   font-family: var(--font-retro);
   font-size: 1.05rem;
+}
+.guess__x2 {
+  position: absolute;
+  top: -0.6rem;
+  right: -0.6rem;
+  font-family: var(--font-retro);
+  font-size: 1.1rem;
+  color: var(--color-ink-strong);
+  background: var(--color-background-2);
+  border: 1px solid var(--color-primary);
+  border-radius: 999px;
+  padding: 0.05em 0.5em;
+  box-shadow: 0 0 12px rgba(var(--mode-accent-rgb), 0.6);
 }
 .guess__opt--sel {
   border-color: var(--color-ink-strong);

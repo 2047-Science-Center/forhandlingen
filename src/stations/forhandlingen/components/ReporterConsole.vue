@@ -18,21 +18,44 @@ import HatchRow from './HatchRow.vue'
 import BiddingZone from './BiddingZone.vue'
 import GuessView from './GuessView.vue'
 import RevealSequence from './RevealSequence.vue'
+import RoleIcon from './RoleIcon.vue'
+import type { HatchCell } from '../store/gameStore'
 
 // allowGuess=false i tutorialen: där får gissningen bara ske i det dedikerade
-// test3-steget (efter ljudblocket där tjejen talar), aldrig i test2-konsolen.
-// Motorn går till fasen 'guessing' redan när test2-budgivningen är klar; utan
-// denna grind skulle konsolen visa en gissningsruta där, och den kvarvarande
-// gissningen låste sedan test3-barriären (båda valv fastnade på "väntar").
-const props = withDefaults(defineProps<{ team: TeamId; allowGuess?: boolean }>(), {
-  allowGuess: true,
-})
+// gissnings-steget, aldrig i budgivnings-konsolen. Motorn går till fasen
+// 'guessing' redan när budgivningen är klar; utan denna grind skulle konsolen
+// visa en gissningsruta där.
+//
+// demo: tutorial-läge (coach-marks). Renderar grund-UI:t i ett LUGNT demo-
+// tillstånd BAKOM coach-mark-overlayn — riktiga header-elementen (kapital,
+// livsviktig) med data-tut-ankare som spotlighten pekar på, plus en lugn mitt
+// (aktuell resurs ELLER förvald gissning). Driver INGET spel-state.
+const props = withDefaults(
+  defineProps<{
+    team: TeamId
+    allowGuess?: boolean
+    demo?: 'resource' | 'guess' | null
+    demoCritical?: string
+    demoCapital?: number
+    demoResource?: string
+    demoGuessPick?: string
+    demoOptions?: string[]
+  }>(),
+  { allowGuess: true, demo: null },
+)
 const store = useGameStore()
 const { t } = useI18n()
 
-const critical = computed(() => store.state.critical[props.team])
-const capital = computed(() => store.state.capital[props.team])
+const critical = computed(() => (props.demo ? (props.demoCritical ?? '') : store.state.critical[props.team]))
+const capital = computed(() => (props.demo ? (props.demoCapital ?? 0) : store.state.capital[props.team]))
 const members = computed(() => store.state.members[props.team])
+
+// Statiska demo-luckor (lugn progress-rad bakom coach-marks): en aktiv + två kvar.
+const demoCells = computed<HatchCell[]>(() => [
+  { index: 0, hatch: 1, kind: 'active', winner: null, resource: null },
+  { index: 1, hatch: 2, kind: 'upcoming', winner: null, resource: null },
+  { index: 2, hatch: 3, kind: 'upcoming', winner: null, resource: null },
+])
 
 function namesOf(role: 'A' | 'B'): string {
   return (
@@ -62,17 +85,56 @@ watch(capital, (nv, ov) => {
   <div class="console">
     <TeamIdentity :team="team" />
 
+    <!-- === DEMO-tillstånd (bakom coach-marks): lugnt, icke-interaktivt === -->
+    <template v-if="demo">
+      <div class="console__header">
+        <div class="stat" data-tut="capital">
+          <span class="stat__label">{{ t('common.capital') }}</span>
+          <span class="stat__big mono ink-strong">{{ capital }}<small> kr</small></span>
+        </div>
+        <div v-if="critical" class="crit" data-tut="critical">
+          <span class="crit__label">{{ t('critical.header') }}</span>
+          <span class="crit__main">
+            <span class="crit__icon">{{ resourceIcon(critical) }}</span>
+            <span class="crit__name ink-strong">{{ t('resource.' + critical) }}</span>
+          </span>
+        </div>
+      </div>
+
+      <HatchRow :cells="demoCells" />
+
+      <!-- Mitt: aktuell resurs på marknaden ELLER förvald gissning -->
+      <div v-if="demo === 'resource'" class="console__rescard" data-tut="resource">
+        <span class="console__res-icon">{{ resourceIcon(demoResource ?? '') }}</span>
+        <span class="console__res-name ink-strong">{{ t('resource.' + demoResource) }}</span>
+      </div>
+      <div v-else-if="demo === 'guess'" class="console__guesswrap" data-tut="guess">
+        <GuessView
+          :team="team"
+          :demo-pick="demoGuessPick"
+          :demo-double="true"
+          :demo-options="demoOptions"
+        />
+      </div>
+    </template>
+
     <!-- === START-skärm: superstora roller === -->
-    <div v-if="store.phase === 'intro'" class="intro">
+    <div v-else-if="store.phase === 'intro'" class="intro">
       <div class="intro__role">
-        <span class="intro__label">{{ t('role.A') }}</span>
-        <span class="intro__names ink-strong">{{ namesOf('A') }}</span>
-        <span class="intro__goal">{{ t('intro.negotiator_goal') }}</span>
+        <RoleIcon role="A" :size="52" class="intro__roleicon" />
+        <div class="intro__roletext">
+          <span class="intro__label">{{ t('role.A') }}</span>
+          <span class="intro__names ink-strong">{{ namesOf('A') }}</span>
+          <span class="intro__goal">{{ t('intro.negotiator_goal') }}</span>
+        </div>
       </div>
       <div class="intro__role">
-        <span class="intro__label">{{ t('role.B') }}</span>
-        <span class="intro__names ink-strong">{{ namesOf('B') }}</span>
-        <span class="intro__goal">{{ t('intro.reporter_goal') }}</span>
+        <RoleIcon role="B" :size="52" class="intro__roleicon" />
+        <div class="intro__roletext">
+          <span class="intro__label">{{ t('role.B') }}</span>
+          <span class="intro__names ink-strong">{{ namesOf('B') }}</span>
+          <span class="intro__goal">{{ t('intro.reporter_goal') }}</span>
+        </div>
       </div>
       <button class="crt-button crt-button--strong intro__start" @click="store.startLive()">
         {{ t('intro.start_round') }}
@@ -83,13 +145,13 @@ watch(capital, (nv, ov) => {
     <template v-else>
       <!-- Header: kapital + kritisk resurs -->
       <div class="console__header">
-        <div class="stat">
+        <div class="stat" data-tut="capital">
           <span class="stat__label">{{ t('common.capital') }}</span>
           <span class="stat__big mono ink-strong" :class="{ 'stat__big--pulse': capitalPulse }"
             >{{ capital }}<small> kr</small></span
           >
         </div>
-        <div v-if="critical" class="crit">
+        <div v-if="critical" class="crit" data-tut="critical">
           <span class="crit__label">{{ t('critical.header') }}</span>
           <span class="crit__main">
             <span class="crit__icon">{{ resourceIcon(critical) }}</span>
@@ -130,8 +192,16 @@ watch(capital, (nv, ov) => {
 }
 .intro__role {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
   line-height: 1.05;
+}
+.intro__roleicon {
+  flex: none;
+}
+.intro__roletext {
+  display: flex;
+  flex-direction: column;
 }
 .intro__label {
   font-size: 1.1rem;
@@ -153,6 +223,26 @@ watch(capital, (nv, ov) => {
   padding: 0.5em 1.6em;
   margin-top: 0.6rem;
   align-self: stretch;
+}
+
+/* Demo-mitt: aktuell resurs på marknaden */
+.console__rescard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+.console__res-icon {
+  font-size: 4rem;
+  line-height: 1;
+}
+.console__res-name {
+  font-size: 2.6rem;
+  text-shadow: var(--glow-soft);
+}
+.console__guesswrap {
+  margin-top: 1rem;
 }
 
 /* Header */
