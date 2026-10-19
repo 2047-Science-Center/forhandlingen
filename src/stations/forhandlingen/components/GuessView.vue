@@ -8,6 +8,7 @@ import type { TeamId } from '../engine/types'
 import { useGameStore } from '../store/gameStore'
 import { resourceIcon } from '../resources'
 import { useI18n } from '@/station-kit/i18n'
+import RoleIcon from './RoleIcon.vue'
 
 // demoPick: tutorial-läge (coach-mark steg 6). Visar gissningsrutan som i det
 // riktiga UI:t men med EN resurs förvald (mockup-tryck) och ×2-badge — ej
@@ -38,6 +39,13 @@ function submit() {
 <template>
   <div class="guess">
     <h3 class="guess__title">{{ t('guess.title') }}</h3>
+
+    <!-- Tydlig markör: det här är RAPPORTÖRENS jobb (syns i både tutorial och
+         skarpt spel, så länge gissningen pågår). -->
+    <div v-if="demo || !locked" class="guess__role">
+      <RoleIcon role="B" :size="34" />
+      <span class="guess__rolelabel">{{ t('guess.role_turn') }}</span>
+    </div>
 
     <!-- DEMO (coach-mark): förvald rätt gissning + ×2-badge, ej interaktiv. -->
     <template v-if="demo">
@@ -96,6 +104,22 @@ function submit() {
   font-size: 1.2rem;
   margin: 0;
   color: var(--color-ink-muted);
+}
+.guess__role {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  padding: 0.25em 0.8em;
+  border: 1px solid var(--color-primary);
+  border-radius: 999px;
+  background: rgba(var(--mode-accent-rgb), 0.08);
+}
+.guess__rolelabel {
+  font-family: var(--font-retro);
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  color: var(--color-primary);
 }
 .guess__grid {
   display: grid;
