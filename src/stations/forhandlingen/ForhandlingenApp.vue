@@ -16,7 +16,7 @@ import { useI18n } from '@/station-kit/i18n'
 import { useStationMode } from '@/station-kit/mode/useStationMode'
 
 import ReporterConsole from './components/ReporterConsole.vue'
-import ResultView from './components/ResultView.vue'
+import ResultWalkthrough from './components/ResultWalkthrough.vue'
 import PilotPanel from './components/PilotPanel.vue'
 import FacilitatorControls from './components/FacilitatorControls.vue'
 import PauseOverlay from './components/PauseOverlay.vue'
@@ -117,9 +117,10 @@ onUnmounted(() => {
         </CrtScreen>
       </div>
 
-      <!-- Avslöjande: en gemensam vy -->
+      <!-- Avslöjande: en gemensam vy. Samma result-genomgång som efter testet
+           (steg 9) — stegar vinnaren/varför på det riktiga resultat-UI:t. -->
       <div v-else-if="showReveal" class="app__single">
-        <CrtScreen><ResultView /></CrtScreen>
+        <CrtScreen><ResultWalkthrough mode="live" @finish="store.reset()" /></CrtScreen>
       </div>
 
       <!-- Delad vy: båda konsolerna sida vid sida -->
