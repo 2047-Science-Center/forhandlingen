@@ -76,6 +76,10 @@ export const sv: Record<string, string> = {
   'walk.step_capital': 'Hur mycket pengar har ni kvar?',
   'walk.step_guess': 'Gissade ni rätt på motståndarens?',
   'walk.step_winner': 'Och vinnaren …',
+  'walk.body_secured': 'Säkrad = ni kan få poäng. Ej säkrad = 0 poäng.',
+  'walk.body_capital': 'Pengarna ni har kvar blir er poäng.',
+  'walk.body_guess': 'Rätt gissning dubblar er poäng.',
+  'walk.body_winner': 'Högst poäng vinner.',
   'walk.tap_next': 'Tryck för nästa ▸',
 
   // --- De tre vinstvillkoren (används i starten OCH i resultatet) ---
@@ -218,6 +222,7 @@ export const sv: Record<string, string> = {
 
   // --- Guessing ---
   'guess.title': 'GISSNINGSFAS',
+  'guess.role_turn': 'RAPPORTÖRENS TUR',
   'guess.prompt': 'Vilken var motståndarens livsviktiga resurs?',
   'guess.submit': 'LÅS GISSNING',
   'guess.locked': 'Gissning låst. Väntar på det andra laget …',

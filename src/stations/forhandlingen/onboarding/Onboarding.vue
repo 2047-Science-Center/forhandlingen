@@ -31,11 +31,11 @@ import { audio } from '@/station-kit/audio/AudioEngine'
 import CrtScreen from '@/station-kit/components/CrtScreen.vue'
 import CoachMark from '@/station-kit/components/CoachMark.vue'
 import RoleIcon from '../components/RoleIcon.vue'
+import CoachAnim from '../components/CoachAnim.vue'
 import TitleScreen from './opening/TitleScreen.vue'
 import ParticipantsScreen from './opening/ParticipantsScreen.vue'
 import RolesSplit from './opening/RolesSplit.vue'
 import NegotiateClip from '../intro/NegotiateClip.vue'
-import PopupSequence, { type PopupSpec } from './PopupSequence.vue'
 import ResultWalkthrough from '../components/ResultWalkthrough.vue'
 import BarrierWait from './BarrierWait.vue'
 import ReporterConsole from '../components/ReporterConsole.vue'
@@ -73,6 +73,7 @@ const demoOppCritical = computed(() =>
 )
 const demoOptions = RESOURCES.map((r) => r.id)
 
+type AnimKind = 'market' | 'critical' | 'capital' | 'guess'
 interface CoachSpec {
   target: string
   title: string
@@ -80,6 +81,8 @@ interface CoachSpec {
   role?: 'A' | 'B'
   reinforce?: string
   demo: 'resource' | 'guess'
+  anim: AnimKind
+  animRes?: string
 }
 const coachSpecs = computed<CoachSpec[]>(() => [
   // 3 · marknad / aktuell resurs
@@ -90,20 +93,25 @@ const coachSpecs = computed<CoachSpec[]>(() => [
     role: 'A',
     reinforce: t('coach.mission_negotiator'),
     demo: 'resource',
+    anim: 'market',
+    animRes: demoResource,
   },
-  // 4 · livsviktig resurs (övre höger)
+  // 4 · livsviktig resurs (övre höger) — stämplas LIVSVIKTIG
   {
     target: '[data-tut="critical"]',
     title: t('coach.critical_title'),
     body: t('coach.critical_body'),
     demo: 'resource',
+    anim: 'critical',
+    animRes: demoCritical.value,
   },
-  // 5 · pengar kvar = poäng
+  // 5 · pengar kvar = poäng — pengar tickar ner → poäng
   {
     target: '[data-tut="capital"]',
     title: t('coach.capital_title'),
     body: t('coach.capital_body'),
     demo: 'resource',
+    anim: 'capital',
   },
   // 6 · gissa motståndarens (GuessView, mockup-tryck + ×2)
   {
@@ -113,6 +121,8 @@ const coachSpecs = computed<CoachSpec[]>(() => [
     role: 'B',
     reinforce: t('coach.mission_reporter'),
     demo: 'guess',
+    anim: 'guess',
+    animRes: demoOppCritical.value,
   },
 ])
 const coach = computed(() => coachSpecs.value[coachStep.value])
@@ -145,13 +155,35 @@ watch(
   { immediate: true },
 )
 
+// Test-start som coach-marks (samma overlay som tutorialen) — spotlighta de
+// RIKTIGA elementen på grund-UI:t: livsviktig (övre höger) + pengar (kapital),
+// inte center-rutor.
 const testPopupsDone = ref(false)
+const testCoachStep = ref(0)
 const myCritical = computed(() => store.state.critical[me.value])
-const testPopups = computed<PopupSpec[]>(() => [
-  { title: t('test.intro_title'), icon: '🎧' },
-  { title: t('reveal.your_critical_is'), resource: myCritical.value },
-  { title: t('reveal.here_is_money'), money: TRIAL_DATASET.kapital },
+const testCoachSpecs = computed<CoachSpec[]>(() => [
+  {
+    target: '[data-tut="critical"]',
+    title: t('test.intro_title'),
+    body: t('coach.critical_body'),
+    demo: 'resource',
+    anim: 'critical',
+    animRes: myCritical.value,
+  },
+  {
+    target: '[data-tut="capital"]',
+    title: t('coach.capital_title'),
+    body: t('coach.capital_body'),
+    demo: 'resource',
+    anim: 'capital',
+  },
 ])
+const testCoach = computed(() => testCoachSpecs.value[testCoachStep.value])
+function testCoachNext() {
+  audio.play('blip')
+  if (testCoachStep.value >= testCoachSpecs.value.length - 1) onTestPopupsFinish()
+  else testCoachStep.value += 1
+}
 function onTestPopupsFinish() {
   testPopupsDone.value = true
   store.onbMarkReady(me.value)
@@ -182,6 +214,7 @@ function onTestResultFinish() {
 // Nollställ lokala flaggor vid stage-byte.
 watch(stage, (s) => {
   testPopupsDone.value = false
+  testCoachStep.value = 0
   if (s === 'headset') {
     openingStep.value = 'title'
     coachStep.value = 0
@@ -229,6 +262,9 @@ const showTestConsole = computed(() => stage.value === 'test' && store.phase !==
           :steps="coachSpecs.length"
           @next="coachNext"
         >
+          <template #visual>
+            <CoachAnim :key="coach.anim" :kind="coach.anim" :resource="coach.animRes" />
+          </template>
           <template v-if="coach.role" #reinforce>
             <RoleIcon :role="coach.role" :size="40" />
           </template>
@@ -262,8 +298,21 @@ const showTestConsole = computed(() => stage.value === 'test' && store.phase !==
       </div>
       <ReporterConsole v-else :team="me" :allow-guess="true" />
 
-      <!-- Intro-popupar (livsviktig + pengar) → barriär → budgivning -->
-      <PopupSequence v-if="!testPopupsDone" :popups="testPopups" @finish="onTestPopupsFinish" />
+      <!-- Test-start: coach-marks som spotlightar livsviktig + pengar på
+           grund-UI:t (samma overlay som tutorialen) → barriär → budgivning -->
+      <CoachMark
+        v-if="!testPopupsDone"
+        :target="testCoach.target"
+        :title="testCoach.title"
+        :body="testCoach.body"
+        :step="testCoachStep"
+        :steps="testCoachSpecs.length"
+        @next="testCoachNext"
+      >
+        <template #visual>
+          <CoachAnim :key="testCoach.anim" :kind="testCoach.anim" :resource="testCoach.animRes" />
+        </template>
+      </CoachMark>
       <BarrierWait v-else-if="!bothReady" />
     </div>
 
