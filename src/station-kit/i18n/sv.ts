@@ -45,6 +45,39 @@ export const sv: Record<string, string> = {
   'roles.example_back': 'Buden går fram och tillbaka',
   'roles.example_lock': 'Ni kommer överens — rapportören låser priset',
 
+  // --- "Vem gör vad" (split-screen, steg 2 i nya introt) ---
+  'roles.split_title': 'VEM GÖR VAD?',
+  'roles.split_sub': 'Två roller i varje valv. Ställ er så här.',
+
+  // --- Coach-marks (spotlight över grund-UI:t, steg 3–6) ---
+  'coach.market_title': 'Ni budar om resurser',
+  'coach.market_body': 'Båda valven budar om samma resurser på en marknad. Den här är uppe nu.',
+  'coach.mission_negotiator': 'Sändebudets uppdrag: buda muntligt — och spendera så lite som möjligt.',
+  'coach.critical_title': 'Er livsviktiga resurs',
+  'coach.critical_body': 'Det viktigaste är att ni får tag på den här — annars 0 poäng.',
+  'coach.capital_title': 'Era pengar',
+  'coach.capital_body': 'Spendera så lite som möjligt. Det som är kvar blir er poäng.',
+  'coach.guess_title': 'Gissa motståndarens',
+  'coach.guess_body': 'Gissar ni rätt på motståndarens livsviktiga resurs — dubbel poäng.',
+  'coach.mission_reporter': 'Rapportörens jobb: lyssna och gissa motståndarens livsviktiga.',
+  'coach.double_badge': 'RÄTT → ×2',
+
+  // --- Förhandlingsklippet (steg 7) ---
+  'clip.title': 'Så här kan en förhandling se ut',
+  'clip.sub': 'Titta hur buden går fram och tillbaka mellan valven.',
+  'clip.continue': 'FORTSÄTT',
+
+  // --- Testomgången (steg 8) ---
+  'test.intro_title': 'Nu provar ni själva',
+  'test.intro_sub': 'En övningsrunda — inga poäng räknas än.',
+
+  // --- Result-genomgång (steg 9, återanvänds efter test OCH efter live) ---
+  'walk.step_secured': 'Fick ni tag på er livsviktiga resurs?',
+  'walk.step_capital': 'Hur mycket pengar har ni kvar?',
+  'walk.step_guess': 'Gissade ni rätt på motståndarens?',
+  'walk.step_winner': 'Och vinnaren …',
+  'walk.tap_next': 'Tryck för nästa ▸',
+
   // --- De tre vinstvillkoren (används i starten OCH i resultatet) ---
   'win.title': 'SÅ VINNER NI',
   'win.cond1': 'Säkra er livsviktiga resurs',
