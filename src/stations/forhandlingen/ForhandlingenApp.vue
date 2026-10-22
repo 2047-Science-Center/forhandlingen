@@ -23,10 +23,27 @@ import FacilitatorControls from './components/FacilitatorControls.vue'
 import PauseOverlay from './components/PauseOverlay.vue'
 import IdleWarning from './components/IdleWarning.vue'
 import Onboarding from './onboarding/Onboarding.vue'
+import VemSaDet from './ventlage/VemSaDet.vue'
 import type { TeamId } from './engine/types'
 
 const store = useGameStore()
 const { t } = useI18n()
+
+// --- Väntläge-entry: hash #vem öppnar väntleken "Vem sa det?" (F1) fristående,
+//     förbi attract/onboarding. "TILL START" rensar hashen → vanlig attract.
+//     Speglar hur gameStore läser #lag1/#shared ur hashen. ---
+const hashRoute = ref(readHashRoute())
+function readHashRoute(): string {
+  return (typeof window !== 'undefined' ? window.location.hash : '').replace('#', '')
+}
+function onHashChange() {
+  hashRoute.value = readHashRoute()
+}
+const showVem = computed(() => hashRoute.value === 'vem')
+function exitVem() {
+  if (typeof window !== 'undefined') window.location.hash = ''
+  hashRoute.value = ''
+}
 
 /** Attract visas tills första gesten. */
 const entered = ref(false)
@@ -87,10 +104,12 @@ const ACTIVITY_EVENTS = ['pointerdown', 'mousedown', 'click', 'keydown', 'touchs
 onMounted(() => {
   store.init()
   window.addEventListener('contextmenu', onContextMenu)
+  window.addEventListener('hashchange', onHashChange)
   ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, onActivity, { passive: true }))
 })
 onUnmounted(() => {
   window.removeEventListener('contextmenu', onContextMenu)
+  window.removeEventListener('hashchange', onHashChange)
   ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, onActivity))
   audio.bedStop(0)
   store.dispose()
@@ -99,6 +118,19 @@ onUnmounted(() => {
 
 <template>
   <div class="app" :data-mode="stationMode">
+    <!-- Väntläge "Vem sa det?" (F1): fristående via #vem, förbi attract/onboarding.
+         Egen app-chrome + CRT-skärm; "TILL START" → exitVem → vanlig attract. -->
+    <template v-if="showVem">
+      <div class="app__chrome">
+        <span class="app__title">{{ t('app.title') }}</span>
+        <MuteButton />
+      </div>
+      <div class="app__single">
+        <CrtScreen><VemSaDet @exit="exitVem" /></CrtScreen>
+      </div>
+    </template>
+
+    <template v-else>
     <div v-if="!entered" class="app__single">
       <CrtScreen><AttractScreen @start="entered = true" /></CrtScreen>
     </div>
@@ -160,6 +192,7 @@ onUnmounted(() => {
       :from="3"
       @done="showGoLive = false"
     />
+    </template>
   </div>
 </template>
 
