@@ -14,6 +14,7 @@ import MuteButton from '@/station-kit/components/MuteButton.vue'
 import ModeCountdown from '@/station-kit/components/ModeCountdown.vue'
 import { useI18n } from '@/station-kit/i18n'
 import { useStationMode } from '@/station-kit/mode/useStationMode'
+import { audio } from '@/station-kit/audio/AudioEngine'
 
 import ReporterConsole from './components/ReporterConsole.vue'
 import ResultWalkthrough from './components/ResultWalkthrough.vue'
@@ -52,6 +53,13 @@ const stationMode = computed<'tutorial' | 'live'>(() =>
 )
 watch(stationMode, (m) => setMode(m), { immediate: true })
 
+// Tutorial-loop (beat 2.2): låg bakgrundsbädd under onboardingen, tonas ut när
+// skarpa rundan börjar. Bädden ligger utanför SFX-mastern (eget HTMLAudio).
+watch([stationMode, entered], ([m, isIn]) => {
+  if (isIn && m === 'tutorial') audio.bed('tutorial-loop.mp3', 0.18)
+  else audio.bedStop()
+})
+
 // Go-live-nedräkning: helskärmsanimation vid övergången tutorial → live.
 const showGoLive = ref(false)
 watch(onboarded, (v, old) => {
@@ -84,6 +92,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('contextmenu', onContextMenu)
   ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, onActivity))
+  audio.bedStop(0)
   store.dispose()
 })
 </script>
@@ -104,7 +113,7 @@ onUnmounted(() => {
            innehållet — det var därför lag-/valv-skyltar kunde täcka texten i test
            1). Syns HELA tutorialen och försvinner i samma stund spelet blir
            skarpt. Blå --mode-tutorial oavsett tema. -->
-      <div v-if="!onboarded" class="app__practice" role="status">
+      <div v-if="!onboarded && store.onbStage !== 'identify'" class="app__practice" role="status">
         <span class="app__practice-dot" aria-hidden="true"></span>
         <span class="app__practice-main">{{ t('mode.testomgang') }}</span>
         <span class="app__practice-sub">{{ t('mode.practice_sub') }}</span>

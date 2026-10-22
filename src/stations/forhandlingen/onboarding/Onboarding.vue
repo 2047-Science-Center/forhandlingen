@@ -21,7 +21,7 @@
  * Steg-numreringen i uppdraget: 1=participants, 2=RolesSplit, 3–6=coach-marks,
  * 7=klipp, 8=test, 9=ResultWalkthrough.
  */
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import type { TeamId } from '../engine/types'
 import { useGameStore } from '../store/gameStore'
 import { TRIAL_DATASET, ROUND_TIMERS, TEAMS, RESOURCES } from '@/config'
@@ -39,6 +39,7 @@ import NegotiateClip from '../intro/NegotiateClip.vue'
 import ResultWalkthrough from '../components/ResultWalkthrough.vue'
 import BarrierWait from './BarrierWait.vue'
 import ReporterConsole from '../components/ReporterConsole.vue'
+import BippStart from '@/station-kit/components/BippStart.vue'
 
 const props = defineProps<{ team: TeamId }>()
 const emit = defineEmits<{ complete: [] }>()
@@ -55,6 +56,39 @@ const bothReady = computed(
 )
 const otherValvName = computed(() => TEAMS[other.value].name)
 const iAmReady = computed(() => store.onbReady[me.value])
+
+// ======================= IDENTIFY (onbStage='identify') =======================
+// Bipp-start: bippa bandet (reader-initierad via regi) ELLER klicka igenom
+// (mock). En bipp eller ett klick markerar valvet klart; när båda valv är klara
+// stegar ledaren vidare till tutorialen ('headset').
+const identifiedName = ref<string | null>(null)
+let stopIdentity: (() => void) | null = null
+let identifyTimer: ReturnType<typeof setTimeout> | null = null
+
+function identifySkip() {
+  store.onbMarkReady(me.value)
+}
+onMounted(() => {
+  stopIdentity = store.listenIdentity((idn) => {
+    if (stage.value !== 'identify' || iAmReady.value || identifiedName.value) return
+    identifiedName.value = idn.medlemmar[0]?.name ?? idn.grupp
+    audio.play('bipstart')
+    // Låt bekräftelsen synas en stund, markera sedan klart.
+    identifyTimer = setTimeout(() => store.onbMarkReady(me.value), 1100)
+  })
+})
+onBeforeUnmount(() => {
+  stopIdentity?.()
+  if (identifyTimer) clearTimeout(identifyTimer)
+})
+// Båda valv klara → ledaren går till tutorialen.
+watch([bothReady, stage], () => {
+  if (bothReady.value && stage.value === 'identify' && leader.value) store.onbGoto('headset', null)
+})
+// "Väntar på andra valvet" (jag är klar men inte båda) → en mild ping.
+watch(iAmReady, (r) => {
+  if (r && stage.value === 'identify' && !bothReady.value) audio.play('waitping')
+})
 
 // ======================= OPENING (onbStage='headset') =======================
 const openingStep = ref<'title' | 'participants' | 'roles' | 'coach' | 'clip' | 'gate'>('title')
@@ -130,6 +164,11 @@ const coach = computed(() => coachSpecs.value[coachStep.value])
 function enterCoach() {
   coachStep.value = 0
   openingStep.value = 'coach'
+}
+/** In i klar-gaten (headset "gör er redo") — med aktiverings-ljud. */
+function enterGate() {
+  openingStep.value = 'gate'
+  audio.play('headset')
 }
 function coachNext() {
   audio.play('blip')
@@ -215,6 +254,7 @@ function onTestResultFinish() {
 watch(stage, (s) => {
   testPopupsDone.value = false
   testCoachStep.value = 0
+  if (s === 'identify') identifiedName.value = null
   if (s === 'headset') {
     openingStep.value = 'title'
     coachStep.value = 0
@@ -232,8 +272,19 @@ const showTestConsole = computed(() => stage.value === 'test' && store.phase !==
 
 <template>
   <div class="ob">
+    <!-- ================= IDENTIFY (bipp-start) ================= -->
+    <template v-if="stage === 'identify'">
+      <BippStart v-if="!iAmReady" :identified-name="identifiedName" @skip="identifySkip" />
+      <div v-else class="ob__headset">
+        <div class="ob__waiting">
+          <span class="ob__waiting-dot" aria-hidden="true"></span>
+          <span class="ob__waiting-text">{{ t('opening.waiting_valv', { valv: otherValvName }) }}</span>
+        </div>
+      </div>
+    </template>
+
     <!-- ================= OPENING ================= -->
-    <template v-if="stage === 'headset'">
+    <template v-else-if="stage === 'headset'">
       <TitleScreen v-if="openingStep === 'title'" @next="openingStep = 'participants'" />
       <ParticipantsScreen
         v-else-if="openingStep === 'participants'"
@@ -272,7 +323,7 @@ const showTestConsole = computed(() => stage.value === 'test' && store.phase !==
       </div>
 
       <!-- Steg 7: förhandlingsklippet -->
-      <NegotiateClip v-else-if="openingStep === 'clip'" @next="openingStep = 'gate'" />
+      <NegotiateClip v-else-if="openingStep === 'clip'" @next="enterGate" />
 
       <!-- Klar-gate (sync-barriär) -->
       <div v-else class="ob__headset">

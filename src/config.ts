@@ -14,8 +14,8 @@ import type { Dataset, Person, TeamId } from './stations/forhandlingen/engine/ty
 export type Mode = 'pilot' | 'production'
 
 /** Stationens nummer i riggen. Topic-namespace blir `station<N>/…`.
- *  ANTA ALDRIG ett faktiskt legacy-nummer — bekräfta mot riggen innan skarp koppling. */
-export const STATION_N = 0
+ *  Förhandlingen = station 1 i X&Y-kedjan (incheckning → st1 → st2 → reveal …). */
+export const STATION_N = 1
 
 export const config = {
   /** 'pilot' = BroadcastChannel + skärm-ljus + mock-identitet/resultat.
@@ -47,10 +47,13 @@ export const config = {
   /** Aktivt språk. Svenska byggd; no/svorsk stubbade. */
   lang: 'sv' as 'sv' | 'no' | 'svorsk',
 
-  /** MQTT/WS-adresser fylls i driftläget (miljövariabler, ej här). */
+  /** Drift-adresser. wsUrl = skärm↔skärm-synk (tomt → faller tillbaka på
+   *  BroadcastChannel, dvs samma-dator-synk; sätt för flera enheter).
+   *  mqttUrl = broker för identitet/resultat/ljus (webbläsare → ws-lyssnare).
+   *  Går att överstyra vid bygget med VITE_MQTT_URL. Inga hemligheter här. */
   production: {
     wsUrl: '',
-    mqttUrl: '',
+    mqttUrl: 'ws://127.0.0.1:9001',
   },
 } as const
 

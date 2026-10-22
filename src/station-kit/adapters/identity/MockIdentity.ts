@@ -19,4 +19,9 @@ export class MockIdentity implements Identity {
       medlemmar: [{ band_id: id, name }],
     }
   }
+
+  /** Ingen hårdvara i piloten → inga inkommande bipp att lyssna på. */
+  listen(): () => void {
+    return () => {}
+  }
 }

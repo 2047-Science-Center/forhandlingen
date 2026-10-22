@@ -1,41 +1,39 @@
 /**
- * Drift-ljus: publicerar på station<N>/lights. STUBB — fyll i skarp MQTT-klient.
+ * Drift-ljus: publicerar på station<N>/lights via den delade MQTT-klienten.
  * Payloadformerna är frysta (§5.1); firmware översätter lucka→pixlar.
  *
- * Mockbart utan hårdvara:
- *   mosquitto_pub -t station0/lights -m '{"hatch":1,"state":"active","winner":null}'
+ * Mockbart utan hårdvara (lyssna):
+ *   mosquitto_sub -t station1/lights -v
  */
 
 import type { Lights } from './Lights'
 import type { HatchLight } from '@/stations/forhandlingen/engine/types'
+import { getMqttClient } from '../mqtt/mqttClient'
 
+/** Minsta publicerings-yta — så adaptrarna kan testas med en fejk-klient. */
 export interface MqttPublisher {
   publish(topic: string, payload: string): void
 }
 
 export class MqttLights implements Lights {
   private topic: string
+  private pub: MqttPublisher
 
-  constructor(
-    stationN: number,
-    private publisher?: MqttPublisher,
-  ) {
+  constructor(stationN: number, publisher?: MqttPublisher) {
     this.topic = `station${stationN}/lights`
+    this.pub = publisher ?? getMqttClient()
   }
 
   set(lights: HatchLight[]): void {
     for (const l of lights) {
-      const payload = JSON.stringify({
-        hatch: l.hatch,
-        state: l.state,
-        winner: l.winner,
-      })
-      // TODO(drift): koppla mqtt-klient
-      this.publisher?.publish(this.topic, payload)
+      this.pub.publish(
+        this.topic,
+        JSON.stringify({ hatch: l.hatch, state: l.state, winner: l.winner }),
+      )
     }
   }
 
   reset(): void {
-    this.publisher?.publish(this.topic, JSON.stringify({ state: 'reset' }))
+    this.pub.publish(this.topic, JSON.stringify({ state: 'reset' }))
   }
 }

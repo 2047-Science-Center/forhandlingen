@@ -17,6 +17,7 @@ import { personResults } from '../engine/scoring'
 
 import { createAdapters, type Adapters } from '@/station-kit/adapters'
 import type { ResultPayload } from '@/station-kit/adapters/result/ResultSink'
+import type { IdentityGroup } from '@/station-kit/adapters/identity/Identity'
 import { audio } from '@/station-kit/audio/AudioEngine'
 import {
   config,
@@ -195,7 +196,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
       if (introStartedAt.value != null) {
         adapters.value?.transport.send({ kind: 'introStart', payload: introStartedAt.value })
       }
-      if (onbStage.value !== 'headset') {
+      if (onbStage.value !== 'identify') {
         adapters.value?.transport.send({
           kind: 'onbStage',
           payload: { stage: onbStage.value, epoch: onbEpoch.value },
@@ -266,7 +267,9 @@ export const useGameStore = defineStore('forhandlingen', () => {
   }
 
   // --- Onboarding-koordinator (synkad mellan valv) ---
-  const onbStage = ref<string>('headset')
+  // Första stage = 'identify' (bipp-start): bippa bandet (eller klicka igenom)
+  // innan tutorialen. Sedan 'headset' → 'test' → 'testresult' → 'live'.
+  const onbStage = ref<string>('identify')
   /** Delad starttid för aktuellt ljudblock (epoch-ms), eller null. */
   const onbEpoch = ref<number | null>(null)
   /** Vilka valv som är klara med aktuellt test (barriär). */
@@ -285,6 +288,12 @@ export const useGameStore = defineStore('forhandlingen', () => {
     if (onbReady.value[vault]) return
     onbReady.value = { ...onbReady.value, [vault]: true }
     adapters.value?.transport.send({ kind: 'onbReady', payload: { vault } })
+  }
+
+  /** Lyssna på inkommande identiteter (hårdvaru-bipp via regi → station1/rfid
+   *  → identitetstjänst → station1/identity). No-op i pilot (mock). */
+  function listenIdentity(cb: (group: IdentityGroup) => void): () => void {
+    return adapters.value?.identity.listen(cb) ?? (() => {})
   }
 
   /** Facilitator-paus (synkad). Vid resume förskjuts aktiv nedräkning framåt så
@@ -406,7 +415,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
     paused.value = false
     pausedSince.value = 0
     sessionActive.value = false
-    onbStage.value = 'headset'
+    onbStage.value = 'identify'
     onbEpoch.value = null
     onbReady.value = { lag1: false, lag2: false }
     dispatch({ type: 'reset', members: defaultRoster() })
@@ -506,6 +515,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
     beginIntro,
     onbGoto,
     onbMarkReady,
+    listenIdentity,
     setPaused,
     togglePause,
     notifyActivity,

@@ -5,6 +5,12 @@ export const sv: Record<string, string> = {
   'app.subtitle': 'X&Y-riggen · 2047',
   'common.press_to_start': 'TRYCK FÖR ATT BÖRJA',
   'common.press_to_skip': 'tryck för att hoppa över',
+  // --- Bipp-start (identifiera dig i början) ---
+  'bipp.title': 'BIPPA DITT BAND',
+  'bipp.hint': 'Håll armbandet mot läsaren',
+  'bipp.skip': 'Fortsätt utan bipp ▸',
+  'bipp.identified': 'VÄLKOMMEN {name}',
+  'bipp.ok': 'band avläst',
   'common.confirm': 'BEKRÄFTA',
   'common.cancel': 'NEJ, ÄNDRA',
   'common.next': 'NÄSTA',

@@ -48,7 +48,10 @@ function createTransport(): Transport {
       return new WebSocketTransport(`${proto}//${window.location.host}${relayPath}`, room)
     }
   }
-  if (config.mode === 'production') {
+  // Drift med explicit wsUrl → WebSocket-relä (flera enheter). Utan wsUrl
+  // (lokal enkel-dator-drift) faller vi tillbaka på BroadcastChannel så
+  // skärm↔skärm-synk funkar ändå utan separat relähost.
+  if (config.mode === 'production' && config.production.wsUrl) {
     return new WebSocketTransport(config.production.wsUrl, room)
   }
   return new BroadcastChannelTransport(`forhandlingen-station${config.stationN}`)
