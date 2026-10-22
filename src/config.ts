@@ -248,6 +248,21 @@ export const TEAM_PARTICIPANTS: Record<TeamId, string[]> = {
   lag2: ['Ebba', 'Hugo', 'Milo'],
 }
 
+/**
+ * SÖM: de incheckade deltagarna vid stationen (hela gruppen, båda valven).
+ *
+ * Används av väntläget (F1 "Vem sa det?") som namnlista. IDAG returnerar den
+ * pilot-platshållarna i `TEAM_PARTICIPANTS` (båda valven ihop, ~6 namn). När
+ * den riktiga incheckningen finns: byt BARA innehållet i den här funktionen
+ * (t.ex. läs från identitetstjänsten/RFID-inloggningen) — allt UI och all
+ * logik utgår från den och behöver inte röras. Returnerar unika, icke-tomma
+ * namn i stabil ordning (Syd först, sedan Nord).
+ */
+export function checkedInParticipants(): string[] {
+  const all = [...TEAM_PARTICIPANTS.lag1, ...TEAM_PARTICIPANTS.lag2]
+  return all.map((n) => n.trim()).filter((n, i, a) => n.length > 0 && a.indexOf(n) === i)
+}
+
 /** Deterministisk pilot-roster (delas av alla fönster). */
 export function defaultRoster(): Record<TeamId, Person[]> {
   return {
