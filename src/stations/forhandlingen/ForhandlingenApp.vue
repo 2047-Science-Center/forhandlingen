@@ -28,6 +28,10 @@ import PauseOverlay from './components/PauseOverlay.vue'
 import IdleWarning from './components/IdleWarning.vue'
 import Onboarding from './onboarding/Onboarding.vue'
 import VemSaDet from './ventlage/VemSaDet.vue'
+import VemDarLek from './lek/VemDarLek.vue'
+import LekStandalone from '@/station-kit/lek/LekStandalone.vue'
+import { lekPreviewFromUrl } from '@/station-kit/lek/lekSync'
+import type { VemPerson } from './lek/vemDar'
 import type { TeamId } from './engine/types'
 
 const store = useGameStore()
@@ -79,6 +83,18 @@ function onEntreDone(): void {
       }))
   store.setRoster({ lag1: team('A'), lag2: team('B') })
 }
+// --- Lek-läget (lila, efter done): "Vem där?" — XY-VANTUPPGIFTER.md 1A. Sidorna ur
+//     entrén (sida A = Valv Syd/lag1, B = Valv Nord/lag2); saknas de (t.ex. omladdning i
+//     lek) gissar man bland hela gruppen. ?lek=1 visar leken direkt (förhandsvisning). ---
+const lekPreview = lekPreviewFromUrl()
+const lekPeople = computed<VemPerson[]>(() => {
+  const ps = entre.personer.value
+  if (ps.length) return ps.map((p) => ({ band_id: p.band_id, name: p.name, side: p.side }))
+  return entre.members.value.map((m) => ({ band_id: m.band_id, name: m.name, side: null }))
+})
+const lekSide = computed(() => (store.view === 'lag1' ? 'A' : store.view === 'lag2' ? 'B' : null))
+const lekLeader = computed(() => store.view !== 'lag2')
+
 /** Onboardingen klar när koordinatorns stage nått 'live'. */
 const onboarded = computed(() => store.onbStage === 'live')
 
@@ -251,7 +267,14 @@ onUnmounted(() => {
     </template>
 
     <!-- Rotationen: väntar / lek (overlay; "Testgrupp X — tryck" visas av entrén) -->
-    <RotationScreens station-title="Förhandlingen" />
+    <RotationScreens station-title="Förhandlingen">
+      <template #lek>
+        <VemDarLek :people="lekPeople" :my-side="lekSide" :leader="lekLeader" :transport="store.transport()" />
+      </template>
+    </RotationScreens>
+    <LekStandalone v-if="lekPreview && store.transport()">
+      <VemDarLek :people="lekPeople" :my-side="lekSide" :leader="lekLeader" :transport="store.transport()" />
+    </LekStandalone>
   </div>
 </template>
 
