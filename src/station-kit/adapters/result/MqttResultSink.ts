@@ -21,6 +21,8 @@ export class MqttResultSink implements ResultSink {
 
   send(payload: ResultPayload): void {
     this.pub.publish(this.resultTopic, JSON.stringify(payload))
-    this.pub.publish(this.doneTopic, JSON.stringify({ grupp: payload.grupp }))
+    // Under rotationen skickar rotationsmodulen done {session_id, round, group} när
+    // resultatet VISATS klart (station-kit/rotation) — inte här.
+    if (payload.round == null) this.pub.publish(this.doneTopic, JSON.stringify({ grupp: payload.grupp }))
   }
 }

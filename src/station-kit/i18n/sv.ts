@@ -126,7 +126,7 @@ export const sv: Record<string, string> = {
   'idle.restart_in': 'Ingen aktivitet – stationen startar om automatiskt',
   'idle.seconds': '{n} s',
   'idle.tap_to_stay': 'Rör skärmen för att fortsätta',
-  'opening.waiting_valv': 'Väntar på Valv {valv} …',
+  'opening.waiting_valv': 'Väntar på sida {valv} …',
   // Överblicks-pop-ups (hur man vinner)
   'overview.market': 'Ni byter inte resurser med varandra – båda valven budar om samma resurser.',
   'overview.market_label': 'MARKNAD',

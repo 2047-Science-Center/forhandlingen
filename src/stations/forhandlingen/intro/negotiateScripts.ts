@@ -2,7 +2,7 @@
  * Manus för förhandlingsdemona (Block 1 & 2). Tider = sekunder RELATIVT
  * cue-starten (elapsed). `speakers` driver talarmarkeringen i bilden; `settle`
  * driver den skriptade settle-UI-kopian (förloraren matar in → vinnaren
- * bekräftar). Sidor: vanster = Valv Syd, hoger = Valv Nord.
+ * bekräftar). Sidor: vanster = sida A, hoger = sida B.
  */
 export type Side = 'vanster' | 'hoger'
 
@@ -27,7 +27,7 @@ export interface NegotiateScript {
 }
 
 export const NEGOTIATE_SCRIPTS: Record<string, NegotiateScript> = {
-  // Block 1, Bild 5 (cue 9.24): Syd (vänster) vinner för 30.
+  // Block 1, Bild 5 (cue 9.24): Sida A (vänster) vinner för 30.
   B1: {
     photo: 5,
     speakers: [
@@ -43,7 +43,7 @@ export const NEGOTIATE_SCRIPTS: Record<string, NegotiateScript> = {
     ],
     settle: { winnerSide: 'vanster', loserSide: 'hoger', price: 30, enterStart: 14.78, chooseAt: 15.4, enterEnd: 16.8, confirmAt: 17.9 },
   },
-  // Block 2, Bild 9 (cue 32.18): Nord (höger) vinner för 95.
+  // Block 2, Bild 9 (cue 32.18): Sida B (höger) vinner för 95.
   B2: {
     photo: 9,
     speakers: [

@@ -10,7 +10,7 @@ export interface IntroCue {
   /**
    * center = foto i mitten;
    * split = enkel-demo (foto vänster + illustration höger);
-   * negotiate = förhandlingsdemo (foto överst ~70%, Nord/Syd-UI under).
+   * negotiate = förhandlingsdemo (foto överst ~70%, A/B-UI under).
    */
   mode: IntroMode
   /** Id för illustrationen (split) eller förhandlingsdemon (negotiate). */

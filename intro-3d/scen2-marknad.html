@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scen 2 · In i skärmen &amp; marknaden</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #141518; overflow: hidden; }
+  canvas { display: block; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<script type="module">
+// Scen 2 — In i skärmen + marknaden (D+E). Skärmarna visar det RIKTIGA konsol-UI:t
+// (Förhandlingen-appens intro3d-skarm.html i iframe). Kräver att appens dev-server kör:
+//   npm --prefix forhandlingen run dev -- --port 5177   (annan port: ?app=http://localhost:PORT)
+// ?spela-in = skärminspelning av fliken (ett varv), ?t=7 = frys tiden.
+import { DIM, ramp, makeStation, makeScreenTexture, makeCast, screenPose, addScreenIframe, tweenCamera, timeline, createStage } from './lib.js';
+
+const LOOP = 9.5;
+const station0 = makeStation(); // bara för att räkna skärmens pose
+const { pos: P, normal: N } = screenPose(station0.screens.A);
+const D = 0.30; // avstånd så att skärm-UI:t fyller bilden
+const end = P.clone().addScaledVector(N, D);
+
+const cam = tweenCamera([
+  { at: 0.0, pos: [2.5, 2.95, 2.3], look: [0, 1.0, 0] },                       // 3/4-översikt (där scen 1 började)
+  { at: 3.0, pos: end.toArray(), look: P.toArray(), via: [0.05, 2.35, 0.62] },  // D: ner + in förbi Valdi-glowet
+  { at: 9.5, pos: P.clone().addScaledVector(N, D * 0.96).toArray(), look: P.toArray() }, // låst (minimal drift)
+]);
+const stage = createStage({ name: 'forhandlingen-scen2-marknad', loop: LOOP, camera: cam, css3d: true });
+const { scene } = stage;
+
+const station = makeStation({ screenTex: { B: makeScreenTexture('VALV NORD') } });
+scene.add(station.group);
+const cast = makeCast(scene);
+
+// riktiga UI:t på båda skärmarna (A = Valv Syd, B = Valv Nord)
+const scrA = addScreenIframe(stage, station, 'A', { team: 'lag1' });
+const scrB = addScreenIframe(stage, station, 'B', { team: 'lag2' });
+
+const tl = timeline([
+  { at: 0.0, do: () => { scrA.setState('idle'); scrB.setState('idle'); } },
+  { at: 3.0, do: () => scrA.setState('luckor') },   // E①: rundans 5 resurser (luckorna) highlightas
+  { at: 6.0, do: () => scrA.setState('resurs') },   // E②: aktuell resurs (bränslecell) i mitten pulsar
+]);
+
+stage.start((t, dt) => {
+  tl(t);
+  cast.all.forEach((f, i) => f.update(t + i * 0.6, dt));
+  stage.setFade(1 - ramp(t, 0, 0.4) + ramp(t, 9.1, 9.5));
+});
+</script>
+</body>
+</html>

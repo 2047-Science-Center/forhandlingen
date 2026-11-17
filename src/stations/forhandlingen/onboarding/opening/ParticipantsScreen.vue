@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * Öppningsskärm 2 — Deltagare (splitscreen på Bild 5). Valv Syd (vänster) och
- * Valv Nord (höger) med orange rubrik + Deltagare-ruta (3 mockupnamn, data-
+ * Öppningsskärm 2 — Deltagare (splitscreen på Bild 5). Sida A (vänster) och
+ * sida B (höger) med orange rubrik + Deltagare-ruta (3 mockupnamn, data-
  * drivet — kommer från RFID-inloggningen i drift). Det EGNA valvet framhävs
  * (ljusare/ramat), det andra dämpas, så var och en ser vilken sida de tillhör.
  * Tap var som helst → nästa. Självtempo per valv (ingen sync här).
@@ -15,10 +15,10 @@ const emit = defineEmits<{ next: [] }>()
 const { t } = useI18n()
 
 const bg = INTRO_MEDIA.photo(5)
-// Vänster = Valv Syd (lag1), höger = Valv Nord (lag2).
+// Vänster = sida A (lag1), höger = sida B (lag2).
 const sides: { id: TeamId; label: string }[] = [
-  { id: 'lag1', label: 'VALV SYD' },
-  { id: 'lag2', label: 'VALV NORD' },
+  { id: 'lag1', label: 'SIDA A' },
+  { id: 'lag2', label: 'SIDA B' },
 ]
 const participants = (id: TeamId) => TEAM_PARTICIPANTS[id]
 // I delad vy (me === null) framhävs ingetdera.

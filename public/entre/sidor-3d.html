@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sidor A/B · 3D</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #141518; }
+  body.transparent { background: transparent; }
+  canvas { display: block; }
+  #tags { position: fixed; inset: 0; pointer-events: none; }
+  .tag {
+    position: absolute; transform: translate(-50%, -100%) scale(0.6); transform-origin: 50% 100%;
+    opacity: 0; transition: opacity .35s ease, transform .45s cubic-bezier(.2,1.4,.4,1);
+    font: 700 clamp(14px, 3vmin, 30px) ui-monospace, Menlo, Consolas, monospace; letter-spacing: .04em;
+    color: #0d0e10; background: var(--c); padding: .3em .7em; border-radius: .7em; white-space: nowrap;
+    box-shadow: 0 0 14px color-mix(in srgb, var(--c) 55%, transparent);
+  }
+  .tag::after { /* pratbubble-svans */
+    content: ''; position: absolute; left: 50%; bottom: -.45em; transform: translateX(-50%);
+    border: .5em solid transparent; border-top-color: var(--c); border-bottom: 0;
+  }
+  .tag.on { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+  .tag.dim { opacity: .45; }
+</style>
+<!-- three.js r160 vendrat lokalt (offline i riggen) -->
+<script type="importmap">
+{ "imports": {
+  "three": "./vendor/three.module.js",
+  "three/addons/": "./vendor/addons/"
+} }
+</script>
+</head>
+<body>
+<div id="tags"></div>
+<script type="module">
+// "Så här ska ni stå" — överblick av stationen med mellanväggen. Sida A till VÄNSTER,
+// sida B till HÖGER (som skärmens rollbilder). Gubbar per sida = antal namn (0–4),
+// var och en får en namnskylt som poppar upp i tur och ordning.
+//
+// URL:  ?a=Liam,Saga,Omar&b=Jonna,Maja&me=A|B&la=Labbtekniker&lb=Forensiker&bg=transparent
+// Live: window.postMessage({ type: 'xy-sidor', a: [...], b: [...], me, la, lb })
+import { THREE, makeStation, makeGubbe, dim, PAL } from './lib.js';
+
+const q = new URLSearchParams(location.search);
+const list = s => (s || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 4);
+const state = {
+  a: list(q.get('a')), b: list(q.get('b')),
+  me: (q.get('me') || '').toUpperCase(),
+  la: q.get('la') || '', lb: q.get('lb') || '',
+};
+const TRANSPARENT = q.get('bg') === 'transparent';
+if (TRANSPARENT) document.body.classList.add('transparent');
+
+const COL = { A: 0xffb347, B: 0x7fd4ff };
+const CSS = { A: '#ffb347', B: '#7fd4ff' };
+
+// ---------- renderer / scen ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: TRANSPARENT });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(PAL.bg, TRANSPARENT ? 0 : 1);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(34, 16 / 9, 0.1, 60);
+scene.add(new THREE.HemisphereLight(0xfff1dc, 0x24262c, 1.0));
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(4, 7, 2); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 20 });
+scene.add(key);
+
+const floor = new THREE.Mesh(new THREE.CircleGeometry(4.2, 64),
+  new THREE.MeshStandardMaterial({ color: PAL.floor, roughness: 1, transparent: TRANSPARENT, opacity: TRANSPARENT ? 0.85 : 1 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true;
+scene.add(floor);
+
+const station = makeStation();
+scene.add(station.group);
+
+// ---------- golvmärkning: zon + stor bokstav + etikett per sida ----------
+function letterTex(letter, label, css) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 512;
+  const g = c.getContext('2d');
+  g.fillStyle = css; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = 'bold 300px ui-monospace, Menlo, Consolas, monospace';
+  g.fillText(letter, 256, label ? 220 : 256);
+  if (label) { g.font = 'bold 52px ui-monospace, Menlo, Consolas, monospace'; g.fillText(label.toUpperCase(), 256, 430); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+const sides = {};
+for (const [S, sz] of [['A', 1], ['B', -1]]) {
+  const zone = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 2.4),
+    new THREE.MeshBasicMaterial({ color: COL[S], transparent: true, opacity: 0.12, depthWrite: false }));
+  zone.rotation.x = -Math.PI / 2; zone.position.set(0.15, 0.003, sz * 1.65);
+  scene.add(zone);
+  const edge = new THREE.LineSegments(new THREE.EdgesGeometry(zone.geometry),
+    new THREE.LineBasicMaterial({ color: COL[S], transparent: true, opacity: 0.5 }));
+  edge.rotation.copy(zone.rotation); edge.position.copy(zone.position); edge.position.y += 0.001;
+  scene.add(edge);
+  const letterMat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false });
+  const letter = new THREE.Mesh(new THREE.PlaneGeometry(1.25, 1.25), letterMat);
+  // liggande på golvet, läsbar från kameran (som står på +X och tittar mot −X)
+  letter.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
+  letter.position.set(1.05, 0.006, sz * 1.65);
+  scene.add(letter);
+  sides[S] = { sz, zone, edge, letter, letterMat, people: [] };
+}
+function setLabels() {
+  for (const S of ['A', 'B']) {
+    const s = sides[S];
+    s.letterMat.map?.dispose();
+    s.letterMat.map = letterTex(S, S === 'A' ? state.la : state.lb, CSS[S]);
+    s.letterMat.needsUpdate = true;
+  }
+}
+
+// ---------- gubbar ----------
+// Kö ut från konsolen (vinkelrätt mot väggen), lätt förskjutna i sidled → alla syns
+// snett uppifrån; vända mot väggen/konsolen.
+const SLOT_Z = [0.95, 1.42, 1.89, 2.36];
+const SLOT_X = [-0.05, 0.28, -0.22, 0.24];
+const tagsEl = document.getElementById('tags');
+const all = [];
+function build() {
+  for (const p of all) { scene.remove(p.g.group); p.tag.remove(); }
+  all.length = 0;
+  let order = 0;
+  for (const S of ['A', 'B']) {
+    const s = sides[S];
+    s.people = (S === 'A' ? state.a : state.b).map((name, i) => {
+      const g = makeGubbe(0xeeeeee);
+      g.group.position.set(SLOT_X[i], 0, s.sz * SLOT_Z[i]);
+      g.group.rotation.y = s.sz > 0 ? Math.PI : 0; // vänd mot väggen
+      g.group.traverse(o => { if (o.isMesh) o.castShadow = true; });
+      scene.add(g.group);
+      const tag = document.createElement('div');
+      tag.className = 'tag'; tag.textContent = name; tag.style.setProperty('--c', CSS[S]);
+      tagsEl.appendChild(tag);
+      const p = { g, tag, side: S, i, appearAt: 0.5 + 0.45 * order++ };
+      all.push(p);
+      return p;
+    });
+  }
+  t0 = performance.now();
+}
+
+// ---------- egen sida ljus, andra dämpad ----------
+function applyMe() {
+  for (const S of ['A', 'B']) {
+    const other = state.me && state.me !== S;
+    const s = sides[S];
+    s.zone.material.opacity = other ? 0.05 : state.me === S ? 0.22 : 0.12;
+    s.edge.material.opacity = other ? 0.2 : 0.6;
+    s.letterMat.opacity = other ? 0.45 : 1;
+    for (const p of s.people) { p.g.setDim(other ? 0.55 : 0); p.g.setGlow(state.me === S ? 0.35 : 0); }
+  }
+  dim(station, state.me ? 0.15 : 0);
+}
+
+function update(next) {
+  if (next.a) state.a = [].concat(next.a).map(String).filter(Boolean).slice(0, 4);
+  if (next.b) state.b = [].concat(next.b).map(String).filter(Boolean).slice(0, 4);
+  if ('me' in next) state.me = String(next.me || '').toUpperCase();
+  if ('la' in next) state.la = next.la || '';
+  if ('lb' in next) state.lb = next.lb || '';
+  setLabels(); build(); applyMe();
+}
+addEventListener('message', e => { if (e.data && e.data.type === 'xy-sidor') update(e.data); });
+
+// ---------- kamera: snett uppifrån från +X (A vänster, B höger), svag rörelse ----------
+const target = new THREE.Vector3(0.1, 0.75, 0);
+function cam(t) {
+  // lätt snett (väggen syns som yta, inte bara kant) + svag pendel
+  const yaw = -0.32 + 0.07 * Math.sin(t * 2 * Math.PI / 16);
+  // smalare ram → backa ut så att båda sidor (upp till 4 + 4) får plats
+  const fitK = Math.max(1, 1.75 / camera.aspect)
+  const r = 5.6 * fitK, h = (3.9 + 0.12 * Math.sin(t * 2 * Math.PI / 21)) * Math.sqrt(fitK);
+  camera.position.set(Math.cos(yaw) * r, h, Math.sin(yaw) * r);
+  camera.lookAt(target);
+}
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.fov = 34;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+
+let t0 = performance.now();
+const _v = new THREE.Vector3();
+let last = performance.now();
+function loop(now) {
+  const t = now / 1000, dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const since = (now - t0) / 1000;
+  cam(t);
+  for (const p of all) {
+    p.g.update(t + p.i, dt);
+    // namnskylt ovanför huvudet
+    _v.set(0, 2.0, 0).applyMatrix4(p.g.group.matrixWorld).project(camera);
+    p.tag.style.left = ((_v.x + 1) / 2 * innerWidth) + 'px';
+    p.tag.style.top = ((1 - _v.y) / 2 * innerHeight) + 'px';
+    const on = since >= p.appearAt;
+    p.tag.classList.toggle('on', on);
+    p.tag.classList.toggle('dim', on && !!state.me && state.me !== p.side);
+    // liten nick när skylten dyker upp ("okej, jag står på sida A")
+    const k = since - p.appearAt;
+    p.g.nod = k > 0 && k < 1.2 ? 1 : 0;
+  }
+  renderer.render(scene, camera);
+  requestAnimationFrame(loop);
+}
+setLabels(); build(); applyMe();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

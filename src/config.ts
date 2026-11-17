@@ -10,6 +10,8 @@
  */
 
 import type { Dataset, Person, TeamId } from './stations/forhandlingen/engine/types'
+import type { RollvalConfig } from './station-kit/rollval/types'
+import type { EntreConfig } from './station-kit/entre/types'
 
 export type Mode = 'pilot' | 'production'
 
@@ -53,9 +55,23 @@ export const config = {
    *  Går att överstyra vid bygget med VITE_MQTT_URL. Inga hemligheter här. */
   production: {
     wsUrl: '',
-    mqttUrl: 'ws://127.0.0.1:9001',
+    /** Tom → VITE_MQTT_URL (riggen: ws://192.168.10.10:9001) → dev-default ws://127.0.0.1:9001. */
+    mqttUrl: '',
   },
 } as const
+
+/**
+ * ROTATION (xy-arkitektur/XY-ROTATION.md, SOM.md 2026-11-17): regi skickar
+ * station<N>/group → "Testgrupp X — tryck för att börja" → tutorial → skarp →
+ * done → lek. Av i piloten (demo/Pages oförändrade); på i drift. Överstyrs
+ * med ?rotation=1|0 / ?mqtt=ws://… i kiosk-URL:en eller VITE_ROTATION /
+ * VITE_MQTT_URL vid bygget. Ingen IP i koden.
+ */
+export const ROTATION = {
+  stationN: STATION_N,
+  enabled: config.mode === 'production',
+  mqttUrl: config.production.mqttUrl || 'ws://127.0.0.1:9001', // dev-default; env/URL går före
+}
 
 /**
  * Resurserna på bordet. `id` är stabilt (används i signaler/datasets);
@@ -207,35 +223,35 @@ export interface TeamConfig {
   members: Person[]
 }
 
-// Valv Syd = vänster (lag1), Valv Nord = höger (lag2). Roll A/B (sändebud/
+// Sida A = vänster (lag1), sida B = höger (lag2). Roll A/B (sändebud/
 // rapportör) i X&Y-resultatet är oförändrat och sätts uppströms.
 export const TEAMS: Record<TeamId, TeamConfig> = {
   lag1: {
     id: 'lag1',
-    name: 'Syd',
-    emoji: 'S',
-    logo: asset('/teams/syd.png'),
+    name: 'A',
+    emoji: 'A',
+    logo: asset('/teams/a.png'),
     members: [
-      { band_id: 'syd-a', name: 'Alva', team: 'lag1', chosen_role: 'A', assigned_role: 'A', role_presented_as: null },
-      { band_id: 'syd-b', name: 'Noah', team: 'lag1', chosen_role: 'B', assigned_role: 'B', role_presented_as: null },
+      { band_id: 'a-1', name: 'Alva', team: 'lag1', chosen_role: 'A', assigned_role: 'A', role_presented_as: null },
+      { band_id: 'a-2', name: 'Noah', team: 'lag1', chosen_role: 'B', assigned_role: 'B', role_presented_as: null },
     ],
   },
   lag2: {
     id: 'lag2',
-    name: 'Nord',
-    emoji: 'N',
-    logo: asset('/teams/nord.png'),
+    name: 'B',
+    emoji: 'B',
+    logo: asset('/teams/b.png'),
     members: [
-      { band_id: 'nord-a', name: 'Ebba', team: 'lag2', chosen_role: 'A', assigned_role: 'A', role_presented_as: null },
-      { band_id: 'nord-b', name: 'Hugo', team: 'lag2', chosen_role: 'B', assigned_role: 'B', role_presented_as: null },
+      { band_id: 'b-1', name: 'Ebba', team: 'lag2', chosen_role: 'A', assigned_role: 'A', role_presented_as: null },
+      { band_id: 'b-2', name: 'Hugo', team: 'lag2', chosen_role: 'B', assigned_role: 'B', role_presented_as: null },
     ],
   },
 }
 
 /** vänster/höger-sida (för förhandlingsdemons talarmarkering). */
 export const TEAM_SIDE: Record<TeamId, 'vanster' | 'hoger'> = {
-  lag1: 'vanster', // Valv Syd
-  lag2: 'hoger', // Valv Nord
+  lag1: 'vanster', // sida A
+  lag2: 'hoger', // sida B
 }
 
 /**
@@ -256,7 +272,7 @@ export const TEAM_PARTICIPANTS: Record<TeamId, string[]> = {
  * den riktiga incheckningen finns: byt BARA innehållet i den här funktionen
  * (t.ex. läs från identitetstjänsten/RFID-inloggningen) — allt UI och all
  * logik utgår från den och behöver inte röras. Returnerar unika, icke-tomma
- * namn i stabil ordning (Syd först, sedan Nord).
+ * namn i stabil ordning (sida A först, sedan B).
  */
 export function checkedInParticipants(): string[] {
   const all = [...TEAM_PARTICIPANTS.lag1, ...TEAM_PARTICIPANTS.lag2]
@@ -277,3 +293,95 @@ export function defaultRoster(): Record<TeamId, Person[]> {
  * redan satta. Datamodellen bär ändå fälten från början.
  */
 export const ROLE_FLOW_ENABLED = false
+
+/* ------------------------------------------------------------------ *
+ * ROLLVAL — nytt touchskärms-flöde FÖRE stationens eget flöde (Lager A).
+ * Besökaren ser ett "en dag i livet"-klipp per roll och väljer roll på
+ * skärmen. Skippbart via ROLLVAL_ENABLED. Inramning: förmågor värda att
+ * vara bra på — IMPLICIT, copyn nämner aldrig "framtidsyrke" eller AI.
+ *
+ * Klippen bor i forhandlingen/assets/ (riktiga klipp, lagda av Josef) och
+ * löses via Vite-glob nedan — matcha EXAKTA filnamn (å/ä/ö + mellanslag).
+ * ------------------------------------------------------------------ */
+
+/** Sätt false för att hoppa över hela rollvalet (appen kör utan det). */
+export const ROLLVAL_ENABLED = true
+
+/** Aktivt klippset. Testet kör ETT fast set (set 1 = Ida + Ossian); det andra
+ *  setet finns kvar i config. 'alternate' = växla per körning. */
+export const ROLLVAL_START_SET: number | 'alternate' = 0
+
+/** Riktiga rollklipp i forhandlingen/assets/ (url via Vite). */
+const ROLLVAL_CLIPS = import.meta.glob('../assets/*.mp4', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+}) as Record<string, string>
+
+function rollvalClip(file: string): string {
+  // Vite-globens nycklar är NFD (macOS dekomponerar å/ä/ö); våra literaler är
+  // NFC. Normalisera båda till NFC före jämförelsen.
+  const target = ('/' + file).normalize('NFC')
+  const hit = Object.entries(ROLLVAL_CLIPS).find(([k]) => k.normalize('NFC').endsWith(target))
+  return hit?.[1] ?? ''
+}
+
+export const ROLLVAL: RollvalConfig = {
+  stationTitle: 'Förhandlingen',
+  intro: 'Två sätt att göra skillnad i ett rum. Titta på hur en dag ser ut — välj sedan vilken du vill kliva in i.',
+  question: 'Vilken av dem känns som du?',
+  roles: [
+    {
+      id: 'sandebud',
+      name: 'Sändebud',
+      tagline: 'Den som möter motparten ansikte mot ansikte.',
+      description: 'Läser rummet, hittar orden som landar och bygger förtroende där andra kör fast. Det går inte att förhandla utan någon som vågar tala.',
+    },
+    {
+      id: 'rapportor',
+      name: 'Rapportör',
+      tagline: 'Den som håller överblicken och fattar besluten.',
+      description: 'Ser helheten, väger varje bud mot det som står på spel och styr konsolen med lugn hand. Utan överblick blir även den bästa förhandlingen gissningar.',
+    },
+  ],
+  // Ett set per körning (ett klipp per roll). Josef byter/lägger till klipp i
+  // forhandlingen/assets/ och uppdaterar filnamnen här.
+  clipSets: [
+    { sandebud: rollvalClip('Ida sändebud.mp4'), rapportor: rollvalClip('Ossian rapportör.mp4') },
+    { sandebud: rollvalClip('Jakob Sändebud.mp4'), rapportor: rollvalClip('Mary rapportör.mp4') },
+  ],
+}
+
+/* ------------------------------------------------------------------ *
+ * ENTRÉN (station-kit/entre, gemensam för st1–3): attract med testgrupp +
+ * sidindelning → rollval-klippen → valet (person för person / RFID) →
+ * ombalansering → "gå till sida A/B". SIDA = ROLL, fast här (EN NUC, båda sidorna):
+ *   sida A = lag1 (vänster) = Sändebud
+ *   sida B = lag2 (höger)   = Rapportör
+ * Röstläge: 'skarm' tills banden finns; ?rost=rfid|skarm i URL:en går före.
+ * ------------------------------------------------------------------ */
+
+export const ENTRE: EntreConfig = {
+  stationTitle: 'Förhandlingen',
+  roles: [
+    { letter: 'A', rollvalRoleId: 'sandebud', name: 'Sändebud' },
+    { letter: 'B', rollvalRoleId: 'rapportor', name: 'Rapportör' },
+  ],
+  voteMode: 'skarm',
+  /** 3D-översikten från three.js-tråden (xy-entre-3d → public/entre/). Saknas → 2D-vyn. */
+  illustrationUrl: `${import.meta.env.BASE_URL}entre/sidor-3d.html`,
+  clips: ROLLVAL_ENABLED,
+  clipSet: ROLLVAL_START_SET,
+  clipSetCount: ROLLVAL.clipSets.length,
+  pilotRoster: [
+    { band_id: 'PILOT01', name: 'Liam', gender: 'man' },
+    { band_id: 'PILOT02', name: 'Jonna', gender: 'kvinna' },
+    { band_id: 'PILOT03', name: 'Andreas', gender: 'man' },
+    { band_id: 'PILOT04', name: 'Maja', gender: 'kvinna' },
+    { band_id: 'PILOT05', name: 'Omar', gender: 'man' },
+    { band_id: 'PILOT06', name: 'Saga', gender: 'kvinna' },
+  ],
+}
+
+/** Sida (entrén) ↔ lag (spelet). */
+export const SIDE_TO_TEAM = { A: 'lag1', B: 'lag2' } as const

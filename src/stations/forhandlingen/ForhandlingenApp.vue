@@ -6,15 +6,19 @@
  */
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from './store/gameStore'
-import { config, LIVE_DATASET_ID } from '@/config'
+import { config, LIVE_DATASET_ID, ROLLVAL, ROTATION, ENTRE, SIDE_TO_TEAM } from '@/config'
 
 import CrtScreen from '@/station-kit/components/CrtScreen.vue'
 import AttractScreen from '@/station-kit/components/AttractScreen.vue'
+import Entre from '@/station-kit/entre/Entre.vue'
+import { initEntre } from '@/station-kit/entre/entre'
 import MuteButton from '@/station-kit/components/MuteButton.vue'
 import ModeCountdown from '@/station-kit/components/ModeCountdown.vue'
 import { useI18n } from '@/station-kit/i18n'
 import { useStationMode } from '@/station-kit/mode/useStationMode'
 import { audio } from '@/station-kit/audio/AudioEngine'
+import RotationScreens from '@/station-kit/rotation/RotationScreens.vue'
+import { initRotation, rotationOptions } from '@/station-kit/rotation/rotation'
 
 import ReporterConsole from './components/ReporterConsole.vue'
 import ResultWalkthrough from './components/ResultWalkthrough.vue'
@@ -45,8 +49,36 @@ function exitVem() {
   hashRoute.value = ''
 }
 
-/** Attract visas tills första gesten. */
+/** Sessionen pågår (entréns attract lämnad). */
 const entered = ref(false)
+
+// --- Rotationen + entrén (station-kit): entréns attract visar "Testgrupp X — tryck"
+//     + sidindelningen, sedan rollval-klipp → valet → ombalansering → "gå till sida A/B".
+//     Sida A = lag1 (Sändebud), sida B = lag2 (Rapportör) — config ENTRE. ---
+const rotation = initRotation(rotationOptions(ROTATION))
+const entre = initEntre({ stationN: ROTATION.stationN, config: ENTRE, mqttUrl: rotationOptions(ROTATION).mqttUrl })
+const entreDone = computed(() => entre.state.step === 'klar')
+watch(
+  () => store.view,
+  (v) => entre.setScreen({ side: v === 'lag1' ? 'A' : v === 'lag2' ? 'B' : null, leader: v === 'shared' || v === 'lag1' }),
+  { immediate: true },
+)
+/** Entrén klar → lottade roller in i spelet (ledaren dispatchar; synkas). */
+function onEntreDone(): void {
+  const team = (side: 'A' | 'B') =>
+    entre.personer.value
+      .filter((p) => p.side === side)
+      .map((p) => ({
+        band_id: p.band_id,
+        name: p.name,
+        team: SIDE_TO_TEAM[side],
+        // DB: chosen_role är NOT NULL — den som inte hann välja (facilitatorns "Lotta nu") loggas som sin tilldelade roll.
+        chosen_role: p.chosen_role ?? p.assigned_role,
+        assigned_role: p.assigned_role,
+        role_presented_as: null,
+      }))
+  store.setRoster({ lag1: team('A'), lag2: team('B') })
+}
 /** Onboardingen klar när koordinatorns stage nått 'live'. */
 const onboarded = computed(() => store.onbStage === 'live')
 
@@ -59,14 +91,31 @@ const leader = computed(() => store.view === 'shared' || onboardTeam.value === '
 /** När onboardingen når 'live' → starta skarp körning (100 kr, 5 resurser). */
 watch(onboarded, (v) => {
   if (v && leader.value && store.state.datasetId !== LIVE_DATASET_ID) store.startLive()
+  if (v) rotation.markSkarp()
 })
+
+// --- Rotationen: entréns touch = begin(); lämnar gruppen 'running' (lek / ny grupp)
+//     → stationen återställs bakom overlayen. ---
+watch(
+  () => rotation.state.phase,
+  (p, old) => {
+    if (p === 'running') {
+      audio.unlock()
+      entered.value = true
+    } else if (old === 'running') store.reset(false)
+  },
+)
+/** Skarpa resultatgenomgången klar → done + lek (rotation), annars som förut. */
+function onLiveFinish(): void {
+  if (!rotation.finishSkarp()) store.reset()
+}
 
 // --- Läges-system (gemensamt station-kit): HELA UI:t är i tutorial-tema (blått)
 //     under hela onboardingen, skarpt tema annars. data-mode på app-roten sätter
 //     tokens; komponenterna ärver färg. Attract visas i skarp identitetsfärg. ---
 const { setMode } = useStationMode()
 const stationMode = computed<'tutorial' | 'live'>(() =>
-  entered.value && !onboarded.value ? 'tutorial' : 'live',
+  entered.value && !onboarded.value && entreDone.value ? 'tutorial' : 'live',
 )
 watch(stationMode, (m) => setMode(m), { immediate: true })
 
@@ -89,6 +138,7 @@ watch(entered, (v) => store.setSessionActive(v))
 // Reset (manuell, idle eller från peer) → tillbaka till attract.
 watch(() => store.resetSignal, () => {
   entered.value = false
+  entre.reset()
 })
 
 function onActivity() {
@@ -103,6 +153,7 @@ function onContextMenu(e: Event) {
 const ACTIVITY_EVENTS = ['pointerdown', 'mousedown', 'click', 'keydown', 'touchstart', 'wheel'] as const
 onMounted(() => {
   store.init()
+  entre.attachTransport(store.transport())
   window.addEventListener('contextmenu', onContextMenu)
   window.addEventListener('hashchange', onHashChange)
   ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, onActivity, { passive: true }))
@@ -131,8 +182,13 @@ onUnmounted(() => {
     </template>
 
     <template v-else>
-    <div v-if="!entered" class="app__single">
-      <CrtScreen><AttractScreen @start="entered = true" /></CrtScreen>
+    <!-- Entrén: attract (testgrupp + sidindelning) → rollval → valet → utfall -->
+    <div v-if="!entreDone" class="app__single">
+      <CrtScreen>
+        <Entre :rollval="ROLLVAL" @start="entered = true" @done="onEntreDone">
+          <template #attract="{ start }"><AttractScreen @start="start" /></template>
+        </Entre>
+      </CrtScreen>
     </div>
 
     <template v-else>
@@ -161,7 +217,7 @@ onUnmounted(() => {
       <!-- Avslöjande: en gemensam vy. Samma result-genomgång som efter testet
            (steg 9) — stegar vinnaren/varför på det riktiga resultat-UI:t. -->
       <div v-else-if="showReveal" class="app__single">
-        <CrtScreen><ResultWalkthrough mode="live" @finish="store.reset()" /></CrtScreen>
+        <CrtScreen><ResultWalkthrough mode="live" @finish="onLiveFinish" /></CrtScreen>
       </div>
 
       <!-- Delad vy: båda konsolerna sida vid sida -->
@@ -193,6 +249,9 @@ onUnmounted(() => {
       @done="showGoLive = false"
     />
     </template>
+
+    <!-- Rotationen: väntar / lek (overlay; "Testgrupp X — tryck" visas av entrén) -->
+    <RotationScreens station-title="Förhandlingen" />
   </div>
 </template>
 

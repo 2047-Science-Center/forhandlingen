@@ -40,6 +40,8 @@ const props = withDefaults(
     demoResource?: string
     demoGuessPick?: string
     demoOptions?: string[]
+    /** Antal luckor i demo-raden (default 3; intro-3D visar skarpa rundans 5). */
+    demoHatches?: number
   }>(),
   { allowGuess: true, demo: null },
 )
@@ -51,11 +53,15 @@ const capital = computed(() => (props.demo ? (props.demoCapital ?? 0) : store.st
 const members = computed(() => store.state.members[props.team])
 
 // Statiska demo-luckor (lugn progress-rad bakom coach-marks): en aktiv + två kvar.
-const demoCells = computed<HatchCell[]>(() => [
-  { index: 0, hatch: 1, kind: 'active', winner: null, resource: null },
-  { index: 1, hatch: 2, kind: 'upcoming', winner: null, resource: null },
-  { index: 2, hatch: 3, kind: 'upcoming', winner: null, resource: null },
-])
+const demoCells = computed<HatchCell[]>(() =>
+  Array.from({ length: props.demoHatches ?? 3 }, (_, i) => ({
+    index: i,
+    hatch: i + 1,
+    kind: i === 0 ? ('active' as const) : ('upcoming' as const),
+    winner: null,
+    resource: null,
+  })),
+)
 
 function namesOf(role: 'A' | 'B'): string {
   return (

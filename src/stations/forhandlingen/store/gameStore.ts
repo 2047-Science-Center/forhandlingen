@@ -12,13 +12,14 @@ import { ref, computed, shallowRef, watch } from 'vue'
 
 import { reduce, initialState, hatchLights, opponentOf } from '../engine/gameEngine'
 import type { Action } from '../engine/gameEngine'
-import type { GameState, TeamId, Phase, BiddingStep, HatchResult } from '../engine/types'
+import type { GameState, TeamId, Phase, BiddingStep, HatchResult, Person } from '../engine/types'
 import { personResults } from '../engine/scoring'
 
 import { createAdapters, type Adapters } from '@/station-kit/adapters'
 import type { ResultPayload } from '@/station-kit/adapters/result/ResultSink'
 import type { IdentityGroup } from '@/station-kit/adapters/identity/Identity'
 import { audio } from '@/station-kit/audio/AudioEngine'
+import { tagResult } from '@/station-kit/rotation/rotation'
 import {
   config,
   DATASETS,
@@ -30,10 +31,17 @@ import {
   IDLE_RESTART,
   TEAMS,
   defaultRoster,
+  ROLLVAL_ENABLED,
 } from '@/config'
 
 const IDLE_MS = IDLE_RESTART.minutes * 60_000
 const IDLE_WARN_MS = IDLE_RESTART.warnSeconds * 1000
+
+// Första onboarding-stage. Det standardiserade rollvalet körs FÖRE onboardingen
+// (app-skalet) och ersätter då den gamla bipp-start-rutan ('identify'): med
+// rollvalet på startar onboardingen direkt vid 'headset'. Är rollvalet av faller
+// vi tillbaka på den gamla bipp-starten.
+const ONB_START = ROLLVAL_ENABLED ? 'headset' : 'identify'
 
 export type ViewSide = 'lag1' | 'lag2' | 'shared'
 
@@ -196,7 +204,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
       if (introStartedAt.value != null) {
         adapters.value?.transport.send({ kind: 'introStart', payload: introStartedAt.value })
       }
-      if (onbStage.value !== 'identify') {
+      if (onbStage.value !== ONB_START) {
         adapters.value?.transport.send({
           kind: 'onbStage',
           payload: { stage: onbStage.value, epoch: onbEpoch.value },
@@ -267,9 +275,10 @@ export const useGameStore = defineStore('forhandlingen', () => {
   }
 
   // --- Onboarding-koordinator (synkad mellan valv) ---
-  // Första stage = 'identify' (bipp-start): bippa bandet (eller klicka igenom)
-  // innan tutorialen. Sedan 'headset' → 'test' → 'testresult' → 'live'.
-  const onbStage = ref<string>('identify')
+  // Första stage = ONB_START. Med rollvalet på = 'headset' (rollvalet uppströms
+  // har redan ersatt bipp-starten); annars 'identify' (bippa bandet eller klicka
+  // igenom). Sedan 'headset' → 'test' → 'testresult' → 'live'.
+  const onbStage = ref<string>(ONB_START)
   /** Delad starttid för aktuellt ljudblock (epoch-ms), eller null. */
   const onbEpoch = ref<number | null>(null)
   /** Vilka valv som är klara med aktuellt test (barriär). */
@@ -415,7 +424,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
     paused.value = false
     pausedSince.value = 0
     sessionActive.value = false
-    onbStage.value = 'identify'
+    onbStage.value = ONB_START
     onbEpoch.value = null
     onbReady.value = { lag1: false, lag2: false }
     dispatch({ type: 'reset', members: defaultRoster() })
@@ -431,7 +440,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
 
   // --- Lag-hjälp ---
   function teamName(id: TeamId): string {
-    return `VALV ${TEAMS[id].name}`
+    return `SIDA ${TEAMS[id].name}`
   }
   function teamConfig(id: TeamId) {
     return TEAMS[id]
@@ -451,7 +460,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
     }
   }
   function sendResult() {
-    adapters.value?.result.send(buildResultPayload())
+    adapters.value?.result.send(tagResult(buildResultPayload()))
   }
 
   // --- Livscykel ---
@@ -483,7 +492,18 @@ export const useGameStore = defineStore('forhandlingen', () => {
     adapters.value?.transport.close()
   }
 
+  /** Entrén (station-kit/entre) har lottat rollerna → gruppen i spelet (bara ledaren, synkas via snapshot). */
+  function setRoster(members: Record<TeamId, Person[]>) {
+    if (view.value === 'shared' || view.value === 'lag1') dispatch({ type: 'setMembers', members })
+  }
+  /** Skärm↔skärm-transporten (entrén delar röster/lottning över den). */
+  function transport() {
+    return adapters.value?.transport ?? null
+  }
+
   return {
+    setRoster,
+    transport,
     // state
     state,
     view,

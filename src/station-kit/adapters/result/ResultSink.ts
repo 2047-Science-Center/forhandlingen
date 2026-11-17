@@ -19,6 +19,9 @@ export interface ResultPayload {
   rollresultat_A: number // summering (förhandlare)
   rollresultat_B: number // summering (rapportörer)
   personer: ResultPerson[]
+  /** Rotationen (SOM.md 2026-11-17): runda + testgrupp. Satt = rotationen äger station<N>/done. */
+  round?: number
+  group?: number
 }
 
 export interface ResultSink {

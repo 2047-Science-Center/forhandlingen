@@ -24,7 +24,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import type { TeamId } from '../engine/types'
 import { useGameStore } from '../store/gameStore'
-import { TRIAL_DATASET, ROUND_TIMERS, TEAMS, RESOURCES } from '@/config'
+import { TRIAL_DATASET, ROUND_TIMERS, TEAMS, RESOURCES, ROLLVAL_ENABLED } from '@/config'
 import { useI18n } from '@/station-kit/i18n'
 import { audio } from '@/station-kit/audio/AudioEngine'
 
@@ -165,6 +165,12 @@ function enterCoach() {
   coachStep.value = 0
   openingStep.value = 'coach'
 }
+/** Efter deltagarskärmen: rollpresentationen (RolesSplit) hoppas över när det
+ *  standardiserade rollvalet är på — rollerna presenteras redan där uppströms. */
+function afterParticipants() {
+  if (ROLLVAL_ENABLED) enterCoach()
+  else openingStep.value = 'roles'
+}
 /** In i klar-gaten (headset "gör er redo") — med aktiverings-ljud. */
 function enterGate() {
   openingStep.value = 'gate'
@@ -289,7 +295,7 @@ const showTestConsole = computed(() => stage.value === 'test' && store.phase !==
       <ParticipantsScreen
         v-else-if="openingStep === 'participants'"
         :me="participantsMe"
-        @next="openingStep = 'roles'"
+        @next="afterParticipants"
       />
       <RolesSplit v-else-if="openingStep === 'roles'" @next="enterCoach" />
 

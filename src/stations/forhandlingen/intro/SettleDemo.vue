@@ -2,7 +2,7 @@
 /**
  * Skriptad visuell KOPIA av settle-UI:t (BiddingZone) för förhandlingsdemona.
  * Ej interaktiv — spelar manusets klick tajmat mot `elapsed`. Två paneler:
- * vänster = Valv Syd, höger = Valv Nord. Förloraren matar in (vinnare + slider
+ * vänster = sida A, höger = sida B. Förloraren matar in (vinnare + slider
  * → skicka), sedan bekräftar vinnaren — precis som i det riktiga spelet.
  */
 import { computed } from 'vue'
@@ -13,7 +13,7 @@ const props = defineProps<{ settle: SettleScript; elapsed: number }>()
 const { t } = useI18n()
 
 const SIDES: Side[] = ['vanster', 'hoger']
-const nameOf = (s: Side) => (s === 'vanster' ? 'VALV SYD' : 'VALV NORD')
+const nameOf = (s: Side) => (s === 'vanster' ? 'SIDA A' : 'SIDA B')
 
 const phase = computed<'negotiate' | 'enter' | 'confirm'>(() => {
   if (props.elapsed >= props.settle.confirmAt) return 'confirm'
@@ -43,7 +43,7 @@ function panelState(side: Side): 'enter' | 'confirm' | 'wait' {
 <template>
   <div class="settle">
     <div v-for="side in SIDES" :key="side" class="panel amber-frame">
-      <span class="panel__name" :class="side === 'vanster' ? 'is-syd' : 'is-nord'">{{ nameOf(side) }}</span>
+      <span class="panel__name" :class="side === 'vanster' ? 'is-a' : 'is-b'">{{ nameOf(side) }}</span>
 
       <!-- Förhandling pågår -->
       <template v-if="phase === 'negotiate' || panelState(side) === 'wait'">
@@ -57,11 +57,11 @@ function panelState(side: Side): 'enter' | 'confirm' | 'wait' {
           <span
             class="panel__choice"
             :class="{ 'panel__choice--sel': winnerChosen && settle.winnerSide === 'vanster' }"
-          >VALV SYD</span>
+          >SIDA A</span>
           <span
             class="panel__choice"
             :class="{ 'panel__choice--sel': winnerChosen && settle.winnerSide === 'hoger' }"
-          >VALV NORD</span>
+          >SIDA B</span>
         </div>
         <template v-if="winnerChosen">
           <div class="panel__price mono ink-strong">{{ sliderValue }} kr</div>
@@ -98,8 +98,8 @@ function panelState(side: Side): 'enter' | 'confirm' | 'wait' {
   text-align: center;
 }
 .panel__name { font-size: 1rem; letter-spacing: 0.05em; }
-.panel__name.is-syd { color: var(--color-primary); }
-.panel__name.is-nord { color: var(--color-primary); }
+.panel__name.is-a { color: var(--color-primary); }
+.panel__name.is-b { color: var(--color-primary); }
 .panel__hint { color: var(--color-ink-muted); font-size: 0.95rem; }
 .panel__q { color: var(--color-primary); font-size: 0.95rem; }
 .panel__choices { display: flex; gap: 0.4rem; }

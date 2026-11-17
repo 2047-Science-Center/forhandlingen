@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scen 1 · Stationen &amp; rollerna</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #141518; overflow: hidden; }
+  canvas { display: block; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<script type="module">
+// Scen 1 — Stationen & rollerna (A+B+C). ?spela-in = spela in ett varv, ?t=5 = frys tiden.
+import { THREE, PAL, DIM, ramp, makeStation, makeScreenTexture, makeCast, dim, tweenCamera, timeline, createStage } from './lib.js';
+
+const LOOP = 15;
+
+// Kamera: hög 3/4 över väggkanten (ser båda sidor) → push-in mot sändebuden → kranbåge över till rapportörerna.
+const cam = tweenCamera([
+  { at: 0.0,  pos: [2.75, 3.2, 2.55], look: [0, 0.95, 0] },                   // A: etablering (högt, ser över väggen)
+  { at: 3.0,  pos: [2.5, 2.95, 2.3], look: [0, 1.0, 0] },               //    långsam drift inåt
+  { at: 5.6,  pos: [2.75, 2.55, 1.0], look: [0.25, 1.15, 0] },             // B: push-in mot sändebuden
+  { at: 8.0,  pos: [2.6, 2.48, 0.92], look: [0.25, 1.15, 0] },
+  { at: 11.0, pos: [-2.75, 2.5, 0.75], look: [-0.45, 1.1, 0], via: [0.3, 4.2, 2.8] }, // C: båge över till rapportörerna
+  { at: 15.0, pos: [-2.55, 2.42, 0.68], look: [-0.45, 1.1, 0] },
+]);
+const stage = createStage({ name: 'forhandlingen-scen1-roller', loop: LOOP, warm: 1, camera: cam });
+const { scene } = stage;
+
+const station = makeStation({ screenTex: { A: makeScreenTexture('VALV SYD'), B: makeScreenTexture('VALV NORD') } });
+scene.add(station.group);
+
+// Figurer: 3 per sida (se makeCast i lib.js för placering/roller).
+const figs = makeCast(scene);
+const all = [...figs.sandebud, ...figs.rapportor];
+
+// diskreta händelser (idempotenta "sätt"-cues)
+const tl = timeline([
+  { at: 0, do: () => all.forEach(f => f.setSpeaking(false)) },
+]);
+
+stage.start((t, dt) => {
+  tl(t);
+  // A (0–3): alla svagt dimmade. B (3–8): sändebuden fram. C (8–14): rapportörerna fram.
+  const inB = ramp(t, 3.0, 4.0) * (1 - ramp(t, 8.0, 9.2));
+  const inC = ramp(t, 9.0, 10.2);
+  const sandDim = 0.35 * (1 - ramp(t, 3, 4)) + 0.75 * ramp(t, 8, 9.2);
+  const rapDim = 0.35 + 0.4 * ramp(t, 3, 4) - 0.75 * ramp(t, 9, 10.2);
+  figs.sandebud.forEach((f, i) => {
+    dim(f, sandDim); f.setGlow(inB);
+    f.gesture = inB * ramp(t, 3.6 + i * 0.25, 4.6 + i * 0.25) * 0.55;
+    f.update(t + i * 0.7, dt);
+  });
+  figs.rapportor.forEach((f, i) => {
+    dim(f, rapDim); f.setGlow(inC);
+    f.nod = inC;
+    f.update(t + i * 0.9, dt);
+  });
+  dim(station.group, 0.25 * ramp(t, 3, 4));
+  stage.setFade(1 - ramp(t, 0, 0.5) + ramp(t, 14.4, 15));
+});
+</script>
+</body>
+</html>

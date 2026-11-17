@@ -18,7 +18,7 @@ import NegotiateDemo from './NegotiateDemo.vue'
 const emit = defineEmits<{ next: [] }>()
 const { t } = useI18n()
 
-// KLIPP #2 (Alma / Valv Syd vinner). Byt här för att välja ett annat manus.
+// KLIPP #2 (Alma / sida A vinner). Byt här för att välja ett annat manus.
 const CLIP = 'B1'
 const script = NEGOTIATE_SCRIPTS[CLIP]
 // Klippets längd = sista manushändelsen + lite svans.
