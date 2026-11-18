@@ -163,8 +163,8 @@ export function makeScreenTexture(title) {
 }
 
 // ---------- Gubbe ----------
-// makeGubbe(color, {mic}) → { group, setGlow(0..1), setSpeaking(bool), setDim(0..1), gesture (0..1), update(t) }
-export function makeGubbe(color, { mic = false } = {}) {
+// makeGubbe(color, {mic, headset}) → { group, setGlow(0..1), setSpeaking(bool), setDim(0..1), setColor(c), gesture (0..1), update(t) }
+export function makeGubbe(color, { mic = false, headset = true } = {}) {
   const g = new THREE.Group();
   const base = new THREE.Color(color);
   const body = M(color, { roughness: 0.7, emissive: color, emissiveIntensity: 0 });
@@ -187,25 +187,26 @@ export function makeGubbe(color, { mic = false } = {}) {
     add(new THREE.CapsuleGeometry(0.04, 0.50, 4, 10), body, 0, -0.29, 0, piv);
     piv.rotation.z = sx * 0.08; arms.push(piv);
   }
-  // headset: bygel + två tjocka öronkåpor (alla bär)
-  const band = add(new THREE.TorusGeometry(0.122, 0.014, 8, 28, Math.PI), hs, 0, 0.01, 0, head);
+  // headset: bygel + två tjocka öronkåpor (valfritt: headset=false för stationer utan headset)
+  const hsGroup = new THREE.Group(); head.add(hsGroup); hsGroup.visible = headset;
+  const band = add(new THREE.TorusGeometry(0.122, 0.014, 8, 28, Math.PI), hs, 0, 0.01, 0, hsGroup);
   band.rotation.y = 0;
   for (const sx of [-1, 1]) {
-    const c = add(new THREE.CylinderGeometry(0.055, 0.055, 0.045, 20), cup, sx * 0.118, 0, 0, head);
+    const c = add(new THREE.CylinderGeometry(0.055, 0.055, 0.045, 20), cup, sx * 0.118, 0, 0, hsGroup);
     c.rotation.z = Math.PI / 2;
     // rollmarkering: rand i gubbens färg runt kåpan (som den fysiska tejpen på headseten)
-    const r = add(new THREE.TorusGeometry(0.047, 0.007, 8, 28), stripe, sx * 0.142, 0, 0, head);
+    const r = add(new THREE.TorusGeometry(0.047, 0.007, 8, 28), stripe, sx * 0.142, 0, 0, hsGroup);
     r.rotation.y = Math.PI / 2;
   }
   // rand längs bygeln
-  const bs = add(new THREE.TorusGeometry(0.134, 0.0045, 6, 28, Math.PI * 0.5), stripe, 0, 0.01, 0, head);
+  const bs = add(new THREE.TorusGeometry(0.134, 0.0045, 6, 28, Math.PI * 0.5), stripe, 0, 0.01, 0, hsGroup);
   bs.rotation.z = Math.PI * 0.25;
   // mik-bom (bara sändebud)
   let tip = null;
   if (mic) {
     const curve = new THREE.CatmullRomCurve3([V(0.13, -0.01, 0.01), V(0.12, -0.06, 0.07), V(0.07, -0.075, 0.115), V(0.03, -0.07, 0.125)]);
-    add(new THREE.TubeGeometry(curve, 20, 0.006, 6), hs, 0, 0, 0, head);
-    tip = add(new THREE.SphereGeometry(0.016, 12, 10), tipMat, 0.03, -0.07, 0.125, head);
+    add(new THREE.TubeGeometry(curve, 20, 0.006, 6), hs, 0, 0, 0, hsGroup);
+    tip = add(new THREE.SphereGeometry(0.016, 12, 10), tipMat, 0.03, -0.07, 0.125, hsGroup);
   }
   // ström ur munnen (setSpeaking): ringar som vandrar framåt och tonar ut
   const stream = new THREE.Group(); stream.position.set(0, -0.06, 0.11); head.add(stream);
@@ -224,6 +225,7 @@ export function makeGubbe(color, { mic = false } = {}) {
   const api = {
     group: g, head, arms, isGubbe: true,
     setGlow(v) { st.glow = clamp01(v); },
+    setColor(c) { base.set(c); body.emissive.set(c); halo.material.color.set(c); },
     setDim(v) { st.dim = clamp01(v); },
     setSpeaking(b) { st.speakingTarget = b ? 1 : 0; },
     set gesture(v) { st.gesture = v; }, get gesture() { return st.gesture; },

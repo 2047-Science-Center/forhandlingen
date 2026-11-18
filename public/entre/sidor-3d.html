@@ -3,19 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sidor A/B · 3D</title>
+<title>Så här ska ni stå · 3D</title>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #141518; }
   body.transparent { background: transparent; }
   canvas { display: block; }
   #tags { position: fixed; inset: 0; pointer-events: none; }
+  /* Namnskylt: stor nog att läsas på en 1080p-skärm på avstånd */
   .tag {
     position: absolute; transform: translate(-50%, -100%) scale(0.6); transform-origin: 50% 100%;
     opacity: 0; transition: opacity .35s ease, transform .45s cubic-bezier(.2,1.4,.4,1);
-    font: 700 clamp(14px, 3vmin, 30px) ui-monospace, Menlo, Consolas, monospace; letter-spacing: .04em;
-    color: #0d0e10; background: var(--c); padding: .3em .7em; border-radius: .7em; white-space: nowrap;
+    font: 700 clamp(16px, 3.3vmin, 46px) ui-monospace, Menlo, Consolas, monospace; letter-spacing: .03em;
+    color: #0d0e10; background: var(--c); padding: .28em .65em .32em; border-radius: .6em; white-space: nowrap;
+    text-align: center; line-height: 1.1;
     box-shadow: 0 0 14px color-mix(in srgb, var(--c) 55%, transparent);
   }
+  .tag small { display: block; font-size: .62em; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .78; margin-top: .12em; }
   .tag::after { /* pratbubble-svans */
     content: ''; position: absolute; left: 50%; bottom: -.45em; transform: translateX(-50%);
     border: .5em solid transparent; border-top-color: var(--c); border-bottom: 0;
@@ -34,26 +37,42 @@
 <body>
 <div id="tags"></div>
 <script type="module">
-// "Så här ska ni stå" — överblick av stationen med mellanväggen. Sida A till VÄNSTER,
-// sida B till HÖGER (som skärmens rollbilder). Gubbar per sida = antal namn (0–4),
-// var och en får en namnskylt som poppar upp i tur och ordning.
+// "Så här ska ni stå" — var varje elev står vid stationen (XY-PLATSER.md).
 //
-// URL:  ?a=Liam,Saga,Omar&b=Jonna,Maja&me=A|B&la=Labbtekniker&lb=Forensiker&bg=transparent
-// Live: window.postMessage({ type: 'xy-sidor', a: [...], b: [...], me, la, lb })
-import { THREE, makeStation, makeGubbe, dim, PAL } from './lib.js';
+// Två lägen:
+//   ANKOMST (startsidor): gruppens fasta halvor A/B (a, b). Sida A VÄNSTER, sida B HÖGER.
+//   PLATSER (efter rollvalet): figurer [{namn, titel, plats, farg}] på stationens rollplatser,
+//     namnskylt = namn + titel, gubbens färg = sidans/zonens färg, rekvisita per roll.
+// Byte av läge eller placering via postMessage → gubbarna GÅR till sina nya platser.
+//
+// URL (bakåtkompatibelt):  ?a=Liam,Saga,Omar&b=Jonna,Maja&me=A|B&la=…&lb=…&bg=transparent
+//   + station=forh|minne|unders|reaktor  lage=ankomst|platser
+//   + figurer=<JSON [{namn,titel,plats,farg}]>  farger=<JSON {A,B,puls,gyro,falt}>
+// Live: postMessage({ type: 'xy-sidor', station, lage, a, b, figurer, farger, me, la, lb })
+import { THREE, makeGubbe, dim, PAL, clamp01 } from './lib.js';
+import { STATIONS, STATION_ALIAS, makeProp, PROP_POSE } from './stationer.js';
 
 const q = new URLSearchParams(location.search);
 const list = s => (s || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 4);
+const json = (s, d) => { try { return s ? JSON.parse(s) : d; } catch { return d; } };
+
+// Färger: förslag (inte spikade, se XY-PLATSER "Ljus"). Får inte likna ljusblå/orange/lila.
+const DEFAULT_COLORS = { A: '#fff1d6', B: '#ff3cc8', puls: '#fff1d6', gyro: '#ff3cc8', falt: '#c6ff3c' };
+
 const state = {
+  station: 'forh', lage: '',
   a: list(q.get('a')), b: list(q.get('b')),
-  me: (q.get('me') || '').toUpperCase(),
+  figurer: json(q.get('figurer'), []),
+  farger: { ...DEFAULT_COLORS, ...json(q.get('farger'), {}) },
+  me: (q.get('me') || ''),
   la: q.get('la') || '', lb: q.get('lb') || '',
 };
+setStation(q.get('station'));
+state.lage = q.get('lage') || '';
 const TRANSPARENT = q.get('bg') === 'transparent';
 if (TRANSPARENT) document.body.classList.add('transparent');
-
-const COL = { A: 0xffb347, B: 0x7fd4ff };
-const CSS = { A: '#ffb347', B: '#7fd4ff' };
+function setStation(s) { const k = String(s || '').toLowerCase(); state.station = STATIONS[k] ? k : (STATION_ALIAS[k] || state.station || 'forh'); }
+const mode = () => state.lage === 'ankomst' ? 'ankomst' : state.lage === 'platser' ? 'platser' : (state.figurer.length ? 'platser' : 'ankomst');
 
 // ---------- renderer / scen ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: TRANSPARENT });
@@ -72,152 +91,311 @@ key.shadow.mapSize.set(2048, 2048);
 Object.assign(key.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 20 });
 scene.add(key);
 
-const floor = new THREE.Mesh(new THREE.CircleGeometry(4.2, 64),
+const floor = new THREE.Mesh(new THREE.CircleGeometry(4.4, 64),
   new THREE.MeshStandardMaterial({ color: PAL.floor, roughness: 1, transparent: TRANSPARENT, opacity: TRANSPARENT ? 0.85 : 1 }));
 floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true;
 scene.add(floor);
 
-const station = makeStation();
-scene.add(station.group);
+let stationGroup = null;
+const decor = new THREE.Group(); scene.add(decor); // golvmärkning (byggs om per läge/station)
 
-// ---------- golvmärkning: zon + stor bokstav + etikett per sida ----------
-function letterTex(letter, label, css) {
-  const c = document.createElement('canvas'); c.width = 512; c.height = 512;
+// ---------- golvmärkning ----------
+function labelTex(big, small, css) {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
   const g = c.getContext('2d');
   g.fillStyle = css; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.font = 'bold 300px ui-monospace, Menlo, Consolas, monospace';
-  g.fillText(letter, 256, label ? 220 : 256);
-  if (label) { g.font = 'bold 52px ui-monospace, Menlo, Consolas, monospace'; g.fillText(label.toUpperCase(), 256, 430); }
+  if (big) { g.font = 'bold 300px ui-monospace, Menlo, Consolas, monospace'; g.fillText(big, 512, small ? 210 : 256); }
+  if (small) { g.font = `bold ${big ? 64 : 96}px ui-monospace, Menlo, Consolas, monospace`; g.fillText(small.toUpperCase(), 512, big ? 430 : 256); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
   return t;
 }
-const sides = {};
-for (const [S, sz] of [['A', 1], ['B', -1]]) {
-  const zone = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 2.4),
-    new THREE.MeshBasicMaterial({ color: COL[S], transparent: true, opacity: 0.12, depthWrite: false }));
-  zone.rotation.x = -Math.PI / 2; zone.position.set(0.15, 0.003, sz * 1.65);
-  scene.add(zone);
-  const edge = new THREE.LineSegments(new THREE.EdgesGeometry(zone.geometry),
-    new THREE.LineBasicMaterial({ color: COL[S], transparent: true, opacity: 0.5 }));
-  edge.rotation.copy(zone.rotation); edge.position.copy(zone.position); edge.position.y += 0.001;
-  scene.add(edge);
-  const letterMat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false });
-  const letter = new THREE.Mesh(new THREE.PlaneGeometry(1.25, 1.25), letterMat);
-  // liggande på golvet, läsbar från kameran (som står på +X och tittar mot −X)
-  letter.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
-  letter.position.set(1.05, 0.006, sz * 1.65);
-  scene.add(letter);
-  sides[S] = { sz, zone, edge, letter, letterMat, people: [] };
+const zoneMeshes = {}; // zon-id → { zone, edge, label, mats }
+const slotRings = [];  // { mesh, mat, pattern, zoneId }
+function floorLabel(tex, w, x, z) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w / 2), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false }));
+  m.rotation.set(-Math.PI / 2, 0, Math.PI / 2); // läsbar från kameran på +X
+  m.position.set(x, 0.006, z); decor.add(m); return m;
 }
-function setLabels() {
-  for (const S of ['A', 'B']) {
-    const s = sides[S];
-    s.letterMat.map?.dispose();
-    s.letterMat.map = letterTex(S, S === 'A' ? state.la : state.lb, CSS[S]);
-    s.letterMat.needsUpdate = true;
+function zonePatch(id, cx, cz, w, d, colorHex) {
+  const col = new THREE.Color(colorHex);
+  const zone = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.12, depthWrite: false }));
+  zone.rotation.x = -Math.PI / 2; zone.position.set(cx, 0.003, cz); decor.add(zone);
+  const edge = new THREE.LineSegments(new THREE.EdgesGeometry(zone.geometry), new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.5 }));
+  edge.rotation.copy(zone.rotation); edge.position.copy(zone.position); edge.position.y += 0.001; decor.add(edge);
+  return { zone, edge };
+}
+function buildDecor() {
+  decor.children.slice().forEach(o => { decor.remove(o); o.geometry?.dispose(); o.material?.map?.dispose(); o.material?.dispose(); });
+  for (const k in zoneMeshes) delete zoneMeshes[k];
+  slotRings.length = 0;
+  const st = STATIONS[state.station];
+  if (mode() === 'ankomst') {
+    // startsidor A/B: zon + stor bokstav (+ etikett la/lb)
+    for (const S of ['A', 'B']) {
+      const sz = S === 'A' ? 1 : -1;
+      const q0 = st.arrival[S];
+      const cz = (q0[0][1] + q0[3][1]) / 2;
+      const p = zonePatch(S, 0.15, cz, 2.3, 2.4, state.farger[S]);
+      const label = floorLabel(labelTex(S, S === 'A' ? state.la : state.lb, state.farger[S]), 2.4, 1.05, cz);
+      zoneMeshes[S] = { ...p, label, side: S };
+    }
+  } else {
+    // rollzoner + etikett + lysande platsringar för de platser som är tagna
+    for (const [id, z] of Object.entries(st.zones)) {
+      const col = state.farger[id] || state.farger[z.side] || '#ffffff';
+      if (z.around) {
+        // fältteknikerna: en zon på varje långsida
+        const pa = zonePatch(id, z.w / 2 - 0.25, 0, 0.5, z.d, col);
+        const pb = zonePatch(id, -(z.w / 2 - 0.25), 0, 0.5, z.d, col);
+        const label = floorLabel(labelTex('', z.label, col), 1.6, 1.25, 0);
+        zoneMeshes[id] = { zone: pa.zone, edge: pa.edge, extra: [pb.zone, pb.edge], label, side: z.side || id };
+      } else {
+        const p = zonePatch(id, z.cx, z.cz, z.w, z.d, col);
+        const label = floorLabel(labelTex('', z.label, col), 1.6, z.cx + z.w / 2 + 0.25, z.cz);
+        zoneMeshes[id] = { ...p, label, side: z.side || id };
+      }
+    }
   }
 }
+function addSlotRing(x, z, colorHex, pattern, zoneId) {
+  const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(colorHex), transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false });
+  const mesh = new THREE.Mesh(new THREE.RingGeometry(0.24, 0.3, 40), mat);
+  mesh.rotation.x = -Math.PI / 2; mesh.position.set(x, 0.008, z); decor.add(mesh);
+  slotRings.push({ mesh, mat, pattern, zoneId });
+}
 
-// ---------- gubbar ----------
-// Kö ut från konsolen (vinkelrätt mot väggen), lätt förskjutna i sidled → alla syns
-// snett uppifrån; vända mot väggen/konsolen.
-const SLOT_Z = [0.95, 1.42, 1.89, 2.36];
-const SLOT_X = [-0.05, 0.28, -0.22, 0.24];
+// ---------- placering: figurer → mål (position, riktning, färg, titel, rekvisita) ----------
+function resolvePlacements() {
+  const st = STATIONS[state.station];
+  const out = [];
+  if (mode() === 'ankomst') {
+    for (const S of ['A', 'B']) {
+      (S === 'A' ? state.a : state.b).forEach((namn, i) => {
+        const [x, z, fx, fz] = st.arrival[S][i];
+        out.push({ namn, titel: '', x, z, fx, fz, color: state.farger[S], side: S, zoneId: S, role: null });
+      });
+    }
+    return out;
+  }
+  const used = {};
+  for (const f of state.figurer) {
+    if (!f || !f.namn) continue;
+    let plats = String(f.plats || '');
+    const role = st.roles[plats] || st.roles[Object.keys(st.roles).find(k => k.toLowerCase() === plats.toLowerCase())];
+    if (!role) continue; // okänd plats → hoppa över (rapporteras i konsolen)
+    const k = used[plats] = (used[plats] || 0) + 1;
+    let slot = role.slots[k - 1];
+    if (!slot) { // fler än platserna → ställ dem bakom sista platsen
+      const last = role.slots[role.slots.length - 1];
+      const extra = k - role.slots.length;
+      const away = Math.sign(last[1] - last[3] || last[0] - last[2] || 1);
+      slot = Math.abs(last[1] - last[3]) >= Math.abs(last[0] - last[2])
+        ? [last[0] + (extra % 2 ? 0.45 : -0.45) * Math.ceil(extra / 2) * 0.5, last[1] + away * 0.45 * Math.ceil(extra / 2), last[2], last[3]]
+        : [last[0] + away * 0.45 * extra, last[1], last[2], last[3]];
+    }
+    const zone = st.zones[role.zone];
+    const color = f.farg || state.farger[role.zone] || state.farger[zone?.side] || '#ffffff';
+    out.push({ namn: String(f.namn), titel: f.titel || role.title, x: slot[0], z: slot[1], fx: slot[2], fz: slot[3], color, side: zone?.side || role.zone, zoneId: role.zone, role });
+  }
+  const unknown = state.figurer.filter(f => f && f.namn && !STATIONS[state.station].roles[f.plats]).map(f => `${f.namn}:${f.plats}`);
+  if (unknown.length) console.warn('[sidor-3d] okänd plats:', unknown.join(', '), '· giltiga:', Object.keys(st.roles).join(', '));
+  return out;
+}
+
+// ---------- gubbar (behålls per namn → går mellan platser) ----------
 const tagsEl = document.getElementById('tags');
-const all = [];
-function build() {
-  for (const p of all) { scene.remove(p.g.group); p.tag.remove(); }
-  all.length = 0;
+const people = new Map(); // namn → person
+function makePerson(p) {
+  const g = makeGubbe(p.color, { mic: !!p.role?.mic, headset: !!p.role?.headset });
+  g.group.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  g.group.position.set(p.x, 0, p.z);
+  scene.add(g.group);
+  const tag = document.createElement('div'); tag.className = 'tag'; tagsEl.appendChild(tag);
+  return { g, tag, pos: new THREE.Vector3(p.x, 0, p.z), yaw: Math.atan2(p.fx - p.x, p.fz - p.z), prop: null, propKind: null, colorNow: new THREE.Color(p.color), headset: !!p.role?.headset, mic: !!p.role?.mic };
+}
+function apply() {
+  const next = resolvePlacements();
+  const keep = new Set(next.map(p => p.namn));
+  // borttagna försvinner
+  for (const [namn, person] of people) if (!keep.has(namn)) { scene.remove(person.g.group); person.tag.remove(); people.delete(namn); }
+  buildDecor();
   let order = 0;
-  for (const S of ['A', 'B']) {
-    const s = sides[S];
-    s.people = (S === 'A' ? state.a : state.b).map((name, i) => {
-      const g = makeGubbe(0xeeeeee);
-      g.group.position.set(SLOT_X[i], 0, s.sz * SLOT_Z[i]);
-      g.group.rotation.y = s.sz > 0 ? Math.PI : 0; // vänd mot väggen
-      g.group.traverse(o => { if (o.isMesh) o.castShadow = true; });
-      scene.add(g.group);
-      const tag = document.createElement('div');
-      tag.className = 'tag'; tag.textContent = name; tag.style.setProperty('--c', CSS[S]);
-      tagsEl.appendChild(tag);
-      const p = { g, tag, side: S, i, appearAt: 0.5 + 0.45 * order++ };
-      all.push(p);
-      return p;
+  const t = performance.now() / 1000;
+  for (const p of next) {
+    let person = people.get(p.namn);
+    // headset/mik ändras bara när gubben byggs → bygg om om behovet ändrats
+    if (person && (person.headset !== !!p.role?.headset || person.mic !== !!p.role?.mic)) {
+      const pos = person.pos.clone(), yaw = person.yaw;
+      scene.remove(person.g.group); person.tag.remove(); people.delete(p.namn);
+      person = makePerson({ ...p, x: pos.x, z: pos.z }); person.yaw = yaw; people.set(p.namn, person);
+    }
+    if (!person) { person = makePerson(p); people.set(p.namn, person); }
+    Object.assign(person, {
+      target: new THREE.Vector3(p.x, 0, p.z), face: new THREE.Vector2(p.fx, p.fz),
+      colorTarget: new THREE.Color(p.color), side: p.side, zoneId: p.zoneId, idx: order,
+      appearAt: t + 0.5 + 0.4 * order++,
     });
+    person.tag.style.setProperty('--c', p.color);
+    person.tag.innerHTML = '';
+    person.tag.append(p.namn);
+    if (p.titel) { const s = document.createElement('small'); s.textContent = p.titel; person.tag.append(s); }
+    person.tag.classList.remove('on');
+    // rekvisita
+    const kind = p.role?.prop || null;
+    if (kind !== person.propKind) {
+      if (person.prop) person.prop.parent?.remove(person.prop);
+      person.prop = null; person.propKind = kind;
+      if (kind && !['puls', 'gyro'].includes(kind)) {
+        person.prop = makeProp(kind); person.prop.position.set(0, -0.56, 0);
+        person.g.arms[1].add(person.prop);
+      }
+    }
+    if (p.role) addSlotRing(p.x, p.z, p.color, p.role.pattern || 'static', p.zoneId);
   }
-  t0 = performance.now();
+  applyMe();
 }
 
-// ---------- egen sida ljus, andra dämpad ----------
+// ---------- egen sida/zon ljus, övriga dämpade ----------
+function isOther(sideOrZone, zoneId) {
+  if (!state.me) return false;
+  const me = state.me.toLowerCase();
+  return me !== String(sideOrZone).toLowerCase() && me !== String(zoneId).toLowerCase();
+}
 function applyMe() {
-  for (const S of ['A', 'B']) {
-    const other = state.me && state.me !== S;
-    const s = sides[S];
-    s.zone.material.opacity = other ? 0.05 : state.me === S ? 0.22 : 0.12;
-    s.edge.material.opacity = other ? 0.2 : 0.6;
-    s.letterMat.opacity = other ? 0.45 : 1;
-    for (const p of s.people) { p.g.setDim(other ? 0.55 : 0); p.g.setGlow(state.me === S ? 0.35 : 0); }
+  for (const [id, z] of Object.entries(zoneMeshes)) {
+    const other = isOther(z.side, id), mine = !!state.me && !other;
+    for (const m of [z.zone, ...(z.extra || []).filter(o => o.isMesh)]) m.material.opacity = other ? 0.05 : mine ? 0.22 : 0.12;
+    for (const e of [z.edge, ...(z.extra || []).filter(o => o.isLineSegments)]) e.material.opacity = other ? 0.2 : 0.6;
+    z.label.material.opacity = other ? 0.45 : 1;
   }
-  dim(station, state.me ? 0.15 : 0);
+  for (const person of people.values()) {
+    const other = isOther(person.side, person.zoneId);
+    person.g.setDim(other ? 0.55 : 0);
+    person.g.setGlow(state.me && !other ? 0.35 : 0);
+  }
+  if (stationGroup) dim({ group: stationGroup }, state.me ? 0.15 : 0);
 }
 
-function update(next) {
-  if (next.a) state.a = [].concat(next.a).map(String).filter(Boolean).slice(0, 4);
-  if (next.b) state.b = [].concat(next.b).map(String).filter(Boolean).slice(0, 4);
-  if ('me' in next) state.me = String(next.me || '').toUpperCase();
-  if ('la' in next) state.la = next.la || '';
-  if ('lb' in next) state.lb = next.lb || '';
-  setLabels(); build(); applyMe();
+// ---------- station ----------
+let currentStation = null;
+function ensureStation() {
+  if (currentStation === state.station) return;
+  if (stationGroup) scene.remove(stationGroup);
+  stationGroup = STATIONS[state.station].build();
+  stationGroup.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  scene.add(stationGroup);
+  currentStation = state.station;
+}
+
+// ---------- uppdatering (URL + postMessage) ----------
+function update(n) {
+  if ('station' in n) setStation(n.station);
+  if ('lage' in n) state.lage = n.lage || '';
+  if (n.a) state.a = [].concat(n.a).map(String).filter(Boolean).slice(0, 4);
+  if (n.b) state.b = [].concat(n.b).map(String).filter(Boolean).slice(0, 4);
+  if (n.figurer) state.figurer = [].concat(n.figurer).filter(Boolean);
+  if (n.farger) state.farger = { ...state.farger, ...n.farger };
+  if ('me' in n) state.me = String(n.me || '');
+  if ('la' in n) state.la = n.la || '';
+  if ('lb' in n) state.lb = n.lb || '';
+  ensureStation(); apply();
 }
 addEventListener('message', e => { if (e.data && e.data.type === 'xy-sidor') update(e.data); });
 
 // ---------- kamera: snett uppifrån från +X (A vänster, B höger), svag rörelse ----------
-const target = new THREE.Vector3(0.1, 0.75, 0);
+const tgt = new THREE.Vector3();
 function cam(t) {
-  // lätt snett (väggen syns som yta, inte bara kant) + svag pendel
+  const c = STATIONS[state.station].cam;
+  tgt.set(...c.target);
   const yaw = -0.32 + 0.07 * Math.sin(t * 2 * Math.PI / 16);
-  // smalare ram → backa ut så att båda sidor (upp till 4 + 4) får plats
-  const fitK = Math.max(1, 1.75 / camera.aspect)
-  const r = 5.6 * fitK, h = (3.9 + 0.12 * Math.sin(t * 2 * Math.PI / 21)) * Math.sqrt(fitK);
-  camera.position.set(Math.cos(yaw) * r, h, Math.sin(yaw) * r);
-  camera.lookAt(target);
+  const fitK = Math.max(1, 1.75 / camera.aspect); // smal ram → backa ut så allt får plats
+  const r = c.r * fitK, h = (c.h + 0.12 * Math.sin(t * 2 * Math.PI / 21)) * Math.sqrt(fitK);
+  camera.position.set(tgt.x + Math.cos(yaw) * r, h, tgt.z + Math.sin(yaw) * r);
+  camera.lookAt(tgt);
 }
-
 function resize() {
-  const w = innerWidth, h = innerHeight;
-  renderer.setSize(w, h);
-  camera.aspect = w / h;
-  camera.fov = 34;
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize);
 resize();
 
-let t0 = performance.now();
-const _v = new THREE.Vector3();
+// ---------- loop: gång, färgövergång, armpose, skyltar ----------
+const _v = new THREE.Vector3(), _d = new THREE.Vector3();
 let last = performance.now();
+const WALK = 0.9; // m/s
 function loop(now) {
   const t = now / 1000, dt = Math.min(0.05, (now - last) / 1000); last = now;
-  const since = (now - t0) / 1000;
   cam(t);
-  for (const p of all) {
-    p.g.update(t + p.i, dt);
-    // namnskylt ovanför huvudet
-    _v.set(0, 2.0, 0).applyMatrix4(p.g.group.matrixWorld).project(camera);
-    p.tag.style.left = ((_v.x + 1) / 2 * innerWidth) + 'px';
-    p.tag.style.top = ((1 - _v.y) / 2 * innerHeight) + 'px';
-    const on = since >= p.appearAt;
-    p.tag.classList.toggle('on', on);
-    p.tag.classList.toggle('dim', on && !!state.me && state.me !== p.side);
-    // liten nick när skylten dyker upp ("okej, jag står på sida A")
-    const k = since - p.appearAt;
-    p.g.nod = k > 0 && k < 1.2 ? 1 : 0;
+  for (const person of people.values()) {
+    const g = person.g;
+    // gå mot målet
+    _d.subVectors(person.target, person.pos);
+    const dist = _d.length();
+    let walking = 0;
+    if (dist > 0.01) {
+      const step = Math.min(dist, WALK * dt);
+      person.pos.addScaledVector(_d.normalize(), step);
+      walking = clamp01(dist / 0.15);
+      const want = Math.atan2(_d.x, _d.z);
+      person.yaw += Math.atan2(Math.sin(want - person.yaw), Math.cos(want - person.yaw)) * Math.min(1, dt * 8);
+    } else {
+      const want = Math.atan2(person.face.x - person.pos.x, person.face.y - person.pos.z);
+      person.yaw += Math.atan2(Math.sin(want - person.yaw), Math.cos(want - person.yaw)) * Math.min(1, dt * 5);
+    }
+    const bob = walking * Math.abs(Math.sin(t * 9)) * 0.03;
+    g.group.position.set(person.pos.x, bob, person.pos.z);
+    g.group.rotation.y = person.yaw;
+    // färg glider mot zonens färg
+    person.colorNow.lerp(person.colorTarget, Math.min(1, dt * 3));
+    g.setColor(person.colorNow);
+    g.update(t + person.idx, dt);
+    // armar: gång-sväng eller rekvisitans hållning
+    const pose = PROP_POSE[person.propKind];
+    const swing = Math.sin(t * 9) * 0.4 * walking;
+    if (pose && !walking) {
+      g.arms[1].rotation.set(pose[0], 0, pose[1]); g.arms[0].rotation.set(pose[2], 0, pose[3]);
+    } else {
+      g.arms[1].rotation.set(swing, 0, 0.08); g.arms[0].rotation.set(-swing, 0, -0.08);
+    }
+    if (person.prop) person.prop.visible = !walking;
+    // namnskylt ovanför huvudet (krockar löses efter loopen)
+    _v.set(0, 2.0, 0).applyMatrix4(g.group.matrixWorld).project(camera);
+    person.sx = (_v.x + 1) / 2 * innerWidth;
+    person.sy = (1 - _v.y) / 2 * innerHeight;
+    const on = t >= person.appearAt && dist < 0.3;
+    person.tag.classList.toggle('on', on);
+    person.tag.classList.toggle('dim', on && isOther(person.side, person.zoneId));
+    const k = t - person.appearAt;
+    g.nod = k > 0 && k < 1.2 && dist < 0.05 ? 1 : 0;
+  }
+  // namnskyltar: flytta upp skyltar som skulle hamna ovanpå varandra
+  const placed = [];
+  for (const person of [...people.values()].sort((p1, p2) => p2.sy - p1.sy)) {
+    const w = person.tag.offsetWidth || 120, h = person.tag.offsetHeight || 40;
+    let y = person.sy;
+    for (let guard = 0; guard < 8; guard++) {
+      const hit = placed.find(r => Math.abs(r.x - person.sx) < (r.w + w) / 2 + 4 && y > r.y - r.h - 4 && y - h < r.y + 4);
+      if (!hit) break;
+      y = hit.y - hit.h - 6;
+    }
+    placed.push({ x: person.sx, y, w, h });
+    person.tag.style.left = person.sx + 'px';
+    person.tag.style.top = y + 'px';
+  }
+  // platsringar: mönster (puls = t.ex. sändebudets plats)
+  for (const r of slotRings) {
+    const other = isOther(STATIONS[state.station].zones[r.zoneId]?.side, r.zoneId);
+    const base = r.pattern === 'puls' ? 0.45 + 0.45 * (0.5 + 0.5 * Math.sin(t * 4)) : r.pattern === 'blink' ? (Math.sin(t * 6) > 0 ? 0.9 : 0.2) : 0.75;
+    r.mat.opacity = base * (other ? 0.35 : 1);
   }
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
 }
-setLabels(); build(); applyMe();
+ensureStation(); apply();
 requestAnimationFrame(loop);
+window.__sidor = { state, update, STATIONS }; // debug
 </script>
 </body>
 </html>

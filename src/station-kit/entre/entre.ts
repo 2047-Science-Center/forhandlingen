@@ -2,7 +2,7 @@
  * Entrén — tillståndsmaskin (Lager A, IDENTISK i alla X&Y-stationer). Ett modul-globalt
  * tillstånd per flik/skärm. Se types.ts för flödet och kontraktet.
  *
- *   attract ──start()──▶ rollval ──clipsDone()──▶ valet ──(alla röstat)──▶ vantar ─▶ utfall ──finish()──▶ klar
+ *   attract ──start()──▶ ankomst ──arrived()──▶ rollval ──clipsDone()──▶ valet ──(alla röstat)──▶ vantar ─▶ utfall ──finish()──▶ klar
  *
  * Koppla in i en station (samma i alla appar):
  *   1. initEntre({ stationN, config, mqttUrl }) en gång vid start (efter initRotation).
@@ -18,7 +18,7 @@
 import { computed, reactive, readonly, watch } from 'vue'
 import mqtt from 'mqtt'
 import { useRotation } from '../rotation/rotation'
-import { normUid, rebalance, seededRng, splitBySide, voteFromTopic } from './logic'
+import { normUid, place, seededRng, splitBySide, voteFromTopic } from './logic'
 import type {
   EntreConfig,
   EntreMember,
@@ -31,7 +31,7 @@ import type {
   VoteMode,
 } from './types'
 
-export type EntreStep = 'attract' | 'rollval' | 'valet' | 'vantar' | 'utfall' | 'klar'
+export type EntreStep = 'attract' | 'ankomst' | 'rollval' | 'valet' | 'vantar' | 'utfall' | 'klar'
 
 interface Msg {
   kind: string
@@ -82,8 +82,14 @@ const runKey = computed(() => {
   return `${r.sessionId ?? '-'}:${r.round}:${r.group}`
 })
 
-/** Röstnings-sidindelningen (skärm-läget). Deterministisk → båda skärmarna får samma. */
-const voteSides = computed(() => splitBySide(members.value, runKey.value))
+/** Startsidornas seed: session:grupp UTAN runda → samma halvor vid alla stationer (XY-PLATSER). */
+const startKey = computed(() => {
+  const r = rotation.state
+  if (r.phase === 'off' || r.group == null) return 'pilot'
+  return `${r.sessionId ?? '-'}:${r.group}`
+})
+/** Startsidorna (fasta halvor; medlemmens `startsida` går före). Deterministisk → alla skärmar får samma. */
+const voteSides = computed(() => splitBySide(members.value, startKey.value))
 
 /** De som röstar på DEN HÄR skärmen i skärm-läget. */
 const myVoters = computed<EntreMember[]>(() =>
@@ -132,7 +138,7 @@ function resolve(): void {
     send('entre:force', { run: state.run })
     return
   }
-  const personer = rebalance(members.value, state.votes, cfg().roles, rngFactory(state.run), state.voteMode === 'skarm' ? voteSides.value : {})
+  const personer = place(members.value, state.votes, cfg(), voteSides.value, rngFactory(state.run))
   setResult(personer)
   send('entre:result', { run: state.run, personer })
 }
@@ -214,13 +220,19 @@ function pickClipSet(): number {
   }
 }
 
-/** Touch på attract → (rotationens begin) → rollval-klippen eller direkt valet. */
+/** Touch på attract → (rotationens begin) → ankomsten (startsidorna i 3D). */
 function start(): void {
   if (state.step !== 'attract') return
   // Rotationen väntar på regi / står i lek → overlayen äger skärmen, ingen start.
   if (rotation.state.phase === 'waiting' || rotation.state.phase === 'lek') return
   if (rotation.state.phase === 'group') rotation.begin()
   state.clipSet = pickClipSet()
+  state.step = 'ankomst'
+}
+
+/** Gruppen står på sina startsidor → rollval-klippen eller direkt valet. */
+function arrived(): void {
+  if (state.step !== 'ankomst') return
   state.step = cfg().clips === false ? 'valet' : 'rollval'
   if (state.step === 'valet') enterValet()
 }
@@ -262,8 +274,8 @@ function finish(): void {
 
 /** Facilitator: hoppa över valet (lotta alla som inte valt). */
 function skipVote(): void {
-  if (state.step === 'rollval' || state.step === 'valet' || state.step === 'vantar') {
-    if (state.step === 'rollval') state.step = 'vantar'
+  if (state.step === 'ankomst' || state.step === 'rollval' || state.step === 'valet' || state.step === 'vantar') {
+    if (state.step === 'ankomst' || state.step === 'rollval') state.step = 'vantar'
     resolve()
   }
 }
@@ -314,6 +326,7 @@ const api = {
   /** Resultatet till appen (tom tills lottningen är gjord). */
   personer: computed<EntrePerson[]>(() => state.result ?? []),
   start,
+  arrived,
   clipsDone,
   showQuestion,
   vote,

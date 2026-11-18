@@ -1,11 +1,12 @@
 /**
- * Entrén — ren logik (ingen Vue, ingen MQTT): sidindelning, platser, ombalansering.
+ * Entrén — ren logik (ingen Vue, ingen MQTT): startsidor, placering enligt XY-PLATSER.
  * Testas i entre.test.ts. IDENTISK i alla X&Y-stationer.
  */
 import type {
+  EntreConfig,
   EntreMember,
   EntrePerson,
-  EntreRole,
+  EntreSubRole,
   GenderKey,
   RoleLetter,
   SideId,
@@ -56,46 +57,40 @@ export function shuffle<T>(list: readonly T[], rng: () => number): T[] {
 }
 
 /**
- * Röstnings-sidindelning (bara skärm-läget): dela gruppen på sida A/B så att
- * varje sida får lika många killar och lika många tjejer (±1), och sidorna lika
- * stora (±1). DETERMINISTISK ur `seed` + band_id → stationens båda skärmar räknar
- * fram exakt samma delning utan att prata med varandra.
+ * STARTSIDOR (XY-PLATSER): gruppens fasta halvor A/B, samma vid alla stationer.
+ * Medlemmar med `startsida` (klasslista-importen) behåller den; övriga fördelas så att
+ * varje sida får lika många killar och tjejer (±1) och sidorna blir lika stora (±1).
+ * DETERMINISTISK ur `seed` (= session:grupp, utan runda) + band_id → samma tre står på
+ * samma sida vid varje station, och stationens skärmar räknar fram samma indelning.
  */
 export function splitBySide(members: readonly EntreMember[], seed: string): Record<string, SideId> {
-  const order = (m: EntreMember) => hashStr(`${seed}|${m.band_id}`)
-  const bucket = (k: GenderKey) =>
-    members
-      .filter((m) => normGender(m.gender) === k)
-      .sort((a, b) => order(a) - order(b) || a.band_id.localeCompare(b.band_id))
   const out: Record<string, SideId> = {}
-  const count = { A: 0, B: 0 }
-  // Killar och tjejer turas om mellan sidorna; varje könsgrupp börjar på den sida
-  // som just nu är minst (så en udda kille vägs upp av en udda tjej på andra sidan).
+  const total = { A: 0, B: 0 }
+  const byGender: Record<GenderKey, { A: number; B: number }> = { m: { A: 0, B: 0 }, f: { A: 0, B: 0 }, x: { A: 0, B: 0 } }
+  const put = (m: EntreMember, side: SideId) => {
+    out[m.band_id] = side
+    total[side]++
+    byGender[normGender(m.gender)][side]++
+  }
+  for (const m of members) if (m.startsida === 'A' || m.startsida === 'B') put(m, m.startsida)
+  const order = (m: EntreMember) => hashStr(`${seed}|${m.band_id}`)
   for (const k of ['m', 'f', 'x'] as GenderKey[]) {
-    const list = bucket(k)
-    let side: SideId = count.A <= count.B ? 'A' : 'B'
-    if (k === 'x') {
-      for (const m of list) {
-        side = count.A <= count.B ? 'A' : 'B'
-        out[m.band_id] = side
-        count[side]++
-      }
-      continue
-    }
+    const list = members
+      .filter((m) => !out[m.band_id] && normGender(m.gender) === k)
+      .sort((a, b) => order(a) - order(b) || a.band_id.localeCompare(b.band_id))
     for (const m of list) {
-      out[m.band_id] = side
-      count[side]++
-      side = side === 'A' ? 'B' : 'A'
+      const g = byGender[k]
+      const side: SideId =
+        k !== 'x' && g.A !== g.B ? (g.A < g.B ? 'A' : 'B') : total.A !== total.B ? (total.A < total.B ? 'A' : 'B') : 'A'
+      put(m, side)
     }
   }
   return out
 }
 
 /**
- * Fördela `n` platser över hinkar med vikter (största-resten-metoden).
- * Lika vikter → hinkarna skiljer sig med högst en plats (5 → 3+2, 7 → 4+3).
- * Ett överskott vid lika rest går till hinken med flest `prefer` (t.ex. röster),
- * sedan till den första.
+ * Fördela `n` platser över hinkar med vikter (största-resten-metoden). Lika vikter →
+ * hinkarna skiljer sig med högst en plats. Kvar som hjälpfunktion (används inte av place()).
  */
 export function allocate(n: number, weights: readonly number[], prefer: readonly number[] = []): number[] {
   const total = weights.reduce((a, w) => a + Math.max(0, w), 0)
@@ -114,81 +109,125 @@ export function allocate(n: number, weights: readonly number[], prefer: readonly
   return out
 }
 
-function roleSide(role: EntreRole): SideId | null {
-  return role.side === undefined ? role.letter : role.side
+const other = (l: RoleLetter): RoleLetter => (l === 'A' ? 'B' : 'A')
+
+/**
+ * Balansera ETT antal personer mellan roll A och B inom gränserna [lo, hi] för A.
+ * Flyttar först dem som inte valt rollen de står i (de som inte röstat), sedan slump bland de andra.
+ * Önskemålet (chosen) rörs aldrig — bara tilldelningen.
+ */
+function clampRoles(
+  people: readonly EntreMember[],
+  assigned: Record<string, RoleLetter>,
+  chosen: (m: EntreMember) => RoleLetter | null,
+  lo: number,
+  hi: number,
+  rng: () => number,
+): void {
+  const inRole = (l: RoleLetter) => people.filter((m) => assigned[m.band_id] === l)
+  const move = (from: RoleLetter) => {
+    const pool = shuffle(inRole(from), rng)
+    const pick = pool.find((m) => chosen(m) !== from) ?? pool[0]
+    if (pick) assigned[pick.band_id] = other(from)
+  }
+  let guard = people.length * 2
+  while (inRole('A').length > hi && guard-- > 0) move('A')
+  while (inRole('A').length < lo && guard-- > 0) move('B')
 }
 
 /**
- * Ombalansering + lottning. Varje roll har platser (vikt, default 3 av 6, skalat
- * till gruppstorleken). Väljer fler en roll än det finns platser lottas
- * överskottet till den andra rollen; de som inte valt fyller lediga platser.
- * Underroller lottas sedan inom sin roll. Resultatet i medlemmarnas ordning.
+ * PLACERING (XY-PLATSER): önskemål → roll + rollsida + 3D-plats + titel, enligt stationens regler.
+ *  'roll-ar-sida':   rollen = sidan; 6 personer → 3+3; annars önskemålen inom min/max per roll.
+ *  'roll-inom-sida': sidan = startsidan; inom varje sida minst `min` av varje roll (om sidan rymmer det).
+ * Underroller slumpas inom rollen (fasta platser först, sedan resten). chosen_role sparas oförändrat.
  */
-export function rebalance(
+export function place(
   members: readonly EntreMember[],
   votes: Readonly<Record<string, RoleLetter>>,
-  roles: readonly [EntreRole, EntreRole],
+  cfg: Pick<EntreConfig, 'roles' | 'placement'>,
+  startSides: Readonly<Record<string, SideId>>,
   rng: () => number,
-  voteSides: Readonly<Record<string, SideId>> = {},
 ): EntrePerson[] {
-  const letters: RoleLetter[] = [roles[0].letter, roles[1].letter]
+  const roles = cfg.roles
+  const role = (l: RoleLetter) => (roles[0].letter === l ? roles[0] : roles[1])
   const chosen = (m: EntreMember): RoleLetter | null => {
     const v = votes[m.band_id]
     return v === 'A' || v === 'B' ? v : null
   }
-  const voters = letters.map((l) => members.filter((m) => chosen(m) === l))
-  const slots = allocate(
-    members.length,
-    roles.map((r) => r.weight ?? 3),
-    voters.map((v) => v.length),
-  )
-
   const assigned: Record<string, RoleLetter> = {}
-  const pool: EntreMember[] = members.filter((m) => chosen(m) === null)
-  letters.forEach((l, i) => {
-    const lucky = shuffle(voters[i], rng)
-    lucky.slice(0, slots[i]).forEach((m) => (assigned[m.band_id] = l))
-    pool.push(...lucky.slice(slots[i]))
-  })
-  const free = letters.map((l, i) => slots[i] - Object.values(assigned).filter((a) => a === l).length)
-  for (const m of shuffle(pool, rng)) {
-    const i = free[0] > 0 ? 0 : 1
-    assigned[m.band_id] = letters[i]
-    free[i]--
+  const assignWishes = (people: readonly EntreMember[]) => {
+    for (const m of people) {
+      const c = chosen(m)
+      if (c) assigned[m.band_id] = c
+    }
+    // De som inte valt fyller den roll som har minst folk.
+    for (const m of shuffle(people.filter((x) => !chosen(x)), rng)) {
+      const a = people.filter((x) => assigned[x.band_id] === 'A').length
+      const b = people.filter((x) => assigned[x.band_id] === 'B').length
+      assigned[m.band_id] = a <= b ? 'A' : 'B'
+    }
+  }
+  const inomSida = cfg.placement === 'roll-inom-sida'
+  const sideOf = (m: EntreMember): SideId => startSides[m.band_id] ?? 'A'
+
+  if (inomSida) {
+    for (const side of ['A', 'B'] as SideId[]) {
+      const group = members.filter((m) => sideOf(m) === side)
+      assignWishes(group)
+      const minA = role('A').min ?? 0
+      const minB = role('B').min ?? 0
+      if (group.length >= minA + minB) {
+        const hi = Math.min(role('A').max ?? group.length, group.length - minB)
+        clampRoles(group, assigned, chosen, minA, hi, rng)
+      }
+    }
+  } else {
+    assignWishes(members)
+    const n = members.length
+    const A = role('A')
+    const B = role('B')
+    let lo = Math.max(A.min ?? 0, n - (B.max ?? n), 0)
+    let hi = Math.min(A.max ?? n, n - (B.min ?? 0))
+    if (n === 6) lo = hi = Math.min(Math.max(3, lo), hi) // 6 personer = alltid 3 per rollsida
+    if (lo <= hi) clampRoles(members, assigned, chosen, lo, hi, rng)
   }
 
-  // Underroller: lotta inom rollen enligt underrollernas vikter.
-  const sub: Record<string, string | null> = {}
-  const subSide: Record<string, SideId | undefined> = {}
-  roles.forEach((role) => {
-    const inRole = members.filter((m) => assigned[m.band_id] === role.letter)
-    if (!role.subRoles?.length) {
-      inRole.forEach((m) => (sub[m.band_id] = null))
-      return
+  // Underroller: slumpa inom rollen (per sida när rollerna ligger inom sidan).
+  const sub: Record<string, EntreSubRole | null> = {}
+  const groups = inomSida
+    ? (['A', 'B'] as SideId[]).flatMap((side) => roles.map((r) => ({ r, people: members.filter((m) => sideOf(m) === side && assigned[m.band_id] === r.letter) })))
+    : roles.map((r) => ({ r, people: members.filter((m) => assigned[m.band_id] === r.letter) }))
+  for (const { r, people } of groups) {
+    const subs = r.subRoles ?? []
+    if (!subs.length) {
+      people.forEach((m) => (sub[m.band_id] = null))
+      continue
     }
-    const subSlots = allocate(inRole.length, role.subRoles.map((s) => s.weight))
+    const fixed = subs.filter((x) => x.count != null)
+    const rest = subs.find((x) => x.count == null) ?? subs[subs.length - 1]
+    const drawn = shuffle(people, rng)
     let k = 0
-    const drawn = shuffle(inRole, rng)
-    role.subRoles.forEach((s, si) => {
-      for (let c = 0; c < subSlots[si]; c++, k++) {
-        sub[drawn[k].band_id] = s.id
-        subSide[drawn[k].band_id] = s.side
-      }
-    })
-  })
+    for (const s of fixed) for (let c = 0; c < s.count! && k < drawn.length; c++) sub[drawn[k++].band_id] = s
+    for (; k < drawn.length; k++) sub[drawn[k].band_id] = rest
+  }
 
   return members.map((m) => {
     const letter = assigned[m.band_id]
-    const role = roles[letters.indexOf(letter)]
+    const r = role(letter)
+    const s = sub[m.band_id] ?? null
+    const side: SideId = inomSida ? sideOf(m) : letter
+    const rawPlats = s?.plats ?? r.plats ?? null
     return {
       band_id: m.band_id,
       name: m.name,
       gender: m.gender ?? null,
-      side: subSide[m.band_id] ?? roleSide(role),
-      vote_side: voteSides[m.band_id] ?? null,
+      side,
+      vote_side: startSides[m.band_id] ?? null,
       chosen_role: chosen(m),
       assigned_role: letter,
-      sub_role: sub[m.band_id] ?? null,
+      sub_role: s?.id ?? null,
+      plats: rawPlats && inomSida && !rawPlats.includes('.') ? `${side}.${rawPlats}` : rawPlats,
+      titel: s?.name ?? r.titel ?? r.name,
     }
   })
 }

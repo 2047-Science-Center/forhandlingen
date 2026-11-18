@@ -9,7 +9,7 @@ import RoleSelect from '../rollval/RoleSelect.vue'
 import type { RollvalConfig } from '../rollval/types'
 import { useRotation } from '../rotation/rotation'
 import { useEntre } from './entre'
-import type { EntrePerson, EntreRole, RoleLetter, SideId } from './types'
+import type { EntrePerson, EntreRole, SideId } from './types'
 
 const props = withDefaults(
   defineProps<{
@@ -70,14 +70,6 @@ onUnmounted(() => nameTimer && clearTimeout(nameTimer))
 const voted = (band: string) => !!s.votes[band]
 
 /* ---------- utfall ---------- */
-function roleOf(letter: RoleLetter): EntreRole {
-  return roles.value[0].letter === letter ? roles.value[0] : roles.value[1]
-}
-function roleText(p: EntrePerson): string {
-  const r = roleOf(p.assigned_role)
-  const sub = p.sub_role ? r.subRoles?.find((x) => x.id === p.sub_role)?.name : null
-  return sub ? `${r.name} · ${sub}` : r.name
-}
 const SIDES = ['A', 'B'] as const
 const sideLabel = (side: SideId) => cfg.value.sides?.[side]?.label ?? ''
 const sideGroups = computed(() =>
@@ -96,18 +88,23 @@ if (illuUrl.value && typeof fetch !== 'undefined') {
     .then((t) => (illuOk.value = t.includes('xy-sidor')))
     .catch(() => (illuOk.value = false))
 }
-const illuSrc = computed(() => {
-  const names = (side: SideId) => sideGroups.value.find((g) => g.side === side)!.people.map((p) => p.name).join(',')
-  const q = new URLSearchParams({
-    a: names('A'),
-    b: names('B'),
-    me: s.screenSide ?? '',
-    la: sideLabel('A'),
-    lb: sideLabel('B'),
-    bg: 'transparent',
-  })
+function src3d(params: Record<string, string>): string {
+  const q = new URLSearchParams({ station: cfg.value.station3d ?? '', me: s.screenSide ?? '', bg: 'transparent', ...params })
   return `${illuUrl.value}?${q.toString()}`
-})
+}
+/** Ankomsten: startsidorna (fasta halvor) med bara namn. */
+const arrivalSrc = computed(() =>
+  src3d({ lage: 'ankomst', a: sideNames('A').join(','), b: sideNames('B').join(','), la: 'Sida A', lb: 'Sida B' }),
+)
+/** Utfallet: varje person på sin rollplats med namn + titel (färgen = sidans, standard i 3D). */
+const placesSrc = computed(() =>
+  src3d({
+    lage: 'platser',
+    figurer: JSON.stringify(
+      entre.personer.value.filter((p) => p.plats).map((p) => ({ namn: p.name, plats: p.plats, titel: p.titel })),
+    ),
+  }),
+)
 
 /* ---------- facilitator ---------- */
 const menu = ref(false)
@@ -135,8 +132,8 @@ function toggleMode(): void {
           <span v-if="rot.manual"> · manuellt vald</span>
           <span v-if="!groupLabel" class="en__muted">Pilotgrupp</span>
         </p>
-        <!-- Sidindelningen (bara skärm-läget): STORA namnblock per sida, så man ser sitt namn direkt -->
-        <template v-if="s.voteMode === 'skarm' && entre.members.value.length">
+        <!-- STARTSIDORNA (fasta halvor, samma vid alla stationer): STORA namnblock per sida -->
+        <template v-if="entre.members.value.length">
           <div class="en__sides" :class="{ 'en__sides--one': s.screenSide }">
             <section
               v-for="side in (s.screenSide ? [s.screenSide] : SIDES)"
@@ -151,13 +148,30 @@ function toggleMode(): void {
             </section>
           </div>
           <p class="en__group-hint">
-            {{ s.screenSide ? `Står ditt namn här? Stå kvar på sida ${s.screenSide} när ni väljer roll.` : 'Hitta ditt namn — stå på din sida när ni väljer roll.' }}
+            {{ s.screenSide ? `Står ditt namn här? Ställ dig på sida ${s.screenSide}.` : 'Hitta ditt namn — ställ dig på din sida.' }}
           </p>
         </template>
-        <div v-else-if="entre.members.value.length" class="en__name-blocks">
-          <span v-for="m in entre.members.value" :key="m.band_id" class="en__name-block">{{ m.name }}</span>
-        </div>
       </div>
+    </div>
+
+    <!-- ANKOMST: startsidorna i 3D → gruppen ställer sig -->
+    <div v-else-if="s.step === 'ankomst'" class="en__stage en__arrival">
+      <h2 class="en__question ink-strong">Ställ er på er sida</h2>
+      <iframe v-if="illuOk" :src="arrivalSrc" class="en__illu3d" title="Era startsidor" />
+      <div class="en__sides" :class="{ 'en__sides--one': s.screenSide }">
+        <section
+          v-for="side in (s.screenSide ? [s.screenSide] : SIDES)"
+          :key="side"
+          class="en__side-block"
+          :class="`en__side-block--${side}`"
+        >
+          <span class="en__side-letter">{{ side }}</span>
+          <div class="en__name-blocks">
+            <span v-for="n in sideNames(side)" :key="n" class="en__name-block">{{ n }}</span>
+          </div>
+        </section>
+      </div>
+      <button class="crt-button crt-button--strong en__cta-btn" @click="entre.arrived()">Vi står på våra sidor ▸</button>
     </div>
 
     <!-- ROLLVAL-KLIPPEN -->
@@ -233,7 +247,7 @@ function toggleMode(): void {
     <!-- UTFALL: överblick sida A / sida B med namnskyltar över gubbarna -->
     <div v-else-if="s.step === 'utfall'" class="en__stage en__outcome">
       <h2 class="en__question ink-strong">Så här blev det</h2>
-      <iframe v-if="illuOk" :src="illuSrc" class="en__illu3d" title="Så här ska ni stå" />
+      <iframe v-if="illuOk" :src="placesSrc" class="en__illu3d" title="Så här ska ni stå" />
       <div v-else class="en__floor">
         <section
           v-for="g in sideGroups"
@@ -254,7 +268,7 @@ function toggleMode(): void {
                 <path d="M8 98 V60 Q8 38 30 38 Q52 38 52 60 V98 Z" />
               </svg>
               <figcaption class="en__fig-role">
-                {{ roleText(p) }}<span v-if="lottad(p)" class="en__lottad">lottad</span>
+                {{ p.titel }}<span v-if="lottad(p)" class="en__lottad">lottad</span>
               </figcaption>
             </figure>
           </div>
@@ -380,7 +394,7 @@ function toggleMode(): void {
   width: min(100%, 60rem);
 }
 .en__side-block {
-  --zone: var(--color-primary, #ffb000);
+  --zone: var(--entre-side-a, #fff1d6);
   display: flex;
   align-items: stretch;
   gap: 0.8rem;
@@ -390,7 +404,7 @@ function toggleMode(): void {
   background: rgba(0, 0, 0, 0.35);
 }
 .en__side-block--B {
-  --zone: var(--mode-tutorial, #7cc8ff);
+  --zone: var(--entre-side-b, #ff3cc8);
 }
 .en__side-letter {
   display: flex;
@@ -547,8 +561,15 @@ button.en__choice:active {
 }
 
 /* utfall — "golvet" med sida A / sida B */
-.en__outcome {
+.en__outcome,
+.en__arrival {
   gap: 0.8rem;
+}
+.en__arrival .en__illu3d {
+  flex: 1;
+}
+.en__arrival .en__name-block {
+  font-size: clamp(1.3rem, 3vw, 2.2rem);
 }
 .en__illu3d {
   width: min(100%, 72rem);
@@ -570,7 +591,7 @@ button.en__choice:active {
   border: 2px solid var(--color-primary-dim);
 }
 .en__zone {
-  --zone: var(--color-primary, #ffb000);
+  --zone: var(--entre-side-a, #fff1d6);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -583,7 +604,7 @@ button.en__choice:active {
   transition: opacity 0.3s ease;
 }
 .en__zone--B {
-  --zone: var(--mode-tutorial, #7cc8ff);
+  --zone: var(--entre-side-b, #ff3cc8);
   border-left: 3px dashed var(--color-primary-dim);
 }
 .en__zone--mine {

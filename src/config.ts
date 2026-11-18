@@ -355,18 +355,24 @@ export const ROLLVAL: RollvalConfig = {
 /* ------------------------------------------------------------------ *
  * ENTRÉN (station-kit/entre, gemensam för st1–3): attract med testgrupp +
  * sidindelning → rollval-klippen → valet (person för person / RFID) →
- * ombalansering → "gå till sida A/B". SIDA = ROLL, fast här (EN NUC, båda sidorna):
- *   sida A = lag1 (vänster) = Sändebud
- *   sida B = lag2 (höger)   = Rapportör
+ * placering → "Så här blev det" (3D). XY-PLATSER (2026-11-18): sidan = STARTSIDAN = laget
+ * (sida A = lag1 vänster, sida B = lag2 höger, EN NUC); rollerna fördelas INOM varje sida —
+ * minst 1 sändebud + 1 rapportör per sida, resten efter önskemål.
  * Röstläge: 'skarm' tills banden finns; ?rost=rfid|skarm i URL:en går före.
  * ------------------------------------------------------------------ */
 
 export const ENTRE: EntreConfig = {
   stationTitle: 'Förhandlingen',
   roles: [
-    { letter: 'A', rollvalRoleId: 'sandebud', name: 'Sändebud' },
-    { letter: 'B', rollvalRoleId: 'rapportor', name: 'Rapportör' },
+    { letter: 'A', rollvalRoleId: 'sandebud', name: 'Sändebud', min: 1, plats: 'sandebud' },
+    { letter: 'B', rollvalRoleId: 'rapportor', name: 'Rapportör', min: 1, plats: 'rapportor' },
   ],
+  sides: {
+    A: { id: 'A', label: 'Lag A' },
+    B: { id: 'B', label: 'Lag B' },
+  },
+  placement: 'roll-inom-sida',
+  station3d: 'forh',
   voteMode: 'skarm',
   /** 3D-översikten från three.js-tråden (xy-entre-3d → public/entre/). Saknas → 2D-vyn. */
   illustrationUrl: `${import.meta.env.BASE_URL}entre/sidor-3d.html`,

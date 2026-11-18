@@ -1,35 +1,38 @@
 /**
  * Entrén — stationens gemensamma första-lager (Lager A, IDENTISK i alla X&Y-stationer).
  *
- *   ATTRACT  "Testgrupp X · runda Y — tryck för att börja" (+ sidindelning i skärm-läge)
+ *   ATTRACT  "Testgrupp X · runda Y — tryck för att börja" + startsidorna i stora namnblock
+ *   ANKOMST  3D (xy-entre-3d, lage=ankomst): gruppen ställer sig på sina fasta startsidor
  *   ROLLVAL  rollval/RoleSelect.vue: intro → klipp roll A → klipp roll B
  *   VALET    en bild per roll sida vid sida (roll A vänster, roll B höger)
  *              skärm: en person i taget — JÄTTESTORT namn → "Vilken roll vill du ha?"
  *              rfid:  station<N>/rfidnej = vänster bild (roll A), station<N>/rfidja = höger (roll B)
- *   UTFALL   ledarskärmen ombalanserar/lottar → "Liam → Sändebud → gå till sida B"
+ *   UTFALL   ledarskärmen placerar (kapacitet per station) → 3D (lage=platser) namn + titel + plats
  *   (klar)   appens eget flöde: tutorial → skarp → done → lek (rotationen)
  *
  * Kontrakt: xy-rigg/SOM.md (`station<N>/group` med gender, rfidja/rfidnej-tillägget 2026-11-17).
  * Modulen beror INTE på appens @/config — allt kommer in via EntreConfig/EntreOptions,
  * så filerna kan kopieras byte-identiskt mellan stationsrepona.
  *
- * SIDA = ROLL, fast per station: den som får roll A går till sida A, roll B → sida B.
- * Underroller (stresstestet) lottas inom sin roll och kan ha en egen sida.
+ * PLATSER (xy-arkitektur/XY-PLATSER.md, Josefs beslut 2026-11-18):
+ *  - STARTSIDA A/B = gruppens fasta halvor (3+3), samma vid alla stationer (seed session:grupp,
+ *    eller medlemmens `startsida` från klasslista-importen). Där man står vid ankomsten och ser klippen.
+ *  - ROLLPLATS = var man står efter valet. Två modeller (`placement`):
+ *      'roll-ar-sida'   rollen ÄR sidan (Människotestet A=lurar max 3 / B=lögndetektorn;
+ *                       Undersökningen A=labb / B=fält med underroller skannare, lyspenna, logggranskare)
+ *      'roll-inom-sida' sidan = startsidan (lag A / lag B), rollerna fördelas inom varje sida
+ *                       (Förhandlingen: minst 1 sändebud + 1 rapportör per sida)
+ *  - 6 personer = alltid 3 per rollsida. Annars följs önskemålen så långt reglerna (min/max) tillåter;
+ *    överskott slumpas. Önskemålet (`chosen_role`) sparas ALLTID oförändrat.
  *
- * Reaktorkärnan (stresstestet, st4) — INTE inkopplad än; så här ser dess roller ut
- * när Josef kopplar in den (en NUC; config anger vilken sida som är pulsvakt/gyrostav):
- *   roles: [
- *     { letter: 'A', rollvalRoleId: 'drifttekniker', name: 'Drifttekniker', weight: 2, side: null },
- *     { letter: 'B', rollvalRoleId: 'expeditionsledare', name: 'Expeditionsledare', weight: 4,
- *       subRoles: [ { id: 'pulsvakt', name: 'Pulsvakt', weight: 2, side: 'A' },
- *                   { id: 'gyrostav', name: 'Gyrostav', weight: 2, side: 'B' } ] },
- *   ]
+ * Reaktorkärnan (stresstestet, st4) — INTE inkopplad än (byggs efter Borlänge); zonerna heter efter
+ * rollen (Pulsvakt, Gyro, Fälttekniker) och modellen behöver en tredje zon — se XY-PLATSER.
  * OBS: results.assigned_role är ENUM('A','B') — underrollen (sub_role) får inte plats i DB:n.
  */
 
 /** Roll-bokstav i X&Y-resultatet (DB: results.chosen_role / assigned_role = ENUM('A','B')). */
 export type RoleLetter = 'A' | 'B'
-/** Stationens sida. Sida = roll → samma bokstav. */
+/** Stationens sida (startsida eller rollsida). */
 export type SideId = RoleLetter
 
 /** Hur gruppen röstar. */
@@ -45,16 +48,19 @@ export interface EntreMember {
   name: string
   /** participants.gender: 'man' | 'kvinna' | 'vill_ej_ange' (tål även kille/tjej/m/f). */
   gender?: string | null
+  /** Fast startsida från klasslista-importen (går före den seedade indelningen). */
+  startsida?: SideId | null
 }
 
-/** En underroll med egna platser (lottas inom huvudrollen). Bara stresstestet än så länge. */
+/** En underroll inom en roll (slumpas). Fasta platser först i ordning, sedan `rest`-underrollen. */
 export interface EntreSubRole {
   id: string
+  /** Titel på namnskylten/utfallet, t.ex. "Skannare". */
   name: string
-  /** Platser i en 6-personersgrupp; skalas för andra gruppstorlekar. */
-  weight: number
-  /** Sidan den här underrollen står på (om den har en egen sida). */
-  side?: SideId
+  /** Antal platser (t.ex. 1 skannare). Utelämnad = tar resten. */
+  count?: number
+  /** 3D-plats-id (xy-entre-3d/README), t.ex. 'B.skannare'. */
+  plats?: string
 }
 
 /** En av stationens två roller. Ordningen i EntreConfig.roles = [roll A, roll B]. */
@@ -68,12 +74,16 @@ export interface EntreRole {
   tagline?: string
   /** Rollbild (url). Saknas → stillbild ur rollens klipp i aktivt klippset. */
   image?: string
-  /** Platser i en 6-personersgrupp (default 3). Skalas för andra storlekar. */
-  weight?: number
-  /** Underroller (lottas vidare inom rollen). */
+  /** Titel på namnskylten (default = name), t.ex. "Labbtekniker". */
+  titel?: string
+  /** Minsta antal ('roll-ar-sida': totalt; 'roll-inom-sida': per sida, om sidan har plats). */
+  min?: number
+  /** Högsta antal (t.ex. Människotestets 3 telefonlurar). */
+  max?: number
+  /** 3D-plats-id. 'roll-ar-sida': fullt id ('A.lur'); 'roll-inom-sida': utan sida ('sandebud' → 'A.sandebud'). */
+  plats?: string
+  /** Underroller (slumpas inom rollen). */
   subRoles?: EntreSubRole[]
-  /** Sidan rollen står på (default = letter). null = ingen egen sida (t.ex. underrollerna har sidorna). */
-  side?: SideId | null
 }
 
 /** Vad stationens sida heter i spelet (t.ex. "Labbtekniker", "Lögndetektorn"). */
@@ -90,6 +100,10 @@ export interface EntreConfig {
   roles: [EntreRole, EntreRole]
   /** Sidornas spel-namn. */
   sides?: Partial<Record<SideId, EntreSideInfo>>
+  /** Placeringsmodell (se ovan). Default 'roll-ar-sida'. */
+  placement?: 'roll-ar-sida' | 'roll-inom-sida'
+  /** 3D-stationsmodell i xy-entre-3d: 'forh' | 'minne' | 'unders'. */
+  station3d?: string
   /** Röstläge innan ?rost= / facilitator-växeln. Default 'skarm'. */
   voteMode?: VoteMode
   /** Visa rollvalets klipp (RoleSelect) före valet. */
@@ -102,8 +116,8 @@ export interface EntreConfig {
   pilotRoster: EntreMember[]
   /** Raden om att man inte säkert får rollen man väljer. */
   notGuaranteed?: string
-  /** 3D-översikten (three.js-sidan `sidor-3d.html`, kontrakt: ?a=&b=&me=&la=&lb= / postMessage 'xy-sidor').
-   *  Saknas sidan → 2D-illustrationen i utfallet. */
+  /** 3D-bilden (xy-entre-3d `sidor-3d.html`; kontrakt i dess README: a/b, me, station, lage, figurer).
+   *  Saknas sidan → 2D-vyn. */
   illustrationUrl?: string
 }
 
@@ -112,16 +126,20 @@ export interface EntrePerson {
   band_id: string
   name: string
   gender: string | null
-  /** Sidan personen ska till under stationen (efter ombalanseringen). null = ingen egen sida. */
+  /** Rollsidan personen står på under stationen (efter placeringen). */
   side: SideId | null
-  /** Sidan personen röstade på i skärm-läget (sidindelningen); null i rfid-läget. */
+  /** Startsidan (fasta halvan vid ankomsten, där man röstade). */
   vote_side: SideId | null
-  /** Vad personen valde. null = valde inte (lottades). */
+  /** Önskemålet, oförändrat. null = valde inte (facilitatorns "Lotta nu"). */
   chosen_role: RoleLetter | null
-  /** Rollen efter ombalanseringen. */
+  /** Rollen efter placeringen. */
   assigned_role: RoleLetter
-  /** Underroll efter lottningen inom rollen (stresstestet), annars null. */
+  /** Underroll (t.ex. 'skannare'), annars null. */
   sub_role: string | null
+  /** 3D-plats-id (xy-entre-3d), t.ex. 'A.sandebud'. */
+  plats: string | null
+  /** Titel på namnskylten, t.ex. "Sändebud". */
+  titel: string
 }
 
 /** Minimal MQTT-yta (mqtt.js-klienten uppfyller den; injicerbar i test). */
