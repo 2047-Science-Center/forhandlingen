@@ -6,7 +6,8 @@
  *
  *   station<N>/group  regi → station (retained)  {session_id, round, group, members:[{band_id,name,gender}]}
  *                     round 0 / group null = ingen aktiv rotation
- *   station<N>/done   station → regi             {session_id, round, group}  (slutet av skarpt läge)
+ *   station<N>/done   station → regi             {session_id, round, group, side?}  (slutet av skarpt läge)
+ *                     side = bara på DELADE stationer (st2: två sidor, två spel) — varje sida sitt done
  *   station<N>/mode   station → hälsovy (retained) {mode} ∈ tutorial | skarp | lek
  *   station<N>/result märks med round + group    (tagResult)
  *
@@ -65,4 +66,10 @@ export interface RotationOptions {
   order?: number[]
   /** Visa manuellt gruppval om inget gruppmeddelande kommit inom så här lång tid. Default 5000. */
   manualAfterMs?: number
+  /**
+   * DELAD station (SOM.md 2026-11-18): den här skärmens sida = egen done-nyckel. Sidan går till
+   * lek när DESS skarpa läge är slut, skickar done med `side`, och ignorerar andra sidans done.
+   * Regi väntar in alla sidor (xy-regi config rotation.done_nycklar). null/utelämnad = hela stationen.
+   */
+  side?: 'A' | 'B' | null
 }

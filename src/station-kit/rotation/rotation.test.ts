@@ -94,6 +94,33 @@ describe('rotation (stationssidan)', () => {
     expect(f.published.length).toBe(before)
   })
 
+  it('delad station (side): egen done med side, lek per sida, andra sidans done ignoreras', () => {
+    const f = fakeClient()
+    const r = initRotation({ stationN: N, enabled: true, mqttUrl: '', side: 'B' }, f.client)
+    f.deliver(`station${N}/group`, group(1, 3))
+    r.begin()
+    r.markSkarp()
+    // Sida A blir klar först → sida B spelar vidare (orange), går INTE till lek.
+    f.deliver(`station${N}/done`, { session_id: 's1', round: 1, group: 3, side: 'A' })
+    expect(r.state.phase).toBe('running')
+    // Sida B klar → eget done med side → lek.
+    expect(r.finishSkarp()).toBe(true)
+    expect(r.state.phase).toBe('lek')
+    const done = f.published.filter((p) => p.topic === `station${N}/done`).at(-1)
+    expect(done?.payload).toEqual({ session_id: 's1', round: 1, group: 3, side: 'B' })
+    const mode = f.published.filter((p) => p.topic === `station${N}/mode`).at(-1)
+    expect(mode?.payload).toEqual({ mode: 'lek', side: 'B' })
+  })
+
+  it('delad station: done UTAN side (hela stationen) tar också sidan till lek', () => {
+    const f = fakeClient()
+    const r = initRotation({ stationN: N, enabled: true, mqttUrl: '', side: 'A' }, f.client)
+    f.deliver(`station${N}/group`, group(1, 3))
+    r.begin()
+    f.deliver(`station${N}/done`, { session_id: 's1', round: 1, group: 3 })
+    expect(r.state.phase).toBe('lek')
+  })
+
   it('manuellt val räknar ut rundan ur stationsordningen', () => {
     vi.useFakeTimers()
     const r = initRotation({ stationN: N, enabled: true, mqttUrl: '' })

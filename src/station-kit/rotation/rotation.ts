@@ -18,6 +18,10 @@
  * Två skärmar på samma station (t.ex. lag1/lag2-fönster): båda prenumererar på
  * station<N>/done, så den skärm som INTE tryckte klart går också till lek när
  * den andra skickat done för samma runda.
+ *
+ * DELAD station (options.side satt, st2): sidorna är två halvor med var sitt spel. Varje
+ * sida skickar done {…, side} och går till lek själv; den andra sidans done ignoreras
+ * (halva stationen kan vara lila medan andra halvan fortfarande är orange).
  */
 import { reactive, readonly } from 'vue'
 import mqtt from 'mqtt'
@@ -49,14 +53,14 @@ const state = reactive({
   mode: null as RotationMode | null,
 })
 
-let opts: Required<RotationOptions> | null = null
+let opts: (Required<Omit<RotationOptions, 'side'>> & { side: 'A' | 'B' | null }) | null = null
 let client: RotationClient | null = null
 let manualTimer: ReturnType<typeof setTimeout> | null = null
 
 const groupTopic = () => `station${opts!.stationN}/group`
 const doneTopic = () => `station${opts!.stationN}/done`
 const modeTopic = () => `station${opts!.stationN}/mode`
-const doneStoreKey = () => `xy-rotation-done-station${opts!.stationN}`
+const doneStoreKey = () => `xy-rotation-done-station${opts!.stationN}${opts!.side ? `-${opts!.side}` : ''}`
 const runKey = (sid: SessionId | null, round: number, group: number | null) =>
   `${sid ?? '-'}:${round}:${group ?? '-'}`
 
@@ -81,7 +85,7 @@ function publish(topic: string, payload: object, retain = false): void {
 
 function setMode(m: RotationMode): void {
   state.mode = m
-  publish(modeTopic(), { mode: m }, true)
+  publish(modeTopic(), opts!.side ? { mode: m, side: opts!.side } : { mode: m }, true)
 }
 
 function clearManualTimer(): void {
@@ -140,8 +144,10 @@ function onGroup(m: GroupMessage): void {
 }
 
 /** done från stationens andra skärm (eller eko av vår egen) → gå till lek utan att publicera. */
-function onDone(d: { session_id?: SessionId | null; round?: number; group?: number }): void {
+function onDone(d: { session_id?: SessionId | null; round?: number; group?: number; side?: string }): void {
   if (state.phase !== 'running') return
+  // Delad station: den andra sidans done gäller inte oss (done utan side = hela stationen).
+  if (opts!.side && d.side != null && d.side !== opts!.side) return
   if (Number(d.round) !== state.round || Number(d.group) !== state.group) return
   if ((d.session_id ?? null) !== state.sessionId) return
   writeDone(runKey(state.sessionId, state.round, state.group))
@@ -158,7 +164,7 @@ function onMessage(topic: string, raw: string): void {
   }
   if (!d || typeof d !== 'object') return
   if (topic === groupTopic()) onGroup(d as GroupMessage)
-  else if (topic === doneTopic()) onDone(d as { session_id?: SessionId; round?: number; group?: number })
+  else if (topic === doneTopic()) onDone(d as { session_id?: SessionId; round?: number; group?: number; side?: string })
 }
 
 /* ------------------------------------------------------------------ */
@@ -183,11 +189,12 @@ function markSkarp(): void {
 function finishSkarp(): boolean {
   if (state.phase === 'off') return false
   if (state.phase !== 'running') return true
-  const payload: { session_id?: SessionId; round: number; group: number | null } = {
+  const payload: { session_id?: SessionId; round: number; group: number | null; side?: 'A' | 'B' } = {
     round: state.round,
     group: state.group,
   }
   if (state.sessionId != null) payload.session_id = state.sessionId
+  if (opts!.side) payload.side = opts!.side
   publish(doneTopic(), payload)
   writeDone(runKey(state.sessionId, state.round, state.group))
   state.phase = 'lek'
@@ -239,7 +246,7 @@ export function useRotation(): Rotation {
  */
 export function initRotation(o: RotationOptions, injected?: RotationClient): Rotation {
   if (opts) return api
-  opts = { order: DEFAULT_ORDER, manualAfterMs: 5000, ...o }
+  opts = { order: DEFAULT_ORDER, manualAfterMs: 5000, ...o, side: o.side ?? null }
   if (!o.enabled) {
     state.phase = 'off'
     return api
