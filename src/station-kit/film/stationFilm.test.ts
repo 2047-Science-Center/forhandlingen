@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { initFilm, useFilm, filmSrc, regiFranMqtt, __resetFilmForTest, type FilmClient } from './stationFilm'
+import { initFilm, useFilm, filmSrc, regiFranMqtt, revealSrc, syvSrc, __resetFilmForTest, type FilmClient } from './stationFilm'
 
 function fakeClient() {
   const handlers: Record<string, (...a: any[]) => void> = {}
@@ -93,5 +93,62 @@ describe('station-kit/film', () => {
     f.msg('film/start', TRAILER)
     expect(film.src.value.startsWith('http://regi.test:8091/film/trailer/')).toBe(true)
     expect(useFilm().state.signal?.film).toBe('trailer')
+  })
+
+  describe('appar på broker-NUC:en (SOM.md "Appar i riggen")', () => {
+    const OPTS = { enabled: true, mqttUrl: 'ws://h:9001', stationN: 4 }
+
+    it('reveal: gruppen vid stationen (station<N>/group), follower som default', () => {
+      const f = fakeClient()
+      const film = initFilm(OPTS, f.c)
+      expect(f.subs).toContain('station4/group')
+      f.msg('station4/group', { round: 4, group: 3, members: [] })
+      f.msg('station3/group', { round: 4, group: 1 }) // annan station → ignoreras
+      f.msg('regi/phase', { phase: 'rotation', session_id: 12 })
+      expect(film.synlig.value).toBe(false)
+      f.msg('regi/phase', { phase: 'reveal', session_id: 12 })
+      expect(film.lage.value).toBe('reveal')
+      expect(film.src.value).toBe('http://h:5188/?group=3&session=12&follower')
+      f.msg('regi/phase', { phase: 'sortering', session_id: 12 })
+      expect(film.synlig.value).toBe(false)
+    })
+
+    it('reveal: driver-skärmen får autostart i stället för follower', () => {
+      expect(revealSrc('http://h:5188/', { grupp: 2, sessionId: null, driver: true })).toBe('http://h:5188/?group=2&autostart')
+      expect(revealSrc('http://h:5188', { grupp: null, sessionId: 5, driver: false })).toBe('http://h:5188/?session=5&follower')
+    })
+
+    it('syv: stationens valv + sida + broker, startar direkt', () => {
+      const f = fakeClient()
+      const film = initFilm({ ...OPTS, sida: 'B' }, f.c)
+      f.msg('regi/phase', { phase: 'syv', session_id: 7 })
+      expect(film.lage.value).toBe('syv')
+      expect(film.src.value).toBe(
+        'http://h:8791/?valv=driften&screen=B&session=7&broker=ws%3A%2F%2Fh%3A9001&autostart=1',
+      )
+      expect(syvSrc('http://x:1', { valv: 'diplomatkaren', sida: null, sessionId: null, mqttUrl: '' })).toBe(
+        'http://x:1/?valv=diplomatkaren&screen=A&autostart=1',
+      )
+    })
+
+    it('utan stationN visas inga appar (bara filmer); filmen går före appen', () => {
+      const f = fakeClient()
+      const film = initFilm({ enabled: true, mqttUrl: 'ws://h:9001' }, f.c)
+      f.msg('regi/phase', { phase: 'syv' })
+      expect(film.synlig.value).toBe(false)
+      f.msg('regi/phase', { phase: 'reveal' })
+      expect(film.lage.value).toBe('reveal') // reveal behöver ingen station (grupp saknas → appens default)
+      f.msg('film/start', { ...TRAILER, fas: 'reveal' })
+      expect(film.lage.value).toBe('film')
+    })
+
+    it('revealUrl/syvUrl överstyr de härledda adresserna', () => {
+      const f = fakeClient()
+      const film = initFilm({ ...OPTS, revealUrl: 'http://r.test:5190/', syvUrl: 'http://s.test:9000' }, f.c)
+      f.msg('regi/phase', { phase: 'reveal' })
+      expect(film.src.value.startsWith('http://r.test:5190/?')).toBe(true)
+      f.msg('regi/phase', { phase: 'syv' })
+      expect(film.src.value.startsWith('http://s.test:9000/?valv=driften')).toBe(true)
+    })
   })
 })

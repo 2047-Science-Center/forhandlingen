@@ -117,7 +117,15 @@ const ljus = initLjus(
 )
 // --- Regis filmer (station-kit/film, SOM.md "Filmer i riggen"): trailern helskärm i båda
 //     fönstren medan regi står i trailerfasen, sedan tillbaka till stationen. ---
-initFilm(filmOptions({ enabled: config.mode === 'production', mqttUrl: ROTATION.mqttUrl }))
+//     I reveal/syv visar overlayen broker-NUC:ens appar (SOM.md "Appar i riggen").
+initFilm(
+  filmOptions({
+    enabled: config.mode === 'production',
+    mqttUrl: ROTATION.mqttUrl,
+    stationN: ROTATION.stationN,
+    sida: store.view === 'lag1' ? 'A' : store.view === 'lag2' ? 'B' : null,
+  }),
+)
 
 const ljusLage = computed(() =>
   appLage({
