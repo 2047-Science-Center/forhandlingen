@@ -8,5 +8,6 @@ coverage
 .claude/worktrees/
 
 # Original-assets (dubbletter — de använda kopiorna ligger i public/)
-/assets/
+/assets/*
+!/assets/*.mp4
 /Sound/
