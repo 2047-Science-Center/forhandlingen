@@ -21,6 +21,8 @@ import RotationScreens from '@/station-kit/rotation/RotationScreens.vue'
 import { initRotation, rotationOptions } from '@/station-kit/rotation/rotation'
 import { initLjus, ljusOptions, lageFranRotation, LjusRemsa } from '@/station-kit/ljus'
 import { initFilm, filmOptions, FilmOverlay } from '@/station-kit/film'
+import { initIncheckning, incheckningOptions } from '@/station-kit/incheckning/incheckning'
+import IncheckningScreen from '@/station-kit/incheckning/IncheckningScreen.vue'
 import { spela, arSkrivare, appLage } from './ljus'
 
 import ReporterConsole from './components/ReporterConsole.vue'
@@ -87,7 +89,8 @@ function onEntreDone(): void {
         // DB: chosen_role är NOT NULL — den som inte hann välja (facilitatorns "Lotta nu") loggas som sin tilldelade roll.
         chosen_role: p.chosen_role ?? p.assigned_role,
         assigned_role: p.assigned_role,
-        role_presented_as: null,
+        // Klippsetet ur DB (station<N>/group set_id + female_role) → hur den valda rollen presenterades.
+        role_presented_as: entre.presentedAs(p),
       }))
   store.setRoster({ lag1: team('A'), lag2: team('B') })
 }
@@ -129,6 +132,17 @@ initFilm(
     mqttUrl: ROTATION.mqttUrl,
     stationN: ROTATION.stationN,
     sida: store.view === 'lag1' ? 'A' : store.view === 'lag2' ? 'B' : null,
+  }),
+)
+// --- Incheckningen (station-kit/incheckning, SOM.md "Incheckningen vid stationerna"): medan regi står i
+//     incheckningen visar stationen gruppen som börjar här ("Ta ditt band") → "Alla har sina band på sig"
+//     → station<N>/incheckad. Regi går till trailern när alla stationer kvitterat. ---
+initIncheckning(
+  incheckningOptions({
+    stationN: ROTATION.stationN,
+    enabled: config.mode === 'production',
+    mqttUrl: rotationOptions(ROTATION).mqttUrl,
+    bandlost: BANDLOST,
   }),
 )
 
@@ -333,6 +347,8 @@ onUnmounted(() => {
     <!-- Ljusförhandsvisning (renderar bara med ?ljus=visa) -->
     <LjusRemsa />
     <!-- Regis filmer (trailern) över allt, bara i filmens fas -->
+    <!-- Incheckningen: "Ta ditt band" medan regi står i incheckningen -->
+    <IncheckningScreen station-title="Förhandlingen" :side-labels="{ A: ENTRE.sides?.A?.label, B: ENTRE.sides?.B?.label }" />
     <FilmOverlay />
     <LekStandalone v-if="lekPreview && store.transport()">
       <VemDarLek :people="lekPeople" :my-side="lekSide" :leader="lekLeader" :transport="store.transport()" />

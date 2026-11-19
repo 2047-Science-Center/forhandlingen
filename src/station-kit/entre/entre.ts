@@ -2,7 +2,7 @@
  * Entrén — tillståndsmaskin (Lager A, IDENTISK i alla X&Y-stationer). Ett modul-globalt
  * tillstånd per flik/skärm. Se types.ts för flödet och kontraktet.
  *
- *   attract ──start()──▶ ankomst ──arrived()──▶ rollval ──clipsDone()──▶ valet ──(alla röstat)──▶ vantar ─▶ utfall ──finish()──▶ klar
+ *   attract ──start()──▶ intro ──introDone()──▶ rollval ──clipsDone()──▶ valet ──(alla röstat)──▶ vantar ─▶ utfall ──finish()──▶ klar
  *
  * Koppla in i en station (samma i alla appar):
  *   1. initEntre({ stationN, config, mqttUrl }) en gång vid start (efter initRotation).
@@ -32,7 +32,7 @@ import type {
   VoteMode,
 } from './types'
 
-export type EntreStep = 'attract' | 'ankomst' | 'rollval' | 'valet' | 'vantar' | 'utfall' | 'klar'
+export type EntreStep = 'attract' | 'intro' | 'rollval' | 'valet' | 'vantar' | 'utfall' | 'klar'
 
 interface Msg {
   kind: string
@@ -62,6 +62,8 @@ const state = reactive({
   clipSet: 0,
   /** Bandlöst läge (station-kit/band) — för facilitatorns statusrad. */
   bandlost: true,
+  /** Stationsintrot (config.introClip) finns och kan spelas (sonderas vid start). */
+  introAvailable: false,
 })
 
 let opts: EntreOptions | null = null
@@ -212,7 +214,20 @@ function ensureMqtt(): void {
 
 /* ------------------------------------------------------------------ */
 
+/**
+ * Klippsetet för körningen. Regi:s set_id (DB, group_assignments) går före; stationens config
+ * (fast index eller 'alternate') bara när regi inte skickat något (pilot, dev, ingen DB).
+ */
+function dbClipIndex(): number {
+  const dbSet = rotation.state.setId
+  if (dbSet == null) return -1
+  const ids = cfg().clipSetIds ?? Array.from({ length: Math.max(1, cfg().clipSetCount ?? 2) }, (_, i) => i + 1)
+  return ids.indexOf(dbSet)
+}
+
 function pickClipSet(): number {
+  const i = dbClipIndex()
+  if (i >= 0) return i
   const c = cfg().clipSet ?? 0
   if (c !== 'alternate') return c
   const n = Math.max(1, cfg().clipSetCount ?? 1)
@@ -226,21 +241,31 @@ function pickClipSet(): number {
   }
 }
 
-/** Touch på attract → (rotationens begin) → ankomsten (startsidorna i 3D). */
+/** Tryck på "Ställ er på rätt sida" → (rotationens begin) → stationsintrot (om det finns) → rollvalet. */
 function start(): void {
   if (state.step !== 'attract') return
   // Rotationen väntar på regi / står i lek → overlayen äger skärmen, ingen start.
   if (rotation.state.phase === 'waiting' || rotation.state.phase === 'lek') return
   if (rotation.state.phase === 'group') rotation.begin()
   state.clipSet = pickClipSet()
-  state.step = 'ankomst'
+  if (state.introAvailable) state.step = 'intro'
+  else afterIntro()
 }
 
-/** Gruppen står på sina startsidor → rollval-klippen eller direkt valet. */
-function arrived(): void {
-  if (state.step !== 'ankomst') return
+/** Efter introt: rollval-klippen eller direkt valet. */
+function afterIntro(): void {
   state.step = cfg().clips === false ? 'valet' : 'rollval'
   if (state.step === 'valet') enterValet()
+}
+
+/** Introt har spelat klart, hoppats över (tryck) eller gick inte att spela. */
+function introDone(): void {
+  if (state.step === 'intro') afterIntro()
+}
+
+/** Finns stationsintrot? (Entrén sonderar själv vid init; injicerbar i test/app.) */
+function setIntroAvailable(v: boolean): void {
+  state.introAvailable = v
 }
 
 function enterValet(): void {
@@ -280,8 +305,8 @@ function finish(): void {
 
 /** Facilitator: hoppa över valet (lotta alla som inte valt). */
 function skipVote(): void {
-  if (state.step === 'ankomst' || state.step === 'rollval' || state.step === 'valet' || state.step === 'vantar') {
-    if (state.step === 'ankomst' || state.step === 'rollval') state.step = 'vantar'
+  if (state.step === 'intro' || state.step === 'rollval' || state.step === 'valet' || state.step === 'vantar') {
+    if (state.step === 'intro' || state.step === 'rollval') state.step = 'vantar'
     resolve()
   }
 }
@@ -321,8 +346,21 @@ function attachMqtt(c: EntreMqttClient): void {
   c.subscribe(`station${opts!.stationN}/rfidnej`)
 }
 
+/**
+ * role_presented_as (station<N>/result): hur personens VALDA roll presenterades i setet som spelades —
+ * 'kvinnlig' om rollen = regi:s female_role, annars 'manlig'. Lottad utan val → den tilldelade rollen.
+ * Utan female_role (pilot, ingen DB) → null som förut. SOM.md "Klippset per grupp".
+ */
+function presentedAs(p: { chosen_role: RoleLetter | null; assigned_role: RoleLetter }): 'manlig' | 'kvinnlig' | null {
+  const f = rotation.state.femaleRole
+  // Bara när klippen som spelas ÄR DB-setet (annars vet vi inte vem som syntes).
+  if (!f || dbClipIndex() < 0 || dbClipIndex() !== state.clipSet) return null
+  return (p.chosen_role ?? p.assigned_role) === f ? 'kvinnlig' : 'manlig'
+}
+
 const api = {
   state: readonly(state),
+  presentedAs,
   members,
   myVoters,
   currentVoter,
@@ -332,7 +370,10 @@ const api = {
   /** Resultatet till appen (tom tills lottningen är gjord). */
   personer: computed<EntrePerson[]>(() => state.result ?? []),
   start,
-  arrived,
+  introDone,
+  /** @deprecated entre-v2: ankomst-steget är borta (attract = "ställ er på rätt sida"). Alias för introDone. */
+  arrived: introDone,
+  setIntroAvailable,
   clipsDone,
   showQuestion,
   vote,
@@ -359,6 +400,21 @@ export function voteModeFromUrl(fallback: VoteMode): VoteMode {
   return r === 'rfid' || r === 'skarm' ? r : fallback
 }
 
+/**
+ * Finns stationsintrot? En statisk server/Vite svarar index.html (200) på saknade filer → kräv video/*.
+ * Ingen fil → introAvailable false → start() går direkt till rollvalet (inget tomt steg).
+ */
+async function probeIntro(url: string | undefined): Promise<void> {
+  state.introAvailable = false
+  if (!url || typeof fetch === 'undefined') return
+  try {
+    const r = await fetch(url, { method: 'HEAD' })
+    state.introAvailable = r.ok && (r.headers.get('content-type') ?? '').startsWith('video/')
+  } catch {
+    state.introAvailable = false
+  }
+}
+
 /** Starta entrén. Idempotent (första anropet vinner). */
 export function initEntre(o: EntreOptions): Entre {
   if (opts) return api
@@ -368,6 +424,7 @@ export function initEntre(o: EntreOptions): Entre {
   state.voteMode = voteModeFromUrl(grund)
   state.run = runKey.value
   if (state.voteMode === 'rfid') ensureMqtt()
+  void probeIntro(o.config.introClip)
   // Ny grupp/runda → ny körning: rensa röster och börja om på attract.
   watch(runKey, (k) => {
     if (k === state.run) return
@@ -387,5 +444,5 @@ export function __resetEntreForTest(rng?: (run: string) => () => number): void {
   mqttClient = null
   if (rng) rngFactory = rng
   resetLocal()
-  Object.assign(state, { voteMode: 'skarm', screenSide: null, leader: true, run: 'pilot', mqttConnected: false, bandlost: true })
+  Object.assign(state, { voteMode: 'skarm', screenSide: null, leader: true, run: 'pilot', mqttConnected: false, bandlost: true, introAvailable: false })
 }

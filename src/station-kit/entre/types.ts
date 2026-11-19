@@ -1,9 +1,9 @@
 /**
  * Entrén — stationens gemensamma första-lager (Lager A, IDENTISK i alla X&Y-stationer).
  *
- *   ATTRACT  "Testgrupp X · runda Y — tryck för att börja" + startsidorna i stora namnblock
- *            (i rotationen: ANKOMSTVYN, tredelad sida A | stationen | sida B — Ankomst.vue)
- *   ANKOMST  3D (xy-entre-3d, lage=ankomst): gruppen ställer sig på sina fasta startsidor
+ *   ATTRACT  "STÄLL ER PÅ RÄTT SIDA" (Ankomst.vue): tredelad sida A | stationen | sida B med namnen
+ *            per fast startsida (entre-v2 2026-11-19: ersätter den gamla förskärmen + ankomst-steget)
+ *   INTRO    stationens hype-klipp ~5–6 s (config.introClip), hoppas över om filen saknas / vid tryck
  *   ROLLVAL  rollval/RoleSelect.vue: intro → klipp roll A → klipp roll B
  *   VALET    en bild per roll sida vid sida (roll A vänster, roll B höger)
  *              skärm: en person i taget — JÄTTESTORT namn → "Vilken roll vill du ha?"
@@ -115,6 +115,13 @@ export interface EntreConfig {
   clipSet?: number | 'alternate'
   /** Antal klippset (för 'alternate'). */
   clipSetCount?: number
+  /**
+   * DB:ns set_id (datasets, 1-baserat) för varje klippset-index i ROLLVAL.clipSets. Default [1, 2, …].
+   * När regi skickar gruppens set_id (station<N>/group, SOM.md "Klippset per grupp") spelas det klippset
+   * vars id matchar — då visar skärm och DB alltid samma set. Ska följa vem som syns i klippen
+   * (rollen som presentation_sets kallar kvinnlig spelas av en kvinna).
+   */
+  clipSetIds?: number[]
   /** Grupp när regi inte skickat någon (pilot / manuellt gruppval). */
   pilotRoster: EntreMember[]
   /** Raden om att man inte säkert får rollen man väljer. */
@@ -122,6 +129,25 @@ export interface EntreConfig {
   /** 3D-bilden (xy-entre-3d `sidor-3d.html`; kontrakt i dess README: a/b, me, station, lage, figurer).
    *  Saknas sidan → 2D-vyn. */
   illustrationUrl?: string
+  /**
+   * STATIONSINTRO (hype-klipp ~5–6 s) som spelas när gruppen tryckt på "Ställ er på rätt sida",
+   * före rollvalet. Konvention: `<BASE_URL>media/stationsintro/<station>.mp4` (H.264/AAC, 1920×1080).
+   * Saknas filen (eller fältet) hoppas introt över. Ett tryck hoppar över det.
+   */
+  introClip?: string
+  /**
+   * ROLLSEKVENSEN efter introt (Josef 2026-11-19, inga klick): brygga1 → kort A → rollklipp A → brygga2 →
+   * kort B → rollklipp B → valet (entre/RollSekvens.vue + station-kit/stationsintro/BryggKort.vue).
+   * Saknas → rollvalets gamla klippsteg (RoleSelect clipsOnly). Kräver clips !== false.
+   */
+  rollkort?: {
+    /** Rollnamnen på korten, [roll A, roll B] (t.ex. "Labbtekniker", "Forensiker"). */
+    A: string
+    B: string
+    /** Valvfärgen på tejpen (SYV-låsningen), t.ex. '#4aa3ff'. */
+    valvfarg?: string
+    sprak?: 'sv' | 'no'
+  }
 }
 
 /** En person efter entrén — det appen får (`personer[]`). */

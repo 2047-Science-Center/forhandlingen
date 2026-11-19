@@ -402,9 +402,16 @@ export const ENTRE: EntreConfig = {
   voteMode: 'skarm',
   /** 3D-översikten från three.js-tråden (xy-entre-3d → public/entre/). Saknas → 2D-vyn. */
   illustrationUrl: `${import.meta.env.BASE_URL}entre/sidor-3d.html`,
+  /** Stationsintrot (hype-klipp ~5–6 s) efter "Ställ er på rätt sida". Saknas filen → hoppas över. */
+  introClip: `${import.meta.env.BASE_URL}media/stationsintro/forhandlingen.mp4`,
+  /** Rollsekvensen efter introt (inga klick): brygga → kort A → klipp A → brygga → kort B → klipp B → valet.
+   *  Rollnamn/valvfärg enligt station-kit/stationsintro/README.md (Josef 2026-11-19). */
+  rollkort: { A: 'SÄNDEBUD', B: 'RAPPORTÖR', valvfarg: '#7ad14f', sprak: config.lang === 'no' ? 'no' : 'sv' },
   clips: ROLLVAL_ENABLED,
   clipSet: ROLLVAL_START_SET,
   clipSetCount: ROLLVAL.clipSets.length,
+  /** DB:ns set_id per klippset-index (SOM.md "Klippset per grupp"): set 0 = Ida (kvinna) sändebud/A + Ossian rapportör → kvinnlig A = DB set 1 (st1 A); set 1 = Jakob sändebud + Mary (kvinna) rapportör/B → DB set 2 (st1 B). */
+  clipSetIds: [1, 2],
   pilotRoster: [
     { band_id: 'PILOT01', name: 'Liam', gender: 'man' },
     { band_id: 'PILOT02', name: 'Jonna', gender: 'kvinna' },
