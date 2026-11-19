@@ -16,7 +16,7 @@
  * Design: xy-arkitektur/XY-BANDLOST-OCH-ANKOMST.md §2.2. Startsidorna = entréns voteSides
  * (klasslistans `halva`, annars seedad indelning — samma vid alla stationer).
  */
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRotation } from '../rotation/rotation'
 import { useEntre } from './entre'
 import type { SideId } from './types'
@@ -44,8 +44,26 @@ const groupLine = computed(() =>
   rot.group != null && rot.phase !== 'off' ? `Testgrupp ${rot.group} · runda ${rot.round}` : 'Pilotgrupp',
 )
 /** Stationens attract-bild bakom vyn (config.attractBild), med mörk slöja så namnen syns. */
+/**
+ * Attract-bilden (config.attractBild) bakom vyn, med HyperFrames-förslagets toning (xy-produktion/attract/kontaktark.html):
+ * mörka ytterkanter under namnkolumnerna + mörka band upptill/nedtill + scanlines. Bilden visas BARA om den faktiskt
+ * laddas (saknad fil → ingen bild; Vite/statisk server svarar annars index.html med 200).
+ */
+const bildOk = ref(false)
+watch(
+  () => cfg.value.attractBild,
+  (src) => {
+    bildOk.value = false
+    if (!src || typeof Image === 'undefined') return
+    const img = new Image()
+    img.onload = () => (bildOk.value = cfg.value.attractBild === src && img.naturalWidth > 0)
+    img.onerror = () => (bildOk.value = false)
+    img.src = src
+  },
+  { immediate: true },
+)
 const bildStil = computed(() =>
-  cfg.value.attractBild ? { '--ak-bild': `url("${cfg.value.attractBild}")` } : undefined,
+  bildOk.value && cfg.value.attractBild ? { '--ak-bild': `url("${cfg.value.attractBild}")` } : undefined,
 )
 const otherHint = (side: SideId) => (side === 'A' ? '◀ andra sidan' : 'andra sidan ▶')
 </script>
@@ -98,7 +116,9 @@ const otherHint = (side: SideId) => (side === 'A' ? '◀ andra sidan' : 'andra s
 .ak--bild {
   border-radius: 12px;
   background:
-    linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
+    repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 4px),
+    linear-gradient(to right, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.25) 30%, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.25) 70%, rgba(0, 0, 0, 0.72) 100%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0) 28%, rgba(0, 0, 0, 0) 70%, rgba(0, 0, 0, 0.6) 100%),
     var(--ak-bild) center / cover no-repeat;
 }
 /* Sidfärgerna (spikade 2026-11-19): A varmvitt, B magenta — station-kit/ljus/kanon.ts SIDFARG.skarm. */
