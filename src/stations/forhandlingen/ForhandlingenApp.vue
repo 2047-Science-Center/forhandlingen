@@ -20,6 +20,7 @@ import { audio } from '@/station-kit/audio/AudioEngine'
 import RotationScreens from '@/station-kit/rotation/RotationScreens.vue'
 import { initRotation, rotationOptions } from '@/station-kit/rotation/rotation'
 import { initLjus, ljusOptions, lageFranRotation, LjusRemsa } from '@/station-kit/ljus'
+import { initFilm, filmOptions, FilmOverlay } from '@/station-kit/film'
 import { spela, arSkrivare, appLage } from './ljus'
 
 import ReporterConsole from './components/ReporterConsole.vue'
@@ -114,6 +115,10 @@ const ljus = initLjus(
     spela,
   }),
 )
+// --- Regis filmer (station-kit/film, SOM.md "Filmer i riggen"): trailern helskärm i båda
+//     fönstren medan regi står i trailerfasen, sedan tillbaka till stationen. ---
+initFilm(filmOptions({ enabled: config.mode === 'production', mqttUrl: ROTATION.mqttUrl }))
+
 const ljusLage = computed(() =>
   appLage({
     rotationPa: rotation.state.phase !== 'off',
@@ -314,6 +319,8 @@ onUnmounted(() => {
     </RotationScreens>
     <!-- Ljusförhandsvisning (renderar bara med ?ljus=visa) -->
     <LjusRemsa />
+    <!-- Regis filmer (trailern) över allt, bara i filmens fas -->
+    <FilmOverlay />
     <LekStandalone v-if="lekPreview && store.transport()">
       <VemDarLek :people="lekPeople" :my-side="lekSide" :leader="lekLeader" :transport="store.transport()" />
     </LekStandalone>
