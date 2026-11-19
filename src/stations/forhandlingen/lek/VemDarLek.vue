@@ -8,6 +8,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import LekPanel from '@/station-kit/lek/LekPanel.vue'
 import { createLekSync, type LekTransport } from '@/station-kit/lek/lekSync'
 import { audio } from '@/station-kit/audio/AudioEngine'
+import { useLjus } from '@/station-kit/ljus'
 import {
   initialVem,
   reduceVem,
@@ -58,12 +59,17 @@ onUnmounted(() => {
   sync.dispose()
 })
 
-// Ljud lokalt per skärm.
+// Ljud lokalt per skärm. Ljus: gissarsidan får rätt/fel på lila bas (§5.1) — leken är
+// synkad, så bara ledaren skickar gesten (annars dubbleras blinket); ljudet finns redan.
+const ljus = useLjus()
 watch(
   () => s.phase,
   (p) => {
     if (p === 'speak') audio.play('headset')
-    else if (p === 'reveal') audio.play(s.correct ? 'confirm' : 'deny')
+    else if (p === 'reveal') {
+      audio.play(s.correct ? 'confirm' : 'deny')
+      if (props.leader) ljus.gest(s.correct ? 'ratt' : 'fel', [other(s.speakerSide)], { tyst: true })
+    }
   },
 )
 

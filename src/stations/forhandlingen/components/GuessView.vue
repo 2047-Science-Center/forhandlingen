@@ -9,6 +9,8 @@ import { useGameStore } from '../store/gameStore'
 import { resourceIcon } from '../resources'
 import { useI18n } from '@/station-kit/i18n'
 import RoleIcon from './RoleIcon.vue'
+import { useLjus } from '@/station-kit/ljus'
+import { SIDA_FOR_LAG } from '../ljus'
 
 // demoPick: tutorial-läge (coach-mark steg 6). Visar gissningsrutan som i det
 // riktiga UI:t men med EN resurs förvald (mockup-tryck) och ×2-badge — ej
@@ -31,8 +33,12 @@ const options = computed(() =>
 const pick = ref<string | null>(null)
 const locked = computed(() => store.state.guesses[props.team] != null)
 
+const ljus = useLjus()
 function submit() {
-  if (pick.value) store.submitGuess(props.team, pick.value)
+  if (!pick.value) return
+  store.submitGuess(props.team, pick.value)
+  // Händer bara i det här fönstret → kvitto på egen sida, med ljud (§5.1).
+  ljus.gest('kvitto', [SIDA_FOR_LAG[props.team]])
 }
 </script>
 

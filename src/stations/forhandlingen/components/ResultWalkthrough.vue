@@ -12,6 +12,12 @@
  * Varje beat exponerar ett NAMNGIVET reveal-ögonblick: emit('reveal', <namn>)
  * + SFX-platshållare, så Agent 3 kan haka i röst utan att röra komponenten
  * (namn: secured | capital | guess | winner).
+ *
+ * Ljus/ljud på winner-beaten (XY-FEEDBACK-LJUS-LJUD §5.1/§6): skrivarfönstret sätter
+ * utfallet på underglow (vinnarsidan `vinst`, den andra `forlorarsida`, oavgjort båda);
+ * varje fönster spelar sin sidas ljud (vinst/neutral). Skarpt läge: sista knappen tidigast
+ * 8 s efter winner-beaten, auto-avslut efter 45 s (useResultatTid) → done skickas alltid.
+ * OBS: beat-indexet är fortfarande lokalt per skärm (ej synkat mellan fönstren).
  */
 import { ref, computed, watch, onMounted } from 'vue'
 import type { TeamId } from '../engine/types'
@@ -22,6 +28,8 @@ import { useI18n } from '@/station-kit/i18n'
 import { audio } from '@/station-kit/audio/AudioEngine'
 import CoachMark from '@/station-kit/components/CoachMark.vue'
 import CoachAnim from './CoachAnim.vue'
+import { useLjus, useResultatTid } from '@/station-kit/ljus'
+import { arSkrivare, resultatLjud, utfallForResultat } from '../ljus'
 
 const props = defineProps<{ mode: 'test' | 'live' }>()
 const emit = defineEmits<{ finish: []; reveal: [name: string] }>()
@@ -62,7 +70,8 @@ const BEATS: Beat[] = [
   { name: 'guess', target: '[data-tut="res-guess"]', title: 'walk.step_guess', body: 'walk.body_guess', anim: 'guess' },
   { name: 'winner', target: '[data-tut="res-winner"]', title: 'walk.step_winner', body: 'walk.body_winner', anim: null },
 ]
-const SFX = { secured: 'stamp', capital: 'blip', guess: 'confirm', winner: 'win' } as const
+// winner: inget Sfx här — utfallets ljud (vinst/neutral) spelas via ljuset nedan.
+const SFX = { secured: 'stamp', capital: 'blip', guess: 'confirm', winner: null } as const
 
 const beat = ref(0)
 const spec = computed(() => BEATS[beat.value])
@@ -77,21 +86,49 @@ const animGuess = computed(
 )
 const animRes = computed(() => (spec.value.anim === 'guess' ? animGuess.value : animCritical.value))
 
-const ctaLabel = computed(() =>
-  last.value ? (props.mode === 'test' ? t('reveal.to_live') : t('reveal.play_again')) : undefined,
-)
+// Resultatrutans tider (§6) — bara skarpt läge (testets genomgång leder vidare till skarpt).
+const live = props.mode === 'live'
+let finished = false
+function finish() {
+  if (finished) return
+  finished = true
+  rt.stop()
+  emit('finish')
+}
+const rt = useResultatTid({ onAuto: finish })
+const locked = computed(() => live && last.value && !rt.kanGaVidare.value)
+
+const ctaLabel = computed(() => {
+  if (!last.value) return undefined
+  const label = props.mode === 'test' ? t('reveal.to_live') : t('reveal.play_again')
+  return locked.value ? `⏳ ${label}` : label
+})
+
+const ljus = useLjus()
+/** Winner-beaten visas: utfallet på underglow (skrivaren) + den här sidans ljud. */
+function visaUtfall() {
+  if (arSkrivare(store.view)) {
+    for (const u of utfallForResultat(winner.value)) ljus.utfall(u.utfall, u.ids, { tyst: true })
+  }
+  ljus.ljud(resultatLjud(winner.value, store.view))
+}
 
 function fire(i: number) {
   const name = BEATS[i].name as keyof typeof SFX
   emit('reveal', name)
-  audio.play(SFX[name])
+  const sfx = SFX[name]
+  if (sfx) audio.play(sfx)
+  if (name === 'winner') {
+    visaUtfall()
+    if (live) rt.start()
+  }
 }
 onMounted(() => fire(0))
 watch(beat, (i) => fire(i))
 
 function next() {
-  if (last.value) emit('finish')
-  else beat.value += 1
+  if (!last.value) beat.value += 1
+  else if (!locked.value) finish()
 }
 </script>
 

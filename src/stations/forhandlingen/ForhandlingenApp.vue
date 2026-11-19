@@ -6,7 +6,7 @@
  */
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from './store/gameStore'
-import { config, LIVE_DATASET_ID, ROLLVAL, ROTATION, ENTRE, SIDE_TO_TEAM } from '@/config'
+import { config, LIVE_DATASET_ID, ROLLVAL, ROTATION, ENTRE, SIDE_TO_TEAM, LJUS } from '@/config'
 
 import CrtScreen from '@/station-kit/components/CrtScreen.vue'
 import AttractScreen from '@/station-kit/components/AttractScreen.vue'
@@ -19,6 +19,8 @@ import { useStationMode } from '@/station-kit/mode/useStationMode'
 import { audio } from '@/station-kit/audio/AudioEngine'
 import RotationScreens from '@/station-kit/rotation/RotationScreens.vue'
 import { initRotation, rotationOptions } from '@/station-kit/rotation/rotation'
+import { initLjus, ljusOptions, lageFranRotation, LjusRemsa } from '@/station-kit/ljus'
+import { spela, arSkrivare, appLage } from './ljus'
 
 import ReporterConsole from './components/ReporterConsole.vue'
 import ResultWalkthrough from './components/ResultWalkthrough.vue'
@@ -97,6 +99,44 @@ const lekLeader = computed(() => store.view !== 'lag2')
 
 /** Onboardingen klar när koordinatorns stage nått 'live'. */
 const onboarded = computed(() => store.onbStage === 'live')
+
+// --- Stationsljus (station-kit/ljus, XY-FEEDBACK-LJUS-LJUD §5.1): underglow A (#lag1) /
+//     B (#lag2). Skrivare = ledarfönstret (lag1/delad) — bara det publicerar basen och
+//     gester för synkade händelser. Samma broker som rotationen; publicerar bara i drift. ---
+const ljus = initLjus(
+  ljusOptions({
+    stationN: ROTATION.stationN,
+    enabled: config.mode === 'production',
+    mqttUrl: ROTATION.mqttUrl,
+    valv: LJUS.valv,
+    segment: LJUS.segment,
+    skrivare: arSkrivare(store.view),
+    spela,
+  }),
+)
+const ljusLage = computed(() =>
+  appLage({
+    rotationPa: rotation.state.phase !== 'off',
+    franRotation: lageFranRotation(rotation.state.phase, rotation.state.mode),
+    entered: entered.value,
+    onboarded: onboarded.value,
+  }),
+)
+watch(
+  ljusLage,
+  (l, old) => {
+    // Skarpt slut → lila lek: `klar` (en gång; sätter själv basen lila). Gesten bara i
+    // skrivaren; den andra skärmen spelar bara ljudet och följer basen lokalt.
+    if (l === 'lek' && old !== 'lek') {
+      if (arSkrivare(store.view)) ljus.gest('klar', ['A', 'B'])
+      else {
+        ljus.lage('lek')
+        ljus.ljud('klar')
+      }
+    } else ljus.lage(l)
+  },
+  { immediate: true },
+)
 
 const isPilot = computed(() => config.mode === 'pilot')
 const showReveal = computed(() => store.phase === 'reveal')
@@ -272,6 +312,8 @@ onUnmounted(() => {
         <VemDarLek :people="lekPeople" :my-side="lekSide" :leader="lekLeader" :transport="store.transport()" />
       </template>
     </RotationScreens>
+    <!-- Ljusförhandsvisning (renderar bara med ?ljus=visa) -->
+    <LjusRemsa />
     <LekStandalone v-if="lekPreview && store.transport()">
       <VemDarLek :people="lekPeople" :my-side="lekSide" :leader="lekLeader" :transport="store.transport()" />
     </LekStandalone>

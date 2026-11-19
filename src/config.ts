@@ -12,6 +12,7 @@
 import type { Dataset, Person, TeamId } from './stations/forhandlingen/engine/types'
 import type { RollvalConfig } from './station-kit/rollval/types'
 import type { EntreConfig } from './station-kit/entre/types'
+import type { Valv } from './station-kit/ljus/kanon'
 
 export type Mode = 'pilot' | 'production'
 
@@ -71,6 +72,21 @@ export const ROTATION = {
   stationN: STATION_N,
   enabled: config.mode === 'production',
   mqttUrl: config.production.mqttUrl || 'ws://127.0.0.1:9001', // dev-default; env/URL går före
+}
+
+/**
+ * STATIONSLJUS (station-kit/ljus, XY-FEEDBACK-LJUS-LJUD §1.2/§5.1): underglow-segmenten.
+ * Sida A = vänster (#lag1, Valv Syd), sida B = höger (#lag2, Valv Nord). Bas retained på
+ * station1/underglow, gester på station1/feedback (SOM.md "Stationsljus"). Publiceras bara i
+ * drift (överstyr ?ljus=1|0|visa / VITE_LJUS). Broker = samma som rotationen (ROTATION.mqttUrl).
+ * Pixelintervallen nedan är BÄNK-värden (60 px-slinga) — riktiga intervall = Eriks mätning.
+ */
+export const LJUS: { valv: Valv; segment: Record<string, [number, number]> } = {
+  valv: 'diplomat',
+  segment: {
+    A: [0, 29],
+    B: [30, 59],
+  },
 }
 
 /**

@@ -20,6 +20,8 @@ import type { ResultPayload } from '@/station-kit/adapters/result/ResultSink'
 import type { IdentityGroup } from '@/station-kit/adapters/identity/Identity'
 import { audio } from '@/station-kit/audio/AudioEngine'
 import { tagResult } from '@/station-kit/rotation/rotation'
+import { useLjus } from '@/station-kit/ljus'
+import { arSkrivare, timerVarning, SIDA_FOR_LAG } from '../ljus'
 import {
   config,
   DATASETS,
@@ -84,6 +86,8 @@ export const useGameStore = defineStore('forhandlingen', () => {
   const holdActiveUntil = ref(0)
 
   const adapters = shallowRef<Adapters | null>(null)
+  /** Stationsljuset (station-kit/ljus). No-op tills appen kört initLjus. */
+  const ljus = useLjus()
   let unsub: (() => void) | null = null
   let timerHandle: ReturnType<typeof setInterval> | null = null
 
@@ -122,8 +126,15 @@ export const useGameStore = defineStore('forhandlingen', () => {
   )
 
   // --- Ljud (per skärm): nedräknings-tick sista 5 s + "GO" + idle-varning ---
+  //     Ljus: sista 5 s → varning(2) (blink), tillbaka varning(0) vid 0/ny runda.
+  //     varning() rör bara basen, som bara skrivarfönstret publicerar.
   let lastTick = -1
+  let timerVarnar = false
   watch(secondsLeft, (nv) => {
+    const v = timerVarning(step.value, nv)
+    if (v === 2 && !timerVarnar) ljus.varning(2)
+    else if (v === 0 && timerVarnar) ljus.varning(0)
+    timerVarnar = v === 2
     if (step.value === 'negotiating' && nv != null) {
       if (nv > 0 && nv <= 5 && nv !== lastTick) {
         audio.play('tick')
@@ -138,6 +149,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
   })
   watch(idleWarn, (v) => {
     if (v) audio.play('idlewarn')
+    ljus.varning(v ? 1 : 0)
   })
 
   /** Luckrad som anonyma thumbnails: resurs avslöjas bara för avgjorda luckor. */
@@ -158,17 +170,38 @@ export const useGameStore = defineStore('forhandlingen', () => {
   let prevResultCount = 0
   let resultSent = false
 
+  // --- Luckljuset (station1/lights, luckformen): bara skrivarfönstret och bara vid
+  //     ändring (förut: varje state-ändring + var 250:e ms från BÅDA fönstren, ~20 msg/s). ---
+  let lastHatchLights = ''
+  function pushHatchLights(): void {
+    if (!adapters.value || !arSkrivare(view.value)) return
+    const json = JSON.stringify(lights.value)
+    if (json === lastHatchLights) return
+    lastHatchLights = json
+    adapters.value.lights.set(lights.value)
+  }
+
   function applyEffects() {
     const s = state.value
-    adapters.value?.lights.set(lights.value)
+    pushHatchLights()
+    // Synkat state → båda fönstren kör detta; underglow-gesten bara i skrivaren
+    // (annars dubbleras blinket). Appens egna ljud spelas som förut per fönster.
+    const skrivare = arSkrivare(view.value)
 
     if (s.phase !== prevPhase) {
-      if (s.phase === 'bidding' && prevPhase === 'intro') audio.play('hatch')
-      if (s.phase === 'reveal') audio.play('win')
+      if (s.phase === 'bidding' && prevPhase === 'intro') {
+        audio.play('hatch')
+        if (skrivare) ljus.gest('oppnar', ['A', 'B'], { tyst: true })
+      }
+      // Reveal: kanon `resultat` (förut `win` här + `win` igen på vinnar-beaten).
+      if (s.phase === 'reveal') ljus.ljud('resultat')
       prevPhase = s.phase
     }
     if (s.step !== prevStep) {
-      if (s.step === 'negotiating') audio.play('hatch')
+      if (s.step === 'negotiating') {
+        audio.play('hatch')
+        if (skrivare) ljus.gest('oppnar', ['A', 'B'], { tyst: true })
+      }
       if (s.step === 'confirm') audio.play('confirm')
       prevStep = s.step
     }
@@ -176,7 +209,11 @@ export const useGameStore = defineStore('forhandlingen', () => {
     const rc = Object.keys(s.results).length
     if (rc > prevResultCount) {
       const last = s.results[Math.max(...Object.keys(s.results).map(Number))]
-      if (last?.winner) audio.play('hatch')
+      if (last?.winner) {
+        audio.play('hatch')
+        // Köp bekräftat: sidan som tog luckan får `rätt` (lockin/hatch spelas redan).
+        if (skrivare) ljus.gest('ratt', [SIDA_FOR_LAG[last.winner]], { tyst: true })
+      }
       prevResultCount = rc
     }
 
@@ -419,7 +456,8 @@ export const useGameStore = defineStore('forhandlingen', () => {
     prevPhase = 'intro'
     prevStep = 'negotiating'
     prevResultCount = 0
-    adapters.value?.lights.reset()
+    lastHatchLights = ''
+    if (arSkrivare(view.value)) adapters.value?.lights.reset()
     introStartedAt.value = null
     paused.value = false
     pausedSince.value = 0
@@ -471,7 +509,8 @@ export const useGameStore = defineStore('forhandlingen', () => {
 
     timerHandle = setInterval(() => {
       now.value = Date.now()
-      if (adapters.value) adapters.value.lights.set(lights.value)
+      // holdActiveUntil går ut på tid → kolla luckljuset, men skicka bara vid ändring.
+      pushHatchLights()
       const s = state.value
       // Nedräkningar: reveal → getready → förhandling → avräkning. Fryst vid paus.
       if (!paused.value && s.phase === 'bidding' && s.hatchTimerEndsAt != null && now.value >= s.hatchTimerEndsAt) {

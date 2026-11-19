@@ -40,6 +40,8 @@ import ResultWalkthrough from '../components/ResultWalkthrough.vue'
 import BarrierWait from './BarrierWait.vue'
 import ReporterConsole from '../components/ReporterConsole.vue'
 import BippStart from '@/station-kit/components/BippStart.vue'
+import { useLjus } from '@/station-kit/ljus'
+import { egnaSidor } from '../ljus'
 
 const props = defineProps<{ team: TeamId }>()
 const emit = defineEmits<{ complete: [] }>()
@@ -172,9 +174,12 @@ function afterParticipants() {
   else openingStep.value = 'roles'
 }
 /** In i klar-gaten (headset "gör er redo") — med aktiverings-ljud. */
+const ljus = useLjus()
 function enterGate() {
   openingStep.value = 'gate'
   audio.play('headset')
+  // Lokalt i det här fönstret → kvitto på egen sida (ljudet = headset, ovan).
+  ljus.gest('kvitto', egnaSidor(store.view), { tyst: true })
 }
 function coachNext() {
   audio.play('blip')
