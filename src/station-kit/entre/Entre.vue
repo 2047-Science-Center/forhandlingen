@@ -7,8 +7,8 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import RoleSelect from '../rollval/RoleSelect.vue'
 import Ankomst from './Ankomst.vue'
+import StationIntro from './StationIntro.vue'
 import type { RollvalConfig } from '../rollval/types'
-import { useRotation } from '../rotation/rotation'
 import { useEntre } from './entre'
 import type { EntrePerson, EntreRole, SideId } from './types'
 
@@ -24,7 +24,6 @@ const emit = defineEmits<{ start: []; done: [] }>()
 
 const entre = useEntre()
 const s = entre.state
-const rot = useRotation().state
 const cfg = computed(() => entre.config())
 const roles = computed(() => cfg.value.roles)
 
@@ -41,12 +40,10 @@ watch(
 
 /* ---------- attract ---------- */
 /**
- * Ankomstvyn (tredelad, Ankomst.vue) när regi skickat en grupp till stationen — då är det eleverna som
- * letar upp sina namn. ?ankomst=1 visar den även i piloten (pilot-rostern), för förhandsvisning.
+ * entre-v2 (Josef 2026-11-19): attract ÄR "Ställ er på rätt sida" (Ankomst.vue, tredelad sida A | stationen |
+ * sida B, med 3D-bilden i mitten). Den gamla förskärmen (stationens attract + namnlistor) och ankomst-steget
+ * (samma information en gång till) är borta. Stationens eget attract-innehåll (slot) visas bara om gruppen är tom.
  */
-const forceAnkomst = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('ankomst') === '1'
-const showAnkomst = computed(() => entre.members.value.length > 0 && (rot.phase === 'group' || forceAnkomst))
-const groupLabel = computed(() => (rot.group != null && rot.phase !== 'off' ? `Testgrupp ${rot.group}` : null))
 const sideNames = (side: SideId) =>
   entre.members.value.filter((m) => entre.voteSides.value[m.band_id] === side).map((m) => m.name)
 
@@ -122,10 +119,10 @@ function toggleMode(): void {
 
 <template>
   <div class="en" :class="`en--${s.step}`">
-    <!-- ATTRACT i rotationen: ANKOMSTVYN, tredelad sida A | stationen | sida B -->
-    <Ankomst v-if="s.step === 'attract' && showAnkomst" />
+    <!-- ATTRACT = "STÄLL ER PÅ RÄTT SIDA": tredelad sida A | stationen (+3D) | sida B -->
+    <Ankomst v-if="s.step === 'attract' && entre.members.value.length" :illu-src="illuOk ? arrivalSrc : ''" />
 
-    <!-- ATTRACT: stationens eget attract-innehåll + testgrupp/sidindelning -->
+    <!-- ATTRACT utan grupp (tom roster): stationens eget attract-innehåll -->
     <div v-else-if="s.step === 'attract'" class="en__attract">
       <div class="en__attract-slot">
         <slot name="attract" :start="entre.start">
@@ -135,54 +132,10 @@ function toggleMode(): void {
           </div>
         </slot>
       </div>
-      <div class="en__group" @click="entre.start()">
-        <p class="en__group-head">
-          <span v-if="groupLabel" class="en__group-name">{{ groupLabel }}</span>
-          <span v-if="groupLabel">Runda {{ rot.round }}</span>
-          <span v-if="rot.manual"> · manuellt vald</span>
-          <span v-if="!groupLabel" class="en__muted">Pilotgrupp</span>
-        </p>
-        <!-- STARTSIDORNA (fasta halvor, samma vid alla stationer): STORA namnblock per sida -->
-        <template v-if="entre.members.value.length">
-          <div class="en__sides" :class="{ 'en__sides--one': s.screenSide }">
-            <section
-              v-for="side in (s.screenSide ? [s.screenSide] : SIDES)"
-              :key="side"
-              class="en__side-block"
-              :class="`en__side-block--${side}`"
-            >
-              <span class="en__side-letter">{{ side }}</span>
-              <div class="en__name-blocks">
-                <span v-for="n in sideNames(side)" :key="n" class="en__name-block">{{ n }}</span>
-              </div>
-            </section>
-          </div>
-          <p class="en__group-hint">
-            {{ s.screenSide ? `Står ditt namn här? Ställ dig på sida ${s.screenSide}.` : 'Hitta ditt namn — ställ dig på din sida.' }}
-          </p>
-        </template>
-      </div>
     </div>
 
-    <!-- ANKOMST: startsidorna i 3D → gruppen ställer sig -->
-    <div v-else-if="s.step === 'ankomst'" class="en__stage en__arrival">
-      <h2 class="en__question ink-strong">Ställ er på er sida</h2>
-      <iframe v-if="illuOk" :src="arrivalSrc" class="en__illu3d" title="Era startsidor" />
-      <div class="en__sides" :class="{ 'en__sides--one': s.screenSide }">
-        <section
-          v-for="side in (s.screenSide ? [s.screenSide] : SIDES)"
-          :key="side"
-          class="en__side-block"
-          :class="`en__side-block--${side}`"
-        >
-          <span class="en__side-letter">{{ side }}</span>
-          <div class="en__name-blocks">
-            <span v-for="n in sideNames(side)" :key="n" class="en__name-block">{{ n }}</span>
-          </div>
-        </section>
-      </div>
-      <button class="crt-button crt-button--strong en__cta-btn" @click="entre.arrived()">Vi står på våra sidor ▸</button>
-    </div>
+    <!-- STATIONSINTRO: hype-klippet (~5–6 s), ett tryck hoppar över -->
+    <StationIntro v-else-if="s.step === 'intro' && cfg.introClip" :src="cfg.introClip" @done="entre.introDone()" />
 
     <!-- ROLLVAL-KLIPPEN -->
     <RoleSelect

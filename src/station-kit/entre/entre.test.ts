@@ -222,12 +222,13 @@ describe('entrén (skärm-läget, en skärm)', () => {
     __resetEntreForTest(() => seededRng(42))
   })
 
-  it('attract → ankomst → valet person för person → utfall med chosen/assigned/plats', () => {
+  it('attract → (intro) → valet person för person → utfall med chosen/assigned/plats', () => {
     const e = initEntre({ stationN: 3, config: CONFIG })
     e.setScreen({ side: null, leader: true })
+    e.setIntroAvailable(true)
     e.start()
-    expect(e.state.step).toBe('ankomst')
-    e.arrived()
+    expect(e.state.step).toBe('intro')
+    e.introDone()
     expect(e.state.step).toBe('valet')
     const picks: RoleLetter[] = ['A', 'A', 'A', 'A', 'B', 'B']
     const order = e.myVoters.value.map((m) => m.band_id)
@@ -400,5 +401,42 @@ describe('entrén — bandlöst läge (station-kit/band, v49)', () => {
     const e = initEntre({ stationN: 3, config: { ...CONFIG, voteMode: 'skarm' }, bandlost: false })
     expect(e.state.voteMode).toBe('rfid')
     expect(e.state.bandlost).toBe(false)
+  })
+})
+
+describe('entrén v2 — attract = "ställ er på rätt sida" → stationsintro → rollval', () => {
+  beforeEach(() => {
+    __resetRotationForTest()
+    __resetEntreForTest(() => seededRng(2))
+  })
+
+  it('utan intro-fil: start går direkt till rollvalet/valet (inget ankomst-steg)', () => {
+    const e = initEntre({ stationN: 3, config: { ...CONFIG, clips: true } })
+    e.start()
+    expect(e.state.step).toBe('rollval')
+  })
+
+  it('med intro: start → intro → introDone → rollval; introDone utanför introt gör inget', () => {
+    const e = initEntre({ stationN: 3, config: { ...CONFIG, clips: true, introClip: '/media/stationsintro/x.mp4' } })
+    e.setIntroAvailable(true)
+    e.introDone()
+    expect(e.state.step).toBe('attract')
+    e.start()
+    expect(e.state.step).toBe('intro')
+    e.introDone()
+    expect(e.state.step).toBe('rollval')
+  })
+
+  it('med intro och clips:false → valet; facilitatorns "lotta nu" fungerar under introt', () => {
+    const e = initEntre({ stationN: 3, config: CONFIG })
+    e.setIntroAvailable(true)
+    e.start()
+    e.introDone()
+    expect(e.state.step).toBe('valet')
+    e.reset()
+    e.start()
+    expect(e.state.step).toBe('intro')
+    e.skipVote()
+    expect(e.state.step).toBe('utfall')
   })
 })

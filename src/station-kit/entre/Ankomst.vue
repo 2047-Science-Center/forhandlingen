@@ -1,12 +1,15 @@
 <script setup lang="ts">
 /**
- * Ankomstvyn (Lager A — IDENTISK i alla X&Y-stationer). Entréns attract i rotationen, TREDELAD:
+ * "STÄLL ER PÅ RÄTT SIDA" (Lager A — IDENTISK i alla X&Y-stationer) = entréns attract, TREDELAD:
  *
  *   ┌ SIDA A · Labb ┬──── UNDERSÖKNINGEN ────┬ SIDA B · Fält ┐
  *   │  Alma         │  Testgrupp 2 · runda 1 │  Fredrik      │
- *   │  Noah         │  Hitta ditt namn —     │  Wilma        │
- *   │  Sigge        │  ställ dig på din sida │  Ebba         │
- *   └───────────────┴─ Tryck för att börja ▸ ┴───────────────┘
+ *   │  Noah         │      [3D: sidorna]     │  Wilma        │
+ *   │  Sigge        │ Ställ er på rätt sida  │  Ebba         │
+ *   └───────────────┴─ [ Vi står rätt ▸ ]  ──┴───────────────┘
+ *
+ * entre-v2 (Josef 2026-11-19): ersätter förskärmen + ankomst-steget (samma information två gånger).
+ * Tryck var som helst (sin sida eller knappen) → stationsintrot → rollvalet. Varje skärm startar sig själv.
  *
  * Eleven letar upp sitt namn: kolumnen säger sidan, mitten säger stationen. Två skärmar per station:
  * båda kolumnerna syns på båda, den egna sidan i full styrka och den andra dämpad ("andra sidan").
@@ -17,6 +20,10 @@ import { computed } from 'vue'
 import { useRotation } from '../rotation/rotation'
 import { useEntre } from './entre'
 import type { SideId } from './types'
+
+const props = withDefaults(defineProps<{ /** 3D-bilden (xy-entre-3d, lage=ankomst); tom = utan. */ illuSrc?: string }>(), {
+  illuSrc: '',
+})
 
 const entre = useEntre()
 const s = entre.state
@@ -66,8 +73,10 @@ const otherHint = (side: SideId) => (side === 'A' ? '◀ andra sidan' : 'andra s
     <section class="ak__mid" :style="{ order: 1 }">
       <p class="ak__group">{{ groupLine }}<span v-if="rot.manual"> · manuellt vald</span></p>
       <h1 class="ak__station ink-strong">{{ cfg.stationTitle }}</h1>
-      <p class="ak__hint">Hitta ditt namn —<br />ställ dig på din sida.</p>
-      <p class="ak__cta">Tryck för att börja ▸</p>
+      <iframe v-if="props.illuSrc" :src="props.illuSrc" class="ak__illu" title="Era sidor" tabindex="-1" />
+      <p class="ak__hint ink-strong">Ställ er på rätt sida</p>
+      <p class="ak__sub">Leta upp ditt namn.</p>
+      <button type="button" class="crt-button crt-button--strong ak__cta" @click.stop="entre.start()">Vi står rätt ▸</button>
     </section>
   </div>
 </template>
@@ -198,20 +207,32 @@ const otherHint = (side: SideId) => (side === 'A' ? '◀ andra sidan' : 'andra s
   overflow-wrap: break-word;
   hyphens: auto;
 }
+.ak__illu {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  max-height: 46vh;
+  border: 0;
+  pointer-events: none; /* trycket går till vyn (start), inte till 3D-sidan */
+}
 .ak__hint {
   margin: 0;
-  font-size: clamp(1.1rem, 2.2vw, 1.8rem);
-  color: var(--color-ink-strong);
+  font-size: clamp(1.4rem, 3vw, 2.6rem);
+  letter-spacing: 0.04em;
+}
+.ak__sub {
+  margin: 0;
+  font-size: clamp(1rem, 1.8vw, 1.4rem);
+  color: var(--color-ink-muted);
 }
 .ak__cta {
-  margin: 0;
-  font-size: clamp(1.1rem, 2vw, 1.6rem);
-  color: var(--color-primary);
-  animation: ak-blink 1.6s steps(2, jump-none) infinite;
+  font-size: clamp(1.1rem, 2.2vw, 1.8rem);
+  padding: 0.5em 1.4em;
+  animation: ak-pulse 2.4s ease-in-out infinite;
 }
-@keyframes ak-blink {
+@keyframes ak-pulse {
   50% {
-    opacity: 0.35;
+    box-shadow: 0 0 22px color-mix(in srgb, var(--color-primary) 55%, transparent);
   }
 }
 @media (prefers-reduced-motion: reduce) {
