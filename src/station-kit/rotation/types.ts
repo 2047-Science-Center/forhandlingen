@@ -66,7 +66,7 @@ export interface RotationOptions {
   enabled: boolean
   /** Broker (WebSocket). Tom → ingen broker: bara manuellt gruppval, done skickas inte. */
   mqttUrl: string
-  /** Medsols stationsordning (för manuellt val: runda räknas ur grupp). Default [1, 4, 2, 3]. */
+  /** Medsols stationsordning (för manuellt val: runda räknas ur grupp). Default [1, 4, 3, 2]. */
   order?: number[]
   /** Visa manuellt gruppval om inget gruppmeddelande kommit inom så här lång tid. Default 5000. */
   manualAfterMs?: number

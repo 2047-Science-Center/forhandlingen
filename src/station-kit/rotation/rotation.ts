@@ -35,7 +35,7 @@ import type {
   SessionId,
 } from './types'
 
-const DEFAULT_ORDER = [1, 4, 2, 3]
+const DEFAULT_ORDER = [1, 4, 3, 2] // medsols, ändrad 2026-11-18 (inga diagonala byten)
 
 const state = reactive({
   phase: 'off' as RotationPhase,

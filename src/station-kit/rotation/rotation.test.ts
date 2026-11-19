@@ -20,7 +20,7 @@ function fakeClient() {
   return { client, published, deliver }
 }
 
-const N = 2 // Människotestet: position 2 i [1, 4, 2, 3]
+const N = 2 // Människotestet: sista position (index 3) i [1, 4, 3, 2]
 const group = (round: number, g: number | null, sid: string | null = 's1') => ({
   session_id: sid,
   round,
@@ -49,7 +49,7 @@ describe('rotation (stationssidan)', () => {
     const f = fakeClient()
     const r = initRotation({ stationN: N, enabled: true, mqttUrl: '' }, f.client)
     expect(r.state.phase).toBe('waiting')
-    const facit = [3, 2, 1, 4] // XY-ROTATION.md, kolumn Människotestet (st2)
+    const facit = [4, 3, 2, 1] // XY-ROTATION.md, kolumn Människotestet (st2)
     facit.forEach((g, i) => {
       const round = i + 1
       f.deliver(`station${N}/group`, group(round, g))
@@ -127,7 +127,7 @@ describe('rotation (stationssidan)', () => {
     expect(r.state.showManual).toBe(true) // ingen broker → manuellt direkt
     r.pickManual(1)
     expect(r.state.phase).toBe('group')
-    expect(r.state.round).toBe(3) // G1 står på st2 i runda 3
+    expect(r.state.round).toBe(4) // G1 står på st2 i runda 4
     vi.useRealTimers()
   })
 })
