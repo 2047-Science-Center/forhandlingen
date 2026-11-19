@@ -8,6 +8,7 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import RoleSelect from '../rollval/RoleSelect.vue'
 import Ankomst from './Ankomst.vue'
 import StationIntro from './StationIntro.vue'
+import RollSekvens from './RollSekvens.vue'
 import type { RollvalConfig } from '../rollval/types'
 import { useEntre } from './entre'
 import type { EntrePerson, EntreRole, SideId } from './types'
@@ -138,6 +139,16 @@ function toggleMode(): void {
     <StationIntro v-else-if="s.step === 'intro' && cfg.introClip" :src="cfg.introClip" @done="entre.introDone()" />
 
     <!-- ROLLVAL-KLIPPEN -->
+    <!-- ROLLSEKVENSEN (inga klick): brygga1 → kort A → klipp A → brygga2 → kort B → klipp B → valet -->
+    <RollSekvens
+      v-else-if="s.step === 'rollval' && cfg.rollkort"
+      :rollnamn="[cfg.rollkort.A, cfg.rollkort.B]"
+      :klipp="[clipFor(roles[0]), clipFor(roles[1])]"
+      :valvfarg="cfg.rollkort.valvfarg"
+      :sprak="cfg.rollkort.sprak"
+      @done="entre.clipsDone()"
+    />
+
     <RoleSelect
       v-else-if="s.step === 'rollval'"
       :config="rollval"

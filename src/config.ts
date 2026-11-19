@@ -404,6 +404,9 @@ export const ENTRE: EntreConfig = {
   illustrationUrl: `${import.meta.env.BASE_URL}entre/sidor-3d.html`,
   /** Stationsintrot (hype-klipp ~5–6 s) efter "Ställ er på rätt sida". Saknas filen → hoppas över. */
   introClip: `${import.meta.env.BASE_URL}media/stationsintro/forhandlingen.mp4`,
+  /** Rollsekvensen efter introt (inga klick): brygga → kort A → klipp A → brygga → kort B → klipp B → valet.
+   *  Rollnamn/valvfärg enligt station-kit/stationsintro/README.md (Josef 2026-11-19). */
+  rollkort: { A: 'SÄNDEBUD', B: 'RAPPORTÖR', valvfarg: '#7ad14f', sprak: config.lang === 'no' ? 'no' : 'sv' },
   clips: ROLLVAL_ENABLED,
   clipSet: ROLLVAL_START_SET,
   clipSetCount: ROLLVAL.clipSets.length,

@@ -135,6 +135,19 @@ export interface EntreConfig {
    * Saknas filen (eller fältet) hoppas introt över. Ett tryck hoppar över det.
    */
   introClip?: string
+  /**
+   * ROLLSEKVENSEN efter introt (Josef 2026-11-19, inga klick): brygga1 → kort A → rollklipp A → brygga2 →
+   * kort B → rollklipp B → valet (entre/RollSekvens.vue + station-kit/stationsintro/BryggKort.vue).
+   * Saknas → rollvalets gamla klippsteg (RoleSelect clipsOnly). Kräver clips !== false.
+   */
+  rollkort?: {
+    /** Rollnamnen på korten, [roll A, roll B] (t.ex. "Labbtekniker", "Forensiker"). */
+    A: string
+    B: string
+    /** Valvfärgen på tejpen (SYV-låsningen), t.ex. '#4aa3ff'. */
+    valvfarg?: string
+    sprak?: 'sv' | 'no'
+  }
 }
 
 /** En person efter entrén — det appen får (`personer[]`). */
