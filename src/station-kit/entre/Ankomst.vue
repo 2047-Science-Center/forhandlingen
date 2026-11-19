@@ -43,11 +43,15 @@ const columns = computed(() =>
 const groupLine = computed(() =>
   rot.group != null && rot.phase !== 'off' ? `Testgrupp ${rot.group} · runda ${rot.round}` : 'Pilotgrupp',
 )
+/** Stationens attract-bild bakom vyn (config.attractBild), med mörk slöja så namnen syns. */
+const bildStil = computed(() =>
+  cfg.value.attractBild ? { '--ak-bild': `url("${cfg.value.attractBild}")` } : undefined,
+)
 const otherHint = (side: SideId) => (side === 'A' ? '◀ andra sidan' : 'andra sidan ▶')
 </script>
 
 <template>
-  <div class="ak" role="button" tabindex="0" @click="entre.start()" @keydown.enter="entre.start()">
+  <div class="ak" :class="{ 'ak--bild': bildStil }" :style="bildStil" role="button" tabindex="0" @click="entre.start()" @keydown.enter="entre.start()">
     <section
       v-for="c in columns"
       :key="c.side"
@@ -91,6 +95,13 @@ const otherHint = (side: SideId) => (side === 'A' ? '◀ andra sidan' : 'andra s
   padding: clamp(0.4rem, 1.2vw, 1rem);
   cursor: pointer;
 }
+.ak--bild {
+  border-radius: 12px;
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
+    var(--ak-bild) center / cover no-repeat;
+}
+/* Sidfärgerna (spikade 2026-11-19): A varmvitt, B magenta — station-kit/ljus/kanon.ts SIDFARG.skarm. */
 .ak__col {
   --zone: var(--entre-side-a, #fff1d6);
   display: flex;

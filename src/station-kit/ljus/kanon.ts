@@ -25,6 +25,29 @@ export const VALVFARG: Record<Valv, string> = {
   forskning: '#4aa3ff',
 }
 
+/**
+ * SIDFÄRGERNA (spikade 2026-11-19, Josef — XY-PLATSER): sida A = VARMVITT, sida B = MAGENTA.
+ * Samma färg överallt; två värden per sida eftersom WS2812 återger vitt kallt:
+ *  - `skarm` = skärmarna (entréns ankomstvy/namnkolumner, incheckningen, 3D-bildens sidor:
+ *    CSS-variablerna --entre-side-a/-b och public/entre/sidor-3d.html DEFAULT_COLORS)
+ *  - `led`   = underglow (station<N>/underglow i läget `startsida`), varmare för att se varmvit ut på slingan.
+ */
+export const SIDFARG = {
+  A: { namn: 'varmvitt', skarm: '#fff1d6', led: '#ffd9a0' },
+  B: { namn: 'magenta', skarm: '#ff3cc8', led: '#ff3ca0' },
+} as const
+
+/**
+ * Vilken startsida ett underglow-segment hör till (SOM.md "Stationsljus", logiska id:n):
+ * `A`/`A.*` och st4:s `puls` (puls-skärmen = sida A) → A; `B`/`B.*` och st4:s `gyro` → B.
+ * Övriga (st2 `valdi`, st4 `falt`) hör inte till en sida → null (behåller ankomstens amber chase).
+ */
+export function sidaForSegment(id: string): 'A' | 'B' | null {
+  if (id === 'A' || id.startsWith('A.') || id === 'puls') return 'A'
+  if (id === 'B' || id.startsWith('B.') || id === 'gyro') return 'B'
+  return null
+}
+
 /** Valvens namn för skärmtext (t.ex. "Leta upp valvet med den här färgen"). */
 export const VALVNAMN: Record<Valv, string> = {
   teknolog: 'Teknologerna',
@@ -44,16 +67,16 @@ export const FARG = {
   rodDjup: '#7a1410',
   vit: '#fff0d0',
   stal: '#9fb2c0',
-  /** Startsidor vid ankomsten (XY-PLATSER, kandidater: varmvitt + magenta). */
-  sidaA: '#ffd9a0',
-  sidaB: '#ff3ca0',
+  /** Startsidor vid ankomsten (spikade 2026-11-19: varmvitt + magenta) — LED-värdena ur SIDFARG. */
+  sidaA: SIDFARG.A.led,
+  sidaB: SIDFARG.B.led,
 } as const
 
 /**
  * Lägen = segmentets bas.
  *  vila         amber andning (attract/väntar)
  *  ankomst      amber chase ("kom hit", ny grupp)
- *  startsida    sidfärg A/B (segment-id A resp. B) vid ankomst
+ *  startsida    sidfärg A varmvitt / B magenta (sidaForSegment) vid ankomsten; segment utan sida → amber chase
  *  tutorial     ljusblå fast
  *  skarp        orange fast
  *  varning      orange andning (tiden ≤15 s)
@@ -86,8 +109,11 @@ export function lageLook(lage: Lage, segmentId = ''): Look {
       return { color: FARG.amber, effekt: 'puls' }
     case 'ankomst':
       return { color: FARG.amber, effekt: 'chase' }
-    case 'startsida':
-      return { color: segmentId.startsWith('B') ? FARG.sidaB : FARG.sidaA, effekt: 'static' }
+    case 'startsida': {
+      const sida = sidaForSegment(segmentId)
+      if (!sida) return { color: FARG.amber, effekt: 'chase' }
+      return { color: sida === 'B' ? FARG.sidaB : FARG.sidaA, effekt: 'static' }
+    }
     case 'tutorial':
       return { color: FARG.tutorial, effekt: 'static' }
     case 'skarp':
@@ -185,12 +211,12 @@ export function regiLook(fas: string | null, valv: Valv): Look | null {
 /**
  * Rotationens fas/läge (station-kit/rotation) → stationens läge. Strängar i stället för
  * rotationens typer så att modulen inte beror på rotationen (st4 saknar den).
- *   off/waiting → null (följ regi), group → ankomst, running → tutorial|skarp, lek → lek.
+ *   off/waiting → null (följ regi), group → startsida (sidfärgerna A/B, XY-PLATSER), running → tutorial|skarp, lek → lek.
  */
 export function lageFranRotation(phase: string, mode: string | null): Lage | null {
   switch (phase) {
     case 'group':
-      return 'ankomst'
+      return 'startsida'
     case 'running':
       return mode === 'skarp' ? 'skarp' : 'tutorial'
     case 'lek':

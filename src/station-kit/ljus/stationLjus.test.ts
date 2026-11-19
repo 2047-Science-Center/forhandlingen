@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initLjus, useLjus, __resetLjusForTest, type LjusClient } from './stationLjus'
-import { lageFranRotation, regiLook, FARG, VALVFARG } from './kanon'
+import { lageFranRotation, lageLook, regiLook, sidaForSegment, FARG, SIDFARG, VALVFARG } from './kanon'
 
 type Msg = { topic: string; payload: any; retain: boolean }
 
@@ -163,7 +163,7 @@ describe('station-kit/ljus', () => {
   })
 
   it('kanon: rotation → läge och regi → valvfärg', () => {
-    expect(lageFranRotation('group', null)).toBe('ankomst')
+    expect(lageFranRotation('group', null)).toBe('startsida')
     expect(lageFranRotation('running', 'tutorial')).toBe('tutorial')
     expect(lageFranRotation('running', 'skarp')).toBe('skarp')
     expect(lageFranRotation('lek', 'lek')).toBe('lek')
@@ -186,5 +186,22 @@ describe('station-kit/ljus resultatTid', () => {
     vi.advanceTimersByTime(37000)
     expect(onAuto).toHaveBeenCalledTimes(1)
     vi.useRealTimers()
+  })
+})
+
+describe('sidfärgerna (spikade 2026-11-19: A varmvitt, B magenta)', () => {
+  it('ankomsten (rotation group) färgar sida A varmvitt och sida B magenta; segment utan sida behåller amber chase', () => {
+    expect(lageLook('startsida', 'A')).toEqual({ color: SIDFARG.A.led, effekt: 'static' })
+    expect(lageLook('startsida', 'B')).toEqual({ color: SIDFARG.B.led, effekt: 'static' })
+    expect(lageLook('startsida', 'A.lur').color).toBe(SIDFARG.A.led)
+    expect(lageLook('startsida', 'puls').color).toBe(SIDFARG.A.led)
+    expect(lageLook('startsida', 'gyro').color).toBe(SIDFARG.B.led)
+    expect(lageLook('startsida', 'valdi')).toEqual({ color: FARG.amber, effekt: 'chase' })
+    expect(lageLook('startsida', 'falt')).toEqual({ color: FARG.amber, effekt: 'chase' })
+    expect(sidaForSegment('Bx')).toBeNull()
+  })
+  it('skärmfärgerna är varmvitt och magenta', () => {
+    expect(SIDFARG.A.skarm).toBe('#fff1d6')
+    expect(SIDFARG.B.skarm).toBe('#ff3cc8')
   })
 })

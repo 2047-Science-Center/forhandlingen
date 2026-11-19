@@ -140,6 +140,12 @@ export interface EntreConfig {
    * kort B → rollklipp B → valet (entre/RollSekvens.vue + station-kit/stationsintro/BryggKort.vue).
    * Saknas → rollvalets gamla klippsteg (RoleSelect clipsOnly). Kräver clips !== false.
    */
+  /**
+   * Attract-bild bakom "Ställ er på rätt sida" (xy-produktion/attract, 1920×1080, mörka sidor + tomt band upptill).
+   * Per NUC/sida väljs i stationens config (st2: Människotestet = valvdörren, Lögndetektorn = konsolen).
+   * Saknas → ingen bild (som förut).
+   */
+  attractBild?: string | null
   rollkort?: {
     /** Rollnamnen på korten, [roll A, roll B] (t.ex. "Labbtekniker", "Forensiker"). */
     A: string
