@@ -9,6 +9,7 @@
  * miljövariabler/driftconfig, aldrig i git).
  */
 
+import { bandlostFran } from '@/station-kit/band/band'
 import type { Dataset, Person, TeamId } from './stations/forhandlingen/engine/types'
 import type { RollvalConfig } from './station-kit/rollval/types'
 import type { EntreConfig } from './station-kit/entre/types'
@@ -73,6 +74,15 @@ export const ROTATION = {
   enabled: config.mode === 'production',
   mqttUrl: config.production.mqttUrl || 'ws://127.0.0.1:9001', // dev-default; env/URL går före
 }
+
+/**
+ * BANDLÖST LÄGE (station-kit/band, xy-arkitektur/XY-BANDLOST-OCH-ANKOMST.md, SOM.md "bandlöst läge (v49)"):
+ * på = allt banden gör görs på skärmen (rollvalet: en person i taget). Av = RFID-läsarna
+ * (station<N>/rfidnej = roll A, rfidja = roll B). Default PÅ inför v49 (läsarna är inte klara).
+ * Överstyrs med ?bandlost=1|0 i kiosk-URL:en eller VITE_BANDLOST=1|0 vid bygget.
+ * ?rost=rfid|skarm (en enskild skärm) och facilitatormenyn går fortfarande före.
+ */
+export const BANDLOST: boolean = bandlostFran(true, import.meta.env.VITE_BANDLOST as string | undefined)
 
 /**
  * STATIONSLJUS (station-kit/ljus, XY-FEEDBACK-LJUS-LJUD §1.2/§5.1): underglow-segmenten.
@@ -374,7 +384,7 @@ export const ROLLVAL: RollvalConfig = {
  * placering → "Så här blev det" (3D). XY-PLATSER (2026-11-18): sidan = STARTSIDAN = laget
  * (sida A = lag1 vänster, sida B = lag2 höger, EN NUC); rollerna fördelas INOM varje sida —
  * minst 1 sändebud + 1 rapportör per sida, resten efter önskemål.
- * Röstläge: 'skarm' tills banden finns; ?rost=rfid|skarm i URL:en går före.
+ * Röstläge: styrs av BANDLOST (ovan); voteMode gäller bara om BANDLOST inte skickas in. ?rost=rfid|skarm går före.
  * ------------------------------------------------------------------ */
 
 export const ENTRE: EntreConfig = {

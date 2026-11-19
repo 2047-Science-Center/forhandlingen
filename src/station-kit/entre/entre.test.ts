@@ -340,3 +340,65 @@ describe('entrén — två skärmar (sida A leder, sida B följer)', () => {
     expect(e.state.result).toBeNull()
   })
 })
+
+describe('entrén — bandlöst läge (station-kit/band, v49)', () => {
+  function rotationWith(stationN: number) {
+    __resetRotationForTest()
+    let deliver: (t: string, p: { toString(): string }) => void = () => {}
+    const client: RotationClient = {
+      publish: () => {},
+      subscribe: () => {},
+      on: ((ev: string, cb: (...a: never[]) => void) => {
+        if (ev === 'message') deliver = cb as unknown as typeof deliver
+      }) as RotationClient['on'],
+    }
+    initRotation({ stationN, enabled: true, mqttUrl: '' }, client)
+    return (payload: object) => deliver(`station${stationN}/group`, { toString: () => JSON.stringify(payload) })
+  }
+  // Som regi skickar en klasslista utan namn incheckad med bandlost.py: virtuella band + halva.
+  const VIRTUELLA = [
+    { band_id: 'V2A1', name: null, gender: 'kvinna', halva: 'A' },
+    { band_id: 'V2A2', name: null, gender: 'man', halva: 'A' },
+    { band_id: 'V2A3', name: 'Alma', gender: 'kvinna', halva: 'A' },
+    { band_id: 'V2B1', name: null, gender: 'man', halva: 'B' },
+    { band_id: 'V2B2', name: 'Fredrik', gender: 'man', halva: 'B' },
+    { band_id: 'V2B3', name: null, gender: 'kvinna', halva: 'B' },
+  ]
+
+  it('regi:s halva blir startsidan; namnlösa visas med plats-koden', () => {
+    __resetEntreForTest(() => seededRng(3))
+    const send = rotationWith(3)
+    const e = initEntre({ stationN: 3, config: CONFIG, bandlost: true })
+    send({ session_id: 21826, round: 1, group: 2, members: VIRTUELLA })
+    expect(e.voteSides.value).toEqual({ V2A1: 'A', V2A2: 'A', V2A3: 'A', V2B1: 'B', V2B2: 'B', V2B3: 'B' })
+    expect(e.members.value.map((m) => m.name)).toEqual(['2A1', '2A2', 'Alma', '2B1', 'Fredrik', '2B3'])
+  })
+
+  it('bandlöst → skärm-läget en i taget per startsida; resultatet bär de virtuella banden', () => {
+    __resetEntreForTest(() => seededRng(5))
+    const send = rotationWith(3)
+    const e = initEntre({ stationN: 3, config: { ...CONFIG, voteMode: 'rfid' }, bandlost: true })
+    expect(e.state.voteMode).toBe('skarm')
+    expect(e.state.bandlost).toBe(true)
+    send({ session_id: 21826, round: 1, group: 2, members: VIRTUELLA })
+    e.setScreen({ side: 'B', leader: true })
+    expect(e.myVoters.value.map((m) => m.band_id)).toEqual(['V2B1', 'V2B2', 'V2B3'])
+    e.setScreen({ side: null, leader: true })
+    e.start()
+    e.arrived()
+    while (e.state.step === 'valet') {
+      e.showQuestion()
+      e.vote(e.currentVoter.value!.band_id.includes('A') ? 'A' : 'B')
+    }
+    expect(e.state.step).toBe('utfall')
+    expect(e.personer.value.map((p) => p.band_id).sort()).toEqual(VIRTUELLA.map((m) => m.band_id).sort())
+  })
+
+  it('band (bandlost=false) → rfid-läget, även om stationens config säger skärm', () => {
+    __resetRotationForTest()
+    __resetEntreForTest()
+    const e = initEntre({ stationN: 3, config: { ...CONFIG, voteMode: 'skarm' }, bandlost: false })
+    expect(e.state.voteMode).toBe('rfid')
+    expect(e.state.bandlost).toBe(false)
+  })
+})

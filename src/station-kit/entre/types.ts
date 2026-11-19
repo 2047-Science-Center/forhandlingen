@@ -2,6 +2,7 @@
  * Entrén — stationens gemensamma första-lager (Lager A, IDENTISK i alla X&Y-stationer).
  *
  *   ATTRACT  "Testgrupp X · runda Y — tryck för att börja" + startsidorna i stora namnblock
+ *            (i rotationen: ANKOMSTVYN, tredelad sida A | stationen | sida B — Ankomst.vue)
  *   ANKOMST  3D (xy-entre-3d, lage=ankomst): gruppen ställer sig på sina fasta startsidor
  *   ROLLVAL  rollval/RoleSelect.vue: intro → klipp roll A → klipp roll B
  *   VALET    en bild per roll sida vid sida (roll A vänster, roll B höger)
@@ -50,6 +51,8 @@ export interface EntreMember {
   gender?: string | null
   /** Fast startsida från klasslista-importen (går före den seedade indelningen). */
   startsida?: SideId | null
+  /** Samma sak som regi skickar den (SOM: station<N>/group members[].halva). Normaliseras till startsida. */
+  halva?: SideId | null
 }
 
 /** En underroll inom en roll (slumpas). Fasta platser först i ordning, sedan `rest`-underrollen. */
@@ -160,4 +163,9 @@ export interface EntreOptions {
   config: EntreConfig
   /** Broker (WebSocket) för rfidja/rfidnej. Tom → rfid-läget får inga bipp. */
   mqttUrl?: string
+  /**
+   * Bandlöst läge (station-kit/band, v49): true → rollvalet på skärmen, false → läsarna (rfid).
+   * Utelämnad → config.voteMode. ?rost=rfid|skarm går alltid före (en enskild skärm).
+   */
+  bandlost?: boolean
 }

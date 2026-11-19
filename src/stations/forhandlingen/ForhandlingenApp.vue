@@ -6,7 +6,7 @@
  */
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from './store/gameStore'
-import { config, LIVE_DATASET_ID, ROLLVAL, ROTATION, ENTRE, SIDE_TO_TEAM, LJUS } from '@/config'
+import { config, LIVE_DATASET_ID, ROLLVAL, ROTATION, ENTRE, BANDLOST, SIDE_TO_TEAM, LJUS } from '@/config'
 
 import CrtScreen from '@/station-kit/components/CrtScreen.vue'
 import AttractScreen from '@/station-kit/components/AttractScreen.vue'
@@ -63,7 +63,12 @@ const entered = ref(false)
 //     + sidindelningen, sedan rollval-klipp → valet → ombalansering → "gå till sida A/B".
 //     Sida A = lag1 (Sändebud), sida B = lag2 (Rapportör) — config ENTRE. ---
 const rotation = initRotation(rotationOptions(ROTATION))
-const entre = initEntre({ stationN: ROTATION.stationN, config: ENTRE, mqttUrl: rotationOptions(ROTATION).mqttUrl })
+const entre = initEntre({
+  stationN: ROTATION.stationN,
+  config: ENTRE,
+  mqttUrl: rotationOptions(ROTATION).mqttUrl,
+  bandlost: BANDLOST,
+})
 const entreDone = computed(() => entre.state.step === 'klar')
 watch(
   () => store.view,
