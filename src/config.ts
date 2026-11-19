@@ -402,6 +402,9 @@ export const ENTRE: EntreConfig = {
   voteMode: 'skarm',
   /** 3D-översikten från three.js-tråden (xy-entre-3d → public/entre/). Saknas → 2D-vyn. */
   illustrationUrl: `${import.meta.env.BASE_URL}entre/sidor-3d.html`,
+  /** Attract-bilden bakom "Ställ er på rätt sida" (Josef 2026-11-19: st1-a, lockin-luckorna; xy-produktion/attract/ut/). En per station.
+   *  Saknas filen → ingen bild. */
+  attractBild: asset('attract/forhandlingen-lockin.jpg'),
   /** Stationsintrot (hype-klipp ~5–6 s) efter "Ställ er på rätt sida". Saknas filen → hoppas över. */
   introClip: `${import.meta.env.BASE_URL}media/stationsintro/forhandlingen.mp4`,
   /** Rollsekvensen efter introt (inga klick): brygga → kort A → klipp A → brygga → kort B → klipp B → valet.
