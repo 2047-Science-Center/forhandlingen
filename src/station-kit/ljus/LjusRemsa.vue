@@ -1,11 +1,14 @@
 <script setup lang="ts">
 /**
- * Förhandsvisning av stationens ljus (?ljus=visa): en tunn remsa längst ner som ritar
+ * 1) Domslutet (station<N>/hitta): en ruta i målvalvets färg med "Leta upp valvet med den här
+ *    färgen" — visas alltid (inte bara med ?ljus=visa), i `sekunder` eller tills nästa person.
+ * 2) Förhandsvisning av stationens ljus (?ljus=visa): en tunn remsa längst ner som ritar
  * segmenten i proportion till pixelintervallen, med samma tider som firmwaren
  * (blink 550/550, puls 2,6 s, chase 40 ms/px) och gesterna ovanpå. Ingen hårdvara krävs.
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useLjus } from './stationLjus'
+import { VALVNAMN, type Valv } from './kanon'
 
 const ljus = useLjus()
 const now = ref(Date.now())
@@ -17,6 +20,8 @@ function tick() {
 onMounted(() => {
   if (ljus.state.visa) raf = requestAnimationFrame(tick)
 })
+const hitta = computed(() => ljus.state.hitta)
+const hittaNamn = computed(() => VALVNAMN[(hitta.value?.valv ?? '') as Valv] ?? '')
 onBeforeUnmount(() => cancelAnimationFrame(raf))
 
 function scale(hex: string, k: number): string {
@@ -54,6 +59,11 @@ const segs = computed(() => {
 </script>
 
 <template>
+  <div v-if="hitta" class="ljus-hitta" role="status" aria-live="assertive">
+    <div class="ljus-hitta__ruta" :style="{ background: hitta.color, boxShadow: `0 0 80px 20px ${hitta.color}` }" />
+    <p class="ljus-hitta__text">Leta upp valvet med den här färgen</p>
+    <p v-if="hittaNamn" class="ljus-hitta__namn" :style="{ color: hitta.color }">{{ hittaNamn }}</p>
+  </div>
   <div v-if="ljus.state.visa" class="ljus-remsa" aria-hidden="true">
     <div
       v-for="s in segs"
@@ -67,6 +77,37 @@ const segs = computed(() => {
 </template>
 
 <style scoped>
+.ljus-hitta {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background: rgba(0, 0, 0, 0.82);
+  pointer-events: none;
+  font-family: inherit;
+}
+.ljus-hitta__ruta {
+  width: min(38vw, 38vh);
+  height: min(38vw, 38vh);
+  border-radius: 18px;
+}
+.ljus-hitta__text {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(28px, 4.2vw, 64px);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+.ljus-hitta__namn {
+  margin: 0;
+  font-size: clamp(22px, 3vw, 44px);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
 .ljus-remsa {
   position: fixed;
   left: 0;
