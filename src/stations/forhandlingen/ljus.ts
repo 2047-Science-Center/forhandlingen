@@ -18,34 +18,66 @@ export type Sida = 'A' | 'B'
 export type Vy = 'lag1' | 'lag2' | 'shared'
 
 /**
- * Kanon-ljud → appens Sfx. Saknade kanon-ljud går till närmaste befintliga Sfx.
- * TODO P1–P6 i XY-FEEDBACK-LJUS-LJUD §8: inom, over, forlust, klar, sista, stanger
- * ska produceras/lyftas in — byt då fallbacken mot den nya filen.
- * (`resultat` = d10-klar-resultat och `neutral` = l9-stinger-neutral finns i xy-ljud men
- * inte i appens public/Sound/sfx än → närmaste Sfx: popup resp. nobuy.)
+ * Kanon-ljud med egen fil i public/Sound/sfx/ — P1–P6 i XY-FEEDBACK-LJUS-LJUD §8 plus
+ * `resultat` (d10-klar-resultat). Källa: xy-simulator/media/ljud/xy-ljud/sfx/feedback/
+ * (README där: prompt, längd, LUFS). `neutral` = l9 finns redan som Sfx 'positive'.
  */
+export const LJUD_FIL: Partial<Record<LjudNamn, string>> = {
+  inom: 'sfx-inom.mp3',
+  over: 'sfx-over.mp3',
+  forlust: 'sfx-forlust.mp3',
+  klar: 'sfx-klar-lek.mp3',
+  sista: 'sfx-sista.mp3',
+  stanger: 'sfx-stanger.mp3',
+  resultat: 'sfx-resultat.mp3',
+}
+
+/** Kanon-ljud → appens Sfx (för ljud med LJUD_FIL: reserv om filen inte kan spelas). */
 export const LJUD_TILL_SFX: Record<LjudNamn, Sfx> = {
   kvitto: 'bipstart',
   'kvitto-fel': 'deny',
   ratt: 'confirm',
   fel: 'deny',
-  inom: 'confirm', // TODO P1 (§8)
-  over: 'deny', // TODO P2 (§8)
+  inom: 'confirm',
+  over: 'deny',
   varning: 'tick',
-  sista: 'tickfinal', // TODO P5 (§8)
+  sista: 'tickfinal',
   start: 'live',
   vinst: 'win',
-  forlust: 'nobuy', // TODO P3 (§8)
-  neutral: 'nobuy',
-  klar: 'positive', // TODO P4 (§8)
+  forlust: 'nobuy',
+  neutral: 'positive', // = l9-stinger-neutral
+  klar: 'positive',
   resultat: 'popup',
   oppnar: 'hatch',
-  stanger: 'deny', // TODO P6 (§8)
+  stanger: 'deny',
 }
 
-/** Spela ett kanon-ljud via appens ljudmotor (lokalt i det här fönstret). */
+const filer = new Map<string, HTMLAudioElement>()
+
+/** Spela en fil ur public/Sound/sfx/ på motorns volym; nekas/saknas den → reserv-Sfx. */
+function spelaFil(fil: string, reserv: Sfx): void {
+  if (audio.muted) return
+  try {
+    let el = filer.get(fil)
+    if (!el) {
+      el = new Audio(import.meta.env.BASE_URL + 'Sound/sfx/' + fil)
+      el.preload = 'auto'
+      filer.set(fil, el)
+    }
+    const kopia = el.cloneNode() as HTMLAudioElement
+    kopia.volume = audio.volume
+    const p = kopia.play()
+    if (p) p.catch(() => audio.play(reserv))
+  } catch {
+    audio.play(reserv)
+  }
+}
+
+/** Spela ett kanon-ljud lokalt i det här fönstret (egen fil om den finns, annars Sfx). */
 export function spela(ljud: LjudNamn): void {
-  audio.play(LJUD_TILL_SFX[ljud])
+  const fil = LJUD_FIL[ljud]
+  if (fil) spelaFil(fil, LJUD_TILL_SFX[ljud])
+  else audio.play(LJUD_TILL_SFX[ljud])
 }
 
 export const SIDA_FOR_LAG: Record<TeamId, Sida> = { lag1: 'A', lag2: 'B' }
