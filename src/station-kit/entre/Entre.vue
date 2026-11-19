@@ -6,6 +6,7 @@
  */
 import { computed, onUnmounted, ref, watch } from 'vue'
 import RoleSelect from '../rollval/RoleSelect.vue'
+import Ankomst from './Ankomst.vue'
 import type { RollvalConfig } from '../rollval/types'
 import { useRotation } from '../rotation/rotation'
 import { useEntre } from './entre'
@@ -39,6 +40,12 @@ watch(
 )
 
 /* ---------- attract ---------- */
+/**
+ * Ankomstvyn (tredelad, Ankomst.vue) när regi skickat en grupp till stationen — då är det eleverna som
+ * letar upp sina namn. ?ankomst=1 visar den även i piloten (pilot-rostern), för förhandsvisning.
+ */
+const forceAnkomst = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('ankomst') === '1'
+const showAnkomst = computed(() => entre.members.value.length > 0 && (rot.phase === 'group' || forceAnkomst))
 const groupLabel = computed(() => (rot.group != null && rot.phase !== 'off' ? `Testgrupp ${rot.group}` : null))
 const sideNames = (side: SideId) =>
   entre.members.value.filter((m) => entre.voteSides.value[m.band_id] === side).map((m) => m.name)
@@ -115,8 +122,11 @@ function toggleMode(): void {
 
 <template>
   <div class="en" :class="`en--${s.step}`">
+    <!-- ATTRACT i rotationen: ANKOMSTVYN, tredelad sida A | stationen | sida B -->
+    <Ankomst v-if="s.step === 'attract' && showAnkomst" />
+
     <!-- ATTRACT: stationens eget attract-innehåll + testgrupp/sidindelning -->
-    <div v-if="s.step === 'attract'" class="en__attract">
+    <div v-else-if="s.step === 'attract'" class="en__attract">
       <div class="en__attract-slot">
         <slot name="attract" :start="entre.start">
           <div class="en__stage en__tap" role="button" tabindex="0" @click="entre.start()" @keydown.enter="entre.start()">
@@ -279,7 +289,9 @@ function toggleMode(): void {
     </div>
 
     <!-- Facilitator: röstläge + lotta nu (diskret) -->
-    <button class="en__fac-btn" @click.stop="menu = !menu">Röst: {{ s.voteMode === 'rfid' ? 'RFID' : 'skärm' }} ▾</button>
+    <button class="en__fac-btn" @click.stop="menu = !menu">
+      Röst: {{ s.voteMode === 'rfid' ? 'RFID' : 'skärm' }}{{ s.bandlost ? ' · bandlöst' : '' }} ▾
+    </button>
     <div v-if="menu" class="en__fac" @click.stop>
       <button class="en__fac-item" @click="toggleMode">Byt till {{ s.voteMode === 'rfid' ? 'skärm' : 'RFID' }}</button>
       <button

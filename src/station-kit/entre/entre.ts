@@ -18,6 +18,7 @@
 import { computed, reactive, readonly, watch } from 'vue'
 import mqtt from 'mqtt'
 import { useRotation } from '../rotation/rotation'
+import { normaliseraMedlemmar } from '../band/band'
 import { normUid, place, seededRng, splitBySide, voteFromTopic } from './logic'
 import type {
   EntreConfig,
@@ -59,6 +60,8 @@ const state = reactive({
   mqttConnected: false,
   /** Aktivt klippset för den här körningen. */
   clipSet: 0,
+  /** Bandlöst läge (station-kit/band) — för facilitatorns statusrad. */
+  bandlost: true,
 })
 
 let opts: EntreOptions | null = null
@@ -70,10 +73,13 @@ let rngFactory: (run: string) => () => number = (run) => seededRng(`${run}|${Dat
 const cfg = (): EntreConfig => opts!.config
 const rotation = useRotation()
 
-/** Gruppen: regi:s station<N>/group-medlemmar, annars pilot-rostern. */
+/**
+ * Gruppen: regi:s station<N>/group-medlemmar, annars pilot-rostern. Normaliserad (station-kit/band):
+ * regi:s `halva` blir `startsida`, och namn saknas (klasslistan har inga) → plats-koden ur det virtuella bandet.
+ */
 const members = computed<EntreMember[]>(() => {
-  const m = rotation.state.members
-  return m && m.length ? (m as EntreMember[]) : (opts?.config.pilotRoster ?? [])
+  const m = rotation.state.members as EntreMember[]
+  return normaliseraMedlemmar(m && m.length ? m : (opts?.config.pilotRoster ?? []))
 })
 
 const runKey = computed(() => {
@@ -357,7 +363,9 @@ export function voteModeFromUrl(fallback: VoteMode): VoteMode {
 export function initEntre(o: EntreOptions): Entre {
   if (opts) return api
   opts = o
-  state.voteMode = voteModeFromUrl(o.config.voteMode ?? 'skarm')
+  state.bandlost = o.bandlost ?? (o.config.voteMode ?? 'skarm') === 'skarm'
+  const grund: VoteMode = o.bandlost == null ? (o.config.voteMode ?? 'skarm') : o.bandlost ? 'skarm' : 'rfid'
+  state.voteMode = voteModeFromUrl(grund)
   state.run = runKey.value
   if (state.voteMode === 'rfid') ensureMqtt()
   // Ny grupp/runda → ny körning: rensa röster och börja om på attract.
@@ -379,5 +387,5 @@ export function __resetEntreForTest(rng?: (run: string) => () => number): void {
   mqttClient = null
   if (rng) rngFactory = rng
   resetLocal()
-  Object.assign(state, { voteMode: 'skarm', screenSide: null, leader: true, run: 'pilot', mqttConnected: false })
+  Object.assign(state, { voteMode: 'skarm', screenSide: null, leader: true, run: 'pilot', mqttConnected: false, bandlost: true })
 }

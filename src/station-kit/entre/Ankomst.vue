@@ -1,0 +1,231 @@
+<script setup lang="ts">
+/**
+ * Ankomstvyn (Lager A — IDENTISK i alla X&Y-stationer). Entréns attract i rotationen, TREDELAD:
+ *
+ *   ┌ SIDA A · Labb ┬──── UNDERSÖKNINGEN ────┬ SIDA B · Fält ┐
+ *   │  Alma         │  Testgrupp 2 · runda 1 │  Fredrik      │
+ *   │  Noah         │  Hitta ditt namn —     │  Wilma        │
+ *   │  Sigge        │  ställ dig på din sida │  Ebba         │
+ *   └───────────────┴─ Tryck för att börja ▸ ┴───────────────┘
+ *
+ * Eleven letar upp sitt namn: kolumnen säger sidan, mitten säger stationen. Två skärmar per station:
+ * båda kolumnerna syns på båda, den egna sidan i full styrka och den andra dämpad ("andra sidan").
+ * Design: xy-arkitektur/XY-BANDLOST-OCH-ANKOMST.md §2.2. Startsidorna = entréns voteSides
+ * (klasslistans `halva`, annars seedad indelning — samma vid alla stationer).
+ */
+import { computed } from 'vue'
+import { useRotation } from '../rotation/rotation'
+import { useEntre } from './entre'
+import type { SideId } from './types'
+
+const entre = useEntre()
+const s = entre.state
+const rot = useRotation().state
+const cfg = computed(() => entre.config())
+
+const SIDES = ['A', 'B'] as const
+const columns = computed(() =>
+  SIDES.map((side) => ({
+    side,
+    label: cfg.value.sides?.[side]?.label ?? '',
+    names: entre.members.value.filter((m) => entre.voteSides.value[m.band_id] === side).map((m) => m.name),
+    mine: s.screenSide === side,
+    dim: s.screenSide != null && s.screenSide !== side,
+  })),
+)
+const groupLine = computed(() =>
+  rot.group != null && rot.phase !== 'off' ? `Testgrupp ${rot.group} · runda ${rot.round}` : 'Pilotgrupp',
+)
+const otherHint = (side: SideId) => (side === 'A' ? '◀ andra sidan' : 'andra sidan ▶')
+</script>
+
+<template>
+  <div class="ak" role="button" tabindex="0" @click="entre.start()" @keydown.enter="entre.start()">
+    <section
+      v-for="c in columns"
+      :key="c.side"
+      class="ak__col"
+      :class="[`ak__col--${c.side}`, { 'ak__col--mine': c.mine, 'ak__col--dim': c.dim }]"
+      :style="{ order: c.side === 'A' ? 0 : 2 }"
+    >
+      <header class="ak__head">
+        <span class="ak__letter">{{ c.side }}</span>
+        <span class="ak__head-text">
+          <span class="ak__sida">SIDA {{ c.side }}</span>
+          <span v-if="c.label" class="ak__label">{{ c.label }}</span>
+        </span>
+      </header>
+      <ol class="ak__names">
+        <li v-for="n in c.names" :key="n" class="ak__name">{{ n }}</li>
+        <li v-if="!c.names.length" class="ak__name ak__name--empty">—</li>
+      </ol>
+      <p v-if="c.dim" class="ak__other">{{ otherHint(c.side) }}</p>
+      <p v-else-if="c.mine" class="ak__here">Här</p>
+    </section>
+
+    <section class="ak__mid" :style="{ order: 1 }">
+      <p class="ak__group">{{ groupLine }}<span v-if="rot.manual"> · manuellt vald</span></p>
+      <h1 class="ak__station ink-strong">{{ cfg.stationTitle }}</h1>
+      <p class="ak__hint">Hitta ditt namn —<br />ställ dig på din sida.</p>
+      <p class="ak__cta">Tryck för att börja ▸</p>
+    </section>
+  </div>
+</template>
+
+<style scoped>
+.ak {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: clamp(0.5rem, 1.6vw, 1.4rem);
+  padding: clamp(0.4rem, 1.2vw, 1rem);
+  cursor: pointer;
+}
+.ak__col {
+  --zone: var(--entre-side-a, #fff1d6);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: clamp(0.5rem, 1.2vw, 1rem);
+  border: 3px solid var(--zone);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.35);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+.ak__col--B {
+  --zone: var(--entre-side-b, #ff3cc8);
+}
+.ak__col--dim {
+  opacity: 0.45;
+  filter: saturate(0.6);
+  border-style: dashed;
+}
+.ak__col--mine {
+  box-shadow: 0 0 0 3px var(--zone), 0 0 28px color-mix(in srgb, var(--zone) 45%, transparent);
+}
+.ak__head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid var(--zone);
+}
+.ak__letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6em;
+  border-radius: 10px;
+  background: var(--zone);
+  color: #0b0b0b;
+  font-family: var(--font-retro, monospace);
+  font-size: clamp(2.2rem, 5vw, 3.8rem);
+  font-weight: 700;
+  line-height: 1.1;
+}
+.ak__head-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ak__sida {
+  font-family: var(--font-retro, monospace);
+  font-size: clamp(1.2rem, 2.4vw, 1.9rem);
+  letter-spacing: 0.08em;
+  color: var(--color-ink-strong);
+}
+.ak__label {
+  font-size: clamp(0.95rem, 1.6vw, 1.3rem);
+  color: var(--color-ink-muted);
+  overflow-wrap: anywhere;
+}
+.ak__names {
+  flex: 1;
+  list-style: none;
+  margin: 0;
+  padding: 0.7rem 0 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  gap: 0.4rem;
+}
+.ak__name {
+  font-family: var(--font-retro, monospace);
+  font-size: clamp(1.9rem, 4.6vw, 3.6rem);
+  line-height: 1.1;
+  letter-spacing: 0.03em;
+  color: var(--color-ink-strong);
+  overflow-wrap: anywhere;
+}
+.ak__name--empty {
+  color: var(--color-ink-muted);
+}
+.ak__other,
+.ak__here {
+  margin: 0.4rem 0 0;
+  font-size: clamp(1rem, 1.8vw, 1.4rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ak__other {
+  color: var(--color-ink-muted);
+}
+.ak__here {
+  color: var(--zone);
+}
+.ak__mid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.6rem, 1.6vw, 1.3rem);
+  text-align: center;
+  min-width: 0;
+}
+.ak__group {
+  margin: 0;
+  font-size: clamp(1rem, 1.8vw, 1.4rem);
+  letter-spacing: 0.06em;
+  color: var(--color-primary);
+}
+.ak__station {
+  margin: 0;
+  max-width: 100%;
+  font-size: clamp(1.4rem, 3.4vw, 4.2rem);
+  letter-spacing: 0.04em;
+  line-height: 1.05;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.ak__hint {
+  margin: 0;
+  font-size: clamp(1.1rem, 2.2vw, 1.8rem);
+  color: var(--color-ink-strong);
+}
+.ak__cta {
+  margin: 0;
+  font-size: clamp(1.1rem, 2vw, 1.6rem);
+  color: var(--color-primary);
+  animation: ak-blink 1.6s steps(2, jump-none) infinite;
+}
+@keyframes ak-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ak__cta {
+    animation: none;
+  }
+}
+@media (max-width: 760px) {
+  .ak {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ak__mid {
+    grid-column: 1 / -1;
+    order: -1 !important;
+  }
+}
+</style>
