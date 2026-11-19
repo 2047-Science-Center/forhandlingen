@@ -32,6 +32,10 @@ export interface GroupMessage {
   round: number
   group: number | null
   members?: GroupMember[]
+  /** Gruppens klippset ur DB (group_assignments, datasets.set_id, 1-baserat). SOM.md "Klippset per grupp". */
+  set_id?: number | null
+  /** Rollen som presenteras kvinnlig i setet vid den här stationen (presentation_sets). */
+  female_role?: 'A' | 'B' | null
 }
 
 /**

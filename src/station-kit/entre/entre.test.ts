@@ -440,3 +440,65 @@ describe('entrén v2 — attract = "ställ er på rätt sida" → stationsintro 
     expect(e.state.step).toBe('utfall')
   })
 })
+
+describe('entrén — klippset per grupp ur DB (station<N>/group set_id + female_role)', () => {
+  function rot(stationN: number) {
+    __resetRotationForTest()
+    let deliver: (t: string, p: { toString(): string }) => void = () => {}
+    const client: RotationClient = {
+      publish: () => {},
+      subscribe: () => {},
+      on: ((ev: string, cb: (...a: never[]) => void) => {
+        if (ev === 'message') deliver = cb as unknown as typeof deliver
+      }) as RotationClient['on'],
+    }
+    initRotation({ stationN, enabled: true, mqttUrl: '' }, client)
+    return (p: object) => deliver(`station${stationN}/group`, { toString: () => JSON.stringify(p) })
+  }
+  const members = group(6).map((m) => ({ band_id: m.band_id, name: m.name, gender: m.gender }))
+  const cfg2 = { ...CONFIG, clipSet: 0 as const, clipSetCount: 2, clipSetIds: [2, 1] }
+
+  it('grupp 1 och 2 får olika klippset enligt DB; config-mappningen set_id → index följs', () => {
+    __resetEntreForTest(() => seededRng(4))
+    const send = rot(3)
+    const e = initEntre({ stationN: 3, config: cfg2 })
+    send({ session_id: 5, round: 1, group: 1, members, set_id: 1, female_role: 'A' })
+    e.start()
+    expect(e.state.clipSet).toBe(1) // set_id 1 = index 1 i [2, 1]
+    e.reset()
+    send({ session_id: 5, round: 2, group: 2, members, set_id: 2, female_role: 'B' })
+    e.start()
+    expect(e.state.clipSet).toBe(0)
+  })
+
+  it('role_presented_as följer den valda rollen och DB:ns female_role; lottad utan val → tilldelad roll', () => {
+    __resetEntreForTest(() => seededRng(4))
+    const send = rot(3)
+    const e = initEntre({ stationN: 3, config: cfg2 })
+    send({ session_id: 5, round: 1, group: 2, members, set_id: 2, female_role: 'B' })
+    e.start()
+    expect(e.presentedAs({ chosen_role: 'B', assigned_role: 'A' })).toBe('kvinnlig')
+    expect(e.presentedAs({ chosen_role: 'A', assigned_role: 'B' })).toBe('manlig')
+    expect(e.presentedAs({ chosen_role: null, assigned_role: 'B' })).toBe('kvinnlig')
+  })
+
+  it('utan set från regi (pilot/ingen DB): stationens config och role_presented_as null', () => {
+    __resetEntreForTest(() => seededRng(4))
+    const send = rot(3)
+    const e = initEntre({ stationN: 3, config: { ...cfg2, clipSet: 1 } })
+    send({ session_id: 5, round: 1, group: 1, members, set_id: null, female_role: null })
+    e.start()
+    expect(e.state.clipSet).toBe(1)
+    expect(e.presentedAs({ chosen_role: 'A', assigned_role: 'A' })).toBeNull()
+  })
+
+  it('okänt set_id (inte i clipSetIds) → config, och role_presented_as null (vi vet inte vem som syntes)', () => {
+    __resetEntreForTest(() => seededRng(4))
+    const send = rot(3)
+    const e = initEntre({ stationN: 3, config: cfg2 })
+    send({ session_id: 5, round: 1, group: 1, members, set_id: 7, female_role: 'A' })
+    e.start()
+    expect(e.state.clipSet).toBe(0)
+    expect(e.presentedAs({ chosen_role: 'A', assigned_role: 'A' })).toBeNull()
+  })
+})
