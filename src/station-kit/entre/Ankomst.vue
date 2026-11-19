@@ -27,7 +27,10 @@ const props = withDefaults(defineProps<{ /** 3D-bilden (xy-entre-3d, lage=ankoms
 
 const entre = useEntre()
 const s = entre.state
-const rot = useRotation().state
+const rotation = useRotation()
+const rot = rotation.state
+/** Startspärren (regi före rotationen, SOM.md): visa sidorna men ingen startknapp. */
+const locked = rotation.startLocked
 const cfg = computed(() => entre.config())
 
 const SIDES = ['A', 'B'] as const
@@ -69,7 +72,7 @@ const otherHint = (side: SideId) => (side === 'A' ? '◀ andra sidan' : 'andra s
 </script>
 
 <template>
-  <div class="ak" :class="{ 'ak--bild': bildStil }" :style="bildStil" role="button" tabindex="0" @click="entre.start()" @keydown.enter="entre.start()">
+  <div class="ak" :class="{ 'ak--bild': bildStil, 'ak--locked': locked }" :style="bildStil" role="button" tabindex="0" @click="entre.start()" @keydown.enter="entre.start()">
     <section
       v-for="c in columns"
       :key="c.side"
@@ -98,7 +101,8 @@ const otherHint = (side: SideId) => (side === 'A' ? '◀ andra sidan' : 'andra s
       <iframe v-if="props.illuSrc" :src="props.illuSrc" class="ak__illu" title="Era sidor" tabindex="-1" />
       <p class="ak__hint ink-strong">Ställ er på rätt sida</p>
       <p class="ak__sub">Leta upp ditt namn.</p>
-      <button type="button" class="crt-button crt-button--strong ak__cta" @click.stop="entre.start()">Vi står rätt ▸</button>
+      <p v-if="locked" class="ak__wait" role="status">Titta på den stora skärmen – vi börjar snart</p>
+      <button v-else type="button" class="crt-button crt-button--strong ak__cta" @click.stop="entre.start()">Vi står rätt ▸</button>
     </section>
   </div>
 </template>
@@ -112,6 +116,9 @@ const otherHint = (side: SideId) => (side === 'A' ? '◀ andra sidan' : 'andra s
   gap: clamp(0.5rem, 1.6vw, 1.4rem);
   padding: clamp(0.4rem, 1.2vw, 1rem);
   cursor: pointer;
+}
+.ak--locked {
+  cursor: default;
 }
 .ak--bild {
   border-radius: 12px;
@@ -254,6 +261,12 @@ const otherHint = (side: SideId) => (side === 'A' ? '◀ andra sidan' : 'andra s
 .ak__sub {
   margin: 0;
   font-size: clamp(1rem, 1.8vw, 1.4rem);
+  color: var(--color-ink-muted);
+}
+.ak__wait {
+  margin: 0;
+  font-size: clamp(1.1rem, 2.2vw, 1.8rem);
+  letter-spacing: 0.03em;
   color: var(--color-ink-muted);
 }
 .ak__cta {

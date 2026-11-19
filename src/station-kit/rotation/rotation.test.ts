@@ -131,3 +131,67 @@ describe('rotation (stationssidan)', () => {
     vi.useRealTimers()
   })
 })
+
+describe('startspärren (regi/phase före rotationen)', () => {
+  beforeEach(() => {
+    __resetRotationForTest()
+  })
+
+  it('incheckning/trailer/intro/idle: gruppen visas men begin() spärras; rotation släpper', () => {
+    const f = fakeClient()
+    const r = initRotation({ stationN: N, enabled: true, mqttUrl: '' }, f.client)
+    f.deliver('regi/phase', { session_id: 's1', phase: 'incheckning', phase_n: 1 })
+    f.deliver(`station${N}/group`, group(1, 4))
+    expect(r.state.phase).toBe('group') // namnen/sidorna får visas
+    for (const phase of ['idle', 'incheckning', 'trailer', 'intro']) {
+      f.deliver('regi/phase', { session_id: 's1', phase })
+      expect(r.startLocked.value).toBe(true)
+      r.begin()
+      expect(r.state.phase).toBe('group')
+    }
+    expect(f.published.filter((p) => p.topic === `station${N}/mode`)).toEqual([])
+    f.deliver('regi/phase', { session_id: 's1', phase: 'rotation', phase_n: 4 })
+    expect(r.startLocked.value).toBe(false)
+    r.begin()
+    expect(r.state.phase).toBe('running')
+  })
+
+  it('senare/okända faser spärrar inte; en grupp som redan kör påverkas inte', () => {
+    const f = fakeClient()
+    const r = initRotation({ stationN: N, enabled: true, mqttUrl: '' }, f.client)
+    f.deliver(`station${N}/group`, group(1, 4))
+    f.deliver('regi/phase', { phase: 'reveal' })
+    expect(r.startLocked.value).toBe(false)
+    r.begin()
+    expect(r.state.phase).toBe('running')
+    f.deliver('regi/phase', { phase: 'idle' }) // regi reset mitt i
+    expect(r.startLocked.value).toBe(true)
+    expect(r.state.phase).toBe('running')
+    expect(r.finishSkarp()).toBe(true)
+    expect(r.state.phase).toBe('lek')
+  })
+
+  it('aldrig fått regi/phase (pilot/dev) eller rotationen av → ingen spärr', () => {
+    const f = fakeClient()
+    const r = initRotation({ stationN: N, enabled: true, mqttUrl: '' }, f.client)
+    f.deliver(`station${N}/group`, group(1, 4))
+    expect(r.state.regiPhase).toBeNull()
+    expect(r.startLocked.value).toBe(false)
+    r.begin()
+    expect(r.state.phase).toBe('running')
+
+    __resetRotationForTest()
+    const off = initRotation({ stationN: N, enabled: false, mqttUrl: '' })
+    expect(off.startLocked.value).toBe(false)
+  })
+
+  it('manuellt val under spärren: gruppen väljs men kan inte starta', () => {
+    const f = fakeClient()
+    const r = initRotation({ stationN: N, enabled: true, mqttUrl: '' }, f.client)
+    f.deliver('regi/phase', { phase: 'trailer' })
+    r.pickManual(2)
+    expect(r.state.phase).toBe('group')
+    r.begin()
+    expect(r.state.phase).toBe('group')
+  })
+})
