@@ -86,7 +86,7 @@ export const BANDLOST: boolean = bandlostFran(true, import.meta.env.VITE_BANDLOS
 
 /**
  * STATIONSLJUS (station-kit/ljus, XY-FEEDBACK-LJUS-LJUD §1.2/§5.1): underglow-segmenten.
- * Sida A = vänster (#lag1, Valv Syd), sida B = höger (#lag2, Valv Nord). Bas retained på
+ * Sida A = vänster (#lag1), sida B = höger (#lag2). Bas retained på
  * station1/underglow, gester på station1/feedback (SOM.md "Stationsljus"). Publiceras bara i
  * drift (överstyr ?ljus=1|0|visa / VITE_LJUS). Broker = samma som rotationen (ROTATION.mqttUrl).
  * Pixelintervallen nedan är BÄNK-värden (60 px-slinga) — riktiga intervall = Eriks mätning.

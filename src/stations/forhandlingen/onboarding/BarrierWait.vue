@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** Blinkande "Väntar på att andra valvet blir klart" (barriär mellan test/block). */
+/** Blinkande "Väntar på att andra sidan blir klar" (barriär mellan test/block). */
 import { useI18n } from '@/station-kit/i18n'
 const { t } = useI18n()
 </script>

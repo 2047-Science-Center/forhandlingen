@@ -6,8 +6,9 @@
  * vinnare), med en bubbla som säger HUR det gick och VARFÖR + en liten
  * animation (CoachAnim: stämpel, pengar→poäng, ×2 — samma vokabulär som introt).
  *
- * Återanvänds på TVÅ ställen: efter testomgången (mode='test' → till skarpt
- * spel) och efter det SKARPA spelet (mode='live' → nollställ).
+ * Används efter testomgången (mode='test' → till skarpt spel). Efter det SKARPA spelet
+ * visas sedan 2026-11-19 i stället ForhandlingAvslut (station-kit/resultat: går av sig
+ * självt, samma takter på båda skärmarna). mode='live' finns kvar men är inte inkopplad.
  *
  * Varje beat exponerar ett NAMNGIVET reveal-ögonblick: emit('reveal', <namn>)
  * + SFX-platshållare, så Agent 3 kan haka i röst utan att röra komponenten

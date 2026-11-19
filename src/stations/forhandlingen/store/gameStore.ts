@@ -20,6 +20,7 @@ import type { ResultPayload } from '@/station-kit/adapters/result/ResultSink'
 import type { IdentityGroup } from '@/station-kit/adapters/identity/Identity'
 import { audio } from '@/station-kit/audio/AudioEngine'
 import { tagResult } from '@/station-kit/rotation/rotation'
+import { skickaResultat } from '@/station-kit/resultat'
 import { useLjus } from '@/station-kit/ljus'
 import { arSkrivare, timerVarning, SIDA_FOR_LAG } from '../ljus'
 import {
@@ -498,7 +499,8 @@ export const useGameStore = defineStore('forhandlingen', () => {
     }
   }
   function sendResult() {
-    adapters.value?.result.send(tagResult(buildResultPayload()))
+    // Bara skrivarfönstret (lag1/delad) skickar — en gång per station (station-kit/resultat).
+    skickaResultat(tagResult(buildResultPayload()), { ledare: arSkrivare(view.value), reserv: adapters.value?.result })
   }
 
   // --- Livscykel ---
