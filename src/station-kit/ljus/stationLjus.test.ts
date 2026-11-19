@@ -134,6 +134,25 @@ describe('station-kit/ljus', () => {
     expect(f.sent.map((m) => m.topic)).toEqual(['station1/feedback'])
   })
 
+  it('station<N>/hitta: hela vagnen i målfärgen i `sekunder`, sedan tillbaka; sekunder 0 släcker', () => {
+    const f = fakeClient()
+    const l = initLjus({ stationN: 2, enabled: true, mqttUrl: '', valv: 'teknolog', segment: SEG }, f.c)
+    expect(f.subs).toContain('station2/hitta')
+    f.connect()
+    l.lage('lek')
+    f.msg('station2/hitta', { valv: 'drift', color: '#e8c020', sekunder: 5, band_id: 'B1' })
+    expect(l.state.hitta?.valv).toBe('drift')
+    let ug = f.sent.filter((m) => m.topic === 'station2/underglow').at(-1)!
+    expect(ug.payload.segments.map((s: any) => s.color)).toEqual(['#e8c020', '#e8c020'])
+    vi.advanceTimersByTime(5000)
+    expect(l.state.hitta).toBeNull()
+    ug = f.sent.filter((m) => m.topic === 'station2/underglow').at(-1)!
+    expect(ug.payload.segments[0]).toMatchObject({ color: FARG.lek, effekt: 'puls' })
+    f.msg('station2/hitta', { valv: 'drift', color: '#e8c020', sekunder: 5 })
+    f.msg('station2/hitta', { valv: 'drift', color: '#e8c020', sekunder: 0 })
+    expect(l.state.hitta).toBeNull()
+  })
+
   it('no-op före init', () => {
     const l = useLjus()
     expect(() => {

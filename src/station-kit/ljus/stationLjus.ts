@@ -5,6 +5,9 @@
  *   station<N>/underglow  (retained)  basen: hela stationens segment, samma form som central/lights
  *   station<N>/feedback   (ej retained) en gest ovanpå basen: {segments:[{id,from,to,color,tempo,antal}]}
  *   regi/phase            (prenumeration) basen utanför rotationen följer regis fas
+ *   station<N>/hitta      (prenumeration) domslutet syns inte härifrån: HELA vagnen lyser i
+ *                         målvalvets färg i `sekunder` + skärmen visar "Leta upp valvet med den
+ *                         här färgen" (SOM.md "Domslut per person"; LjusRemsa ritar rutan)
  *
  * Koppla in (små ingrepp, samma i alla appar):
  *   1. initLjus(ljusOptions({ stationN, enabled, mqttUrl, valv, segment, skrivare, spela })) vid start.
@@ -79,20 +82,25 @@ const state = reactive({
   segment: {} as Record<string, [number, number]>,
   /** Senast publicerade bas (felsökning). */
   senast: '',
+  /** Domslut: hela vagnen i målvalvets färg tills `until` (epoch-ms). null = inget. */
+  hitta: null as { valv: string; color: string; band_id: string | null; until: number } | null,
 })
 
 let opts: (Required<Omit<LjusOptions, 'spela'>> & { spela?: (l: LjudNamn) => void }) | null = null
 let client: LjusClient | null = null
 let republishTimer: ReturnType<typeof setInterval> | null = null
+let hittaTimer: ReturnType<typeof setTimeout> | null = null
 
 const underglowTopic = () => `station${opts!.stationN}/underglow`
 const feedbackTopic = () => `station${opts!.stationN}/feedback`
+const hittaTopic = () => `station${opts!.stationN}/hitta`
 
 function egna(): string[] {
   return opts!.egna.length ? opts!.egna : Object.keys(opts!.segment)
 }
 
 function lookFor(id: string): Look {
+  if (state.hitta && Date.now() < state.hitta.until) return { color: state.hitta.color, effekt: 'static' }
   const l = state.lage[id]
   if (l) return lageLook(l, id)
   return regiLook(state.regiFas, opts!.valv) ?? lageLook('vila', id)
@@ -193,8 +201,39 @@ function ljud(namn: LjudNamn): void {
   opts?.spela?.(namn)
 }
 
+function clearHitta(): void {
+  if (hittaTimer) clearTimeout(hittaTimer)
+  hittaTimer = null
+  state.hitta = null
+}
+
+/** station<N>/hitta: {valv, color, sekunder, band_id?}. sekunder 0 = släck direkt (nästa person). */
+function onHitta(raw: string): void {
+  let d: { valv?: string; color?: string; sekunder?: number; band_id?: string }
+  try {
+    d = JSON.parse(raw)
+  } catch {
+    return
+  }
+  const sek = Number(d?.sekunder) || 0
+  clearHitta()
+  if (sek > 0 && typeof d.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(d.color)) {
+    state.hitta = { valv: String(d.valv ?? ''), color: d.color.toLowerCase(), band_id: d.band_id ?? null, until: Date.now() + sek * 1000 }
+    hittaTimer = setTimeout(() => {
+      clearHitta()
+      publiceraBas()
+    }, sek * 1000)
+  }
+  publiceraBas()
+}
+
 function onMessage(topic: string, raw: string): void {
-  if (!opts || topic !== 'regi/phase') return
+  if (!opts) return
+  if (topic === hittaTopic()) {
+    onHitta(raw)
+    return
+  }
+  if (topic !== 'regi/phase') return
   try {
     const d = JSON.parse(raw) as { phase?: string }
     state.regiFas = typeof d?.phase === 'string' ? d.phase : null
@@ -255,6 +294,7 @@ export function initLjus(o: LjusOptions, injected?: LjusClient): StationLjus {
     })
     client.on('message', (topic, payload) => onMessage(topic, payload.toString()))
     client.subscribe('regi/phase')
+    client.subscribe(hittaTopic())
   }
   if (opts.delad && opts.skrivare) republishTimer = setInterval(() => publiceraBas(true), opts.republishMs)
   return api
@@ -287,6 +327,7 @@ export function ljusOptions(defaults: LjusOptions): LjusOptions {
 export function __resetLjusForTest(): void {
   if (republishTimer) clearInterval(republishTimer)
   republishTimer = null
+  clearHitta()
   opts = null
   client = null
   state.enabled = false

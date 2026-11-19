@@ -25,6 +25,14 @@ export const VALVFARG: Record<Valv, string> = {
   forskning: '#4aa3ff',
 }
 
+/** Valvens namn för skärmtext (t.ex. "Leta upp valvet med den här färgen"). */
+export const VALVNAMN: Record<Valv, string> = {
+  teknolog: 'Teknologerna',
+  diplomat: 'Diplomatkåren',
+  drift: 'Driften',
+  forskning: 'Forskningslaget',
+}
+
 export const FARG = {
   tutorial: '#35e0d0',
   skarp: '#ff9500',
