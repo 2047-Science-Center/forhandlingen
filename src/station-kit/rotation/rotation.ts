@@ -51,6 +51,10 @@ const state = reactive({
   connected: false,
   /** Senast publicerade läge på station<N>/mode. */
   mode: null as RotationMode | null,
+  /** Gruppens klippset ur DB (station<N>/group set_id, 1-baserat) — null = stationens config. */
+  setId: null as number | null,
+  /** Rollen som presenteras kvinnlig i setet vid stationen (station<N>/group female_role). */
+  femaleRole: null as 'A' | 'B' | null,
 })
 
 let opts: (Required<Omit<RotationOptions, 'side'>> & { side: 'A' | 'B' | null }) | null = null
@@ -108,6 +112,8 @@ function onGroup(m: GroupMessage): void {
   const round = Number(m.round) || 0
   const group = m.group == null ? null : Number(m.group)
   const members = Array.isArray(m.members) ? m.members : []
+  state.setId = typeof m.set_id === 'number' && m.set_id > 0 ? m.set_id : null
+  state.femaleRole = m.female_role === 'A' || m.female_role === 'B' ? m.female_role : null
 
   // Ingen aktiv rotation (regi idle/reset). En grupp som kör får köra klart.
   if (!round || group == null) {
@@ -214,6 +220,8 @@ function pickManual(group: number): void {
   state.round = round
   state.group = group
   state.members = []
+  state.setId = null
+  state.femaleRole = null
   state.manual = true
   state.showManual = false
   state.phase = 'group'
@@ -306,6 +314,8 @@ export function __resetRotationForTest(): void {
     round: 0,
     group: null,
     members: [],
+    setId: null,
+    femaleRole: null,
     manual: false,
     showManual: false,
     connected: false,

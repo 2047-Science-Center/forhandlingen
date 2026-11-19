@@ -115,6 +115,13 @@ export interface EntreConfig {
   clipSet?: number | 'alternate'
   /** Antal klippset (för 'alternate'). */
   clipSetCount?: number
+  /**
+   * DB:ns set_id (datasets, 1-baserat) för varje klippset-index i ROLLVAL.clipSets. Default [1, 2, …].
+   * När regi skickar gruppens set_id (station<N>/group, SOM.md "Klippset per grupp") spelas det klippset
+   * vars id matchar — då visar skärm och DB alltid samma set. Ska följa vem som syns i klippen
+   * (rollen som presentation_sets kallar kvinnlig spelas av en kvinna).
+   */
+  clipSetIds?: number[]
   /** Grupp när regi inte skickat någon (pilot / manuellt gruppval). */
   pilotRoster: EntreMember[]
   /** Raden om att man inte säkert får rollen man väljer. */

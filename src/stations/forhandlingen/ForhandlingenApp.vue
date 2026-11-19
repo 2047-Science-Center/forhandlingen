@@ -89,7 +89,8 @@ function onEntreDone(): void {
         // DB: chosen_role är NOT NULL — den som inte hann välja (facilitatorns "Lotta nu") loggas som sin tilldelade roll.
         chosen_role: p.chosen_role ?? p.assigned_role,
         assigned_role: p.assigned_role,
-        role_presented_as: null,
+        // Klippsetet ur DB (station<N>/group set_id + female_role) → hur den valda rollen presenterades.
+        role_presented_as: entre.presentedAs(p),
       }))
   store.setRoster({ lag1: team('A'), lag2: team('B') })
 }

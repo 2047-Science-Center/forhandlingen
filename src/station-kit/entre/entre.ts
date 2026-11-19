@@ -212,7 +212,20 @@ function ensureMqtt(): void {
 
 /* ------------------------------------------------------------------ */
 
+/**
+ * Klippsetet för körningen. Regi:s set_id (DB, group_assignments) går före; stationens config
+ * (fast index eller 'alternate') bara när regi inte skickat något (pilot, dev, ingen DB).
+ */
+function dbClipIndex(): number {
+  const dbSet = rotation.state.setId
+  if (dbSet == null) return -1
+  const ids = cfg().clipSetIds ?? Array.from({ length: Math.max(1, cfg().clipSetCount ?? 2) }, (_, i) => i + 1)
+  return ids.indexOf(dbSet)
+}
+
 function pickClipSet(): number {
+  const i = dbClipIndex()
+  if (i >= 0) return i
   const c = cfg().clipSet ?? 0
   if (c !== 'alternate') return c
   const n = Math.max(1, cfg().clipSetCount ?? 1)
@@ -321,8 +334,21 @@ function attachMqtt(c: EntreMqttClient): void {
   c.subscribe(`station${opts!.stationN}/rfidnej`)
 }
 
+/**
+ * role_presented_as (station<N>/result): hur personens VALDA roll presenterades i setet som spelades —
+ * 'kvinnlig' om rollen = regi:s female_role, annars 'manlig'. Lottad utan val → den tilldelade rollen.
+ * Utan female_role (pilot, ingen DB) → null som förut. SOM.md "Klippset per grupp".
+ */
+function presentedAs(p: { chosen_role: RoleLetter | null; assigned_role: RoleLetter }): 'manlig' | 'kvinnlig' | null {
+  const f = rotation.state.femaleRole
+  // Bara när klippen som spelas ÄR DB-setet (annars vet vi inte vem som syntes).
+  if (!f || dbClipIndex() < 0 || dbClipIndex() !== state.clipSet) return null
+  return (p.chosen_role ?? p.assigned_role) === f ? 'kvinnlig' : 'manlig'
+}
+
 const api = {
   state: readonly(state),
+  presentedAs,
   members,
   myVoters,
   currentVoter,
