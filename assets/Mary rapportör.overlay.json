@@ -1,0 +1,24 @@
+{
+  "klipp": "Mary rapportör",
+  "fil": "Mary rapportör.mp4",
+  "duration_s": 16.83,
+  "sprak": [
+    "sv",
+    "no"
+  ],
+  "_no_status": "UTKAST - ersätts av Josefs norska översättning",
+  "_undertext_status": "Extraherad ur bakat original, timing ögonmått. Verifiera sv-text/timing mot Premiere. En genomgående POV-caption.",
+  "titel": {
+    "sv": "Rapportör",
+    "no": "Rapportør"
+  },
+  "portratt": "Mary rapportör.portratt.jpg",
+  "undertext": [
+    {
+      "t": 0.5,
+      "slut": 16.83,
+      "sv": "POV: du valde en karriär som rapportör och nu ser din vardag ut så här",
+      "no": "POV: du valgte en karriere som rapportør og nå ser hverdagen din slik ut"
+    }
+  ]
+}

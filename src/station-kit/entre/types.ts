@@ -136,6 +136,12 @@ export interface EntreConfig {
    */
   introClip?: string
   /**
+   * Två skärmar spelar stationsintrot + rollsekvensen I TAKT: varje skärm väntar efter "Vi står rätt" tills
+   * andra sidan också tryckt, sedan leder ledarskärmen sekvensen och följaren följer (ljudet bara hos ledaren).
+   * Av som standard (stationer som inte slagit på det beter sig som förut).
+   */
+  synkIntro?: boolean
+  /**
    * ROLLSEKVENSEN efter introt (Josef 2026-11-19, inga klick): brygga1 → kort A → rollklipp A → brygga2 →
    * kort B → rollklipp B → valet (entre/RollSekvens.vue + station-kit/stationsintro/BryggKort.vue).
    * Saknas → rollvalets gamla klippsteg (RoleSelect clipsOnly). Kräver clips !== false.

@@ -1,0 +1,72 @@
+{
+  "klipp": "Jakob Sändebud",
+  "fil": "Jakob Sändebud.mp4",
+  "duration_s": 24.2,
+  "sprak": [
+    "sv",
+    "no"
+  ],
+  "_no_status": "UTKAST - ersätts av Josefs norska översättning",
+  "_undertext_status": "Extraherad ur bakat original, timing ögonmått. Verifiera sv-text/timing mot Premiere. Tidsstämplad day-in-life. Skärmtexten 'Strategi för optimering…' är diegetisk (skärm i rummet), ej caption.",
+  "titel": {
+    "sv": "Sändebud",
+    "no": "Sendebud"
+  },
+  "portratt": "Jakob Sändebud.portratt.jpg",
+  "undertext": [
+    {
+      "t": 0.0,
+      "slut": 4.0,
+      "sv": "Följ med mig en dag som sändebud i Valv Nordväst",
+      "no": "Bli med meg en dag som sendebud i Valv Nordvest"
+    },
+    {
+      "t": 4.0,
+      "slut": 6.0,
+      "sv": "05:49 Vakna",
+      "no": "05:49 Våkne"
+    },
+    {
+      "t": 6.0,
+      "slut": 8.0,
+      "sv": "06:15 Calisthenics",
+      "no": "06:15 Calisthenics"
+    },
+    {
+      "t": 8.0,
+      "slut": 10.0,
+      "sv": "06:37 Protein shake (frukost)",
+      "no": "06:37 Proteinshake (frokost)"
+    },
+    {
+      "t": 10.0,
+      "slut": 12.0,
+      "sv": "08:07 Förhandla avtal",
+      "no": "08:07 Forhandle avtale"
+    },
+    {
+      "t": 12.0,
+      "slut": 14.0,
+      "sv": "09:36 Inläsning presentation",
+      "no": "09:36 Innlesing presentasjon"
+    },
+    {
+      "t": 14.0,
+      "slut": 18.0,
+      "sv": "13:30 Presentation för arbetsgrupp",
+      "no": "13:30 Presentasjon for arbeidsgruppe"
+    },
+    {
+      "t": 18.0,
+      "slut": 22.0,
+      "sv": "21:47 Nätverkande och sen middag",
+      "no": "21:47 Nettverksbygging og sen middag"
+    },
+    {
+      "t": 22.0,
+      "slut": 24.2,
+      "sv": "22:17 Sova",
+      "no": "22:17 Sove"
+    }
+  ]
+}

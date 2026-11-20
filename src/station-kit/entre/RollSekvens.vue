@@ -14,6 +14,8 @@
  */
 import { computed, onUnmounted, ref, watch } from 'vue'
 import BryggKort from '../stationsintro/BryggKort.vue'
+import Undertext from '../undertext/Undertext.vue'
+import type { OverlayData } from '../undertext/undertext'
 import { audio } from '../audio/AudioEngine'
 
 type Steg = 'brygga1' | 'kortA' | 'klippA' | 'brygga2' | 'kortB' | 'klippB'
@@ -24,6 +26,8 @@ const props = defineProps<{
   rollnamn: [string, string]
   /** Klipp-url för roll A och B i det aktiva setet ('' = saknas → hoppas över). */
   klipp: [string, string]
+  /** Textlager (XY-TEXTLAGER, overlay.json) för klipp A och B — undertext ritas på det textfria klippet. */
+  overlay?: [OverlayData | null, OverlayData | null]
   valvfarg?: string
   sprak?: 'sv' | 'no'
 }>()
@@ -33,6 +37,13 @@ const i = ref(0)
 const steg = computed(() => ORDNING[i.value])
 /** Klippet som gäller i ett klippsteg (0 = roll A, 1 = roll B). */
 const klippIdx = computed<0 | 1>(() => (steg.value === 'klippB' ? 1 : 0))
+/** Textlagret för det aktiva klippet. */
+const aktivOverlay = computed<OverlayData | null>(() => props.overlay?.[klippIdx.value] ?? null)
+/** Klippets egen klocka (sekunder) — driver undertexten. */
+const tid = ref(0)
+function onTid(): void {
+  tid.value = video.value?.currentTime ?? 0
+}
 const video = ref<HTMLVideoElement | null>(null)
 let guard: ReturnType<typeof setTimeout> | null = null
 
@@ -74,6 +85,7 @@ watch(
   steg,
   (s) => {
     emit('steg', s)
+    tid.value = 0
     if (s !== 'klippA' && s !== 'klippB') return
     if (!props.klipp[klippIdx.value]) {
       nasta() // klippet saknas → nästa steg direkt
@@ -115,9 +127,11 @@ onUnmounted(clearGuard)
         playsinline
         preload="auto"
         @loadedmetadata="onMeta"
+        @timeupdate="onTid"
         @ended="nasta"
         @error="nasta"
       />
+      <Undertext v-if="aktivOverlay" :rader="aktivOverlay.undertext" :tid="tid" :sprak="props.sprak ?? 'sv'" />
       <span class="rs__roll">{{ props.rollnamn[klippIdx] }}</span>
       <button type="button" class="rs__skip" @click="nasta">Hoppa över ▸</button>
     </div>

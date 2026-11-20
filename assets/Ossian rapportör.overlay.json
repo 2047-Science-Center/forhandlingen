@@ -1,0 +1,17 @@
+{
+  "klipp": "Ossian rapportör",
+  "fil": "Ossian rapportör.mp4",
+  "duration_s": 32.62,
+  "sprak": [
+    "sv",
+    "no"
+  ],
+  "_no_status": "UTKAST - ersätts av Josefs norska översättning",
+  "_undertext_status": "Extraherad ur bakat original, timing ögonmått. Verifiera sv-text/timing mot Premiere. Inga overlay-texter i originalet. 'BEHOV: 78%' = diegetisk CRT-skärm, ej caption.",
+  "titel": {
+    "sv": "Rapportör",
+    "no": "Rapportør"
+  },
+  "portratt": "Ossian rapportör.portratt.jpg",
+  "undertext": []
+}
