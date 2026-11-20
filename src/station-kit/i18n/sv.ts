@@ -44,7 +44,7 @@ export const sv: Record<string, string> = {
   'roles.why_mic_title': 'Varför bara sändebuden pratar?',
   'roles.why_mic': 'Bara sändebuden pratar. Då maskeras rösten och motståndaren vet inte vem som förhandlar.',
   'roles.example_title': 'SÅ GÅR EN BUDGIVNING TILL',
-  'roles.example_sub': 'Valven förhandlar med varandra – på riktigt, genom headseten.',
+  'roles.example_sub': 'Sida A och sida B förhandlar med varandra – på riktigt, genom headseten.',
   'roles.example_talk_note': '(prata på riktigt)',
   'roles.example_bid': 'Sändebuden lägger ett bud',
   'roles.example_counter': 'Motparten nekar eller höjer',
@@ -53,11 +53,11 @@ export const sv: Record<string, string> = {
 
   // --- "Vem gör vad" (split-screen, steg 2 i nya introt) ---
   'roles.split_title': 'VEM GÖR VAD?',
-  'roles.split_sub': 'Två roller i varje valv. Ställ er så här.',
+  'roles.split_sub': 'Två roller på varje sida. Ställ er så här.',
 
   // --- Coach-marks (spotlight över grund-UI:t, steg 3–6) ---
   'coach.market_title': 'Ni budar om resurser',
-  'coach.market_body': 'Båda valven budar om samma resurser på en marknad. Den här är uppe nu.',
+  'coach.market_body': 'Båda sidorna budar om samma resurser på en marknad. Den här är uppe nu.',
   'coach.mission_negotiator': 'Sändebudets uppdrag: buda muntligt — och spendera så lite som möjligt.',
   'coach.critical_title': 'Er livsviktiga resurs',
   'coach.critical_body': 'Det viktigaste är att ni får tag på den här — annars 0 poäng.',
@@ -70,7 +70,7 @@ export const sv: Record<string, string> = {
 
   // --- Förhandlingsklippet (steg 7) ---
   'clip.title': 'Så här kan en förhandling se ut',
-  'clip.sub': 'Titta hur buden går fram och tillbaka mellan valven.',
+  'clip.sub': 'Titta hur buden går fram och tillbaka mellan sidorna.',
   'clip.continue': 'FORTSÄTT',
 
   // --- Testomgången (steg 8) ---
@@ -101,7 +101,7 @@ export const sv: Record<string, string> = {
   // --- Intro-klipp ---
   'intro.skip': 'Hoppa över',
   'intro.begin': 'BÖRJA',
-  'onb.wait_other': 'Väntar på att andra valvet blir klart …',
+  'onb.wait_other': 'Väntar på att andra sidan blir klar …',
 
   // --- Öppningssekvens (Titel → Deltagare → 3 pop-ups → klar-gate) ---
   'opening.tap_continue': 'tryck för att fortsätta',
@@ -109,7 +109,7 @@ export const sv: Record<string, string> = {
   'opening.tap_start': 'Tryck för att börja',
   'opening.headset_on': 'Ta på dig headsetet',
   'opening.begin': 'Börja',
-  'opening.market': 'Ni byter inte resurser med varandra – båda valven budar om samma resurser på en gemensam marknad. Ingen äger dem.',
+  'opening.market': 'Ni byter inte resurser med varandra – båda sidorna budar om samma resurser på en gemensam marknad. Ingen äger dem.',
 
   // --- Facilitator (paus/återställ) + idle-återstart ---
   'facil.pause': 'Paus',
@@ -128,7 +128,7 @@ export const sv: Record<string, string> = {
   'idle.tap_to_stay': 'Rör skärmen för att fortsätta',
   'opening.waiting_valv': 'Väntar på sida {valv} …',
   // Överblicks-pop-ups (hur man vinner)
-  'overview.market': 'Ni byter inte resurser med varandra – båda valven budar om samma resurser.',
+  'overview.market': 'Ni byter inte resurser med varandra – båda sidorna budar om samma resurser.',
   'overview.market_label': 'MARKNAD',
   'overview.no_owner': 'Ingen äger dem',
   'overview.bid': 'bud',
@@ -151,7 +151,7 @@ export const sv: Record<string, string> = {
   'test1.pop3': 'Ni har totalt 50 kr.',
   // Test 2 (livsviktig + pengar) återanvänder reveal-texterna nedan
   // Test 3
-  'test3.instruction': 'Vilken resurs verkade vara livsviktig för det andra valvet? Lås er gissning — ingen får se den.',
+  'test3.instruction': 'Vilken resurs verkade vara livsviktig för den andra sidan? Lås er gissning — ingen får se den.',
   'test3.title': 'GISSNINGEN',
   // Resultat-popupar (efter test 2 & 3)
   'res.secured': 'Livsviktig resurs säkrad',
@@ -278,7 +278,7 @@ export const sv: Record<string, string> = {
 
   // Livsviktig-berättelse — visas BARA i intro-popupen (5 s) för det egna laget.
   'critical.copy.insulin':
-    'Tre i ert valv är beroende av insulin — och kylförrådet slutade fungera i natt. Ni måste få tag på nytt innan lagret sinar.',
+    'Tre av er är beroende av insulin — och kylförrådet slutade fungera i natt. Ni måste få tag på nytt innan lagret sinar.',
   'critical.copy.branslecell':
     'En cell har brunnit ut och reservkraften sjunker. Utan en ny slocknar livsuppehållningen sektion för sektion.',
   'critical.copy.styrkort':
@@ -305,7 +305,7 @@ export const sv: Record<string, string> = {
   'onboarding.headset.masked_done': 'Rösten är maskerad ✓',
 
   // Steg 2 — ramen
-  'onboarding.frame.caption': 'Två valv · en hög förnödenheter',
+  'onboarding.frame.caption': 'Två sidor · en hög förnödenheter',
 
   // Steg 3 — ett bud
   'onboarding.bid.prompt': 'Buda på den här.',
@@ -339,10 +339,10 @@ export const sv: Record<string, string> = {
 
   // Karaktärsmanus (utbytbara narration-slots — text-läge nu)
   'narr.headset.mentor1': 'Där ja. Ingen hör vems röst det är.',
-  'narr.frame.mentor1': 'Två valv. En hög förnödenheter. Ni ska förhandla om dem.',
+  'narr.frame.mentor1': 'Två sidor. En hög förnödenheter. Ni ska förhandla om dem.',
   'narr.bid.apprentice1': 'Så jag budar, och pengarna dras?',
   'narr.bid.mentor1': 'Precis.',
-  'narr.critical.mentor1': 'Det här är det NI måste få. Utan det klarar sig inte valvet.',
+  'narr.critical.mentor1': 'Det här är det NI måste få. Utan det klarar ni er inte.',
   'narr.critical.apprentice1': 'Då budar jag väl bara på den?',
   'narr.critical.mentor2': 'Om du har kvar pengar när den kommer. Ni har 100 — till alla fem.',
   'narr.hide.apprentice1': 'Men då behöver vi ju inte buda på nåt annat?',

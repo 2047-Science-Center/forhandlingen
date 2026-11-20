@@ -4,14 +4,14 @@
  * En runda: talarsidan väljer vem som tar headsetet (trycker på sitt namn) → talaren
  * säger en rad / svarar på en fråga genom den maskerade rösten → motsidan trycker på
  * vem de tror pratar (de får ställa EN egen fråga) → facit → sidan byts.
- * Lurar talaren motsidan får talarens valv poäng; gissar de rätt får gissarna poäng.
+ * Lurar talaren motsidan får talarens sida poäng; gissar de rätt får gissarna poäng.
  * Poängen finns bara i RAM och räknas aldrig (XY-VANTUPPGIFTER.md §0).
  */
 import type { LekAction } from '@/station-kit/lek/lekSync'
 import { pickIndex } from '@/station-kit/lek/lekSync'
 
 export type Side = 'A' | 'B'
-export const SIDE_NAME: Record<Side, string> = { A: 'Valv Syd', B: 'Valv Nord' }
+export const SIDE_NAME: Record<Side, string> = { A: 'Sida A', B: 'Sida B' }
 export const other = (s: Side): Side => (s === 'A' ? 'B' : 'A')
 
 export interface VemPerson {

@@ -22,6 +22,8 @@ export interface ResultPayload {
   /** Rotationen (SOM.md 2026-11-17): runda + testgrupp. Satt = rotationen äger station<N>/done. */
   round?: number
   group?: number
+  /** Delad station (st2): sidan/spelet som resultatet gäller (som `done`). Utelämnas annars. */
+  side?: 'A' | 'B'
 }
 
 export interface ResultSink {

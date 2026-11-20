@@ -85,6 +85,8 @@ export const FARG = {
  *  forlust      djupröd fast
  *  forlorarsida dämpad orange (lag mot lag — aldrig rött)
  *  oavgjort     grön andning
+ *  spanning     amber chase (avslutets spänningstakt före avslöjandet, station-kit/resultat)
+ *  vinnare      grön chase (vinnarsidan lag mot lag, under resultatrutan, station-kit/resultat)
  *  lek          lila andning
  *  av           släckt
  */
@@ -100,6 +102,8 @@ export type Lage =
   | 'forlust'
   | 'forlorarsida'
   | 'oavgjort'
+  | 'spanning'
+  | 'vinnare'
   | 'lek'
   | 'av'
 
@@ -130,6 +134,10 @@ export function lageLook(lage: Lage, segmentId = ''): Look {
       return { color: FARG.amberDim, effekt: 'static' }
     case 'oavgjort':
       return { color: FARG.gron, effekt: 'puls' }
+    case 'spanning':
+      return { color: FARG.amber, effekt: 'chase' }
+    case 'vinnare':
+      return { color: FARG.gron, effekt: 'chase' }
     case 'lek':
       return { color: FARG.lek, effekt: 'puls' }
     case 'av':

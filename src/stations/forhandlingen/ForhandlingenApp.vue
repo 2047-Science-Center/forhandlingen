@@ -19,6 +19,8 @@ import { useStationMode } from '@/station-kit/mode/useStationMode'
 import { audio } from '@/station-kit/audio/AudioEngine'
 import RotationScreens from '@/station-kit/rotation/RotationScreens.vue'
 import { initRotation, rotationOptions } from '@/station-kit/rotation/rotation'
+import { initResultat, resultatOptions } from '@/station-kit/resultat'
+import ForhandlingAvslut from './components/ForhandlingAvslut.vue'
 import { initLjus, ljusOptions, lageFranRotation, LjusRemsa } from '@/station-kit/ljus'
 import { initFilm, filmOptions, FilmOverlay } from '@/station-kit/film'
 import { initIncheckning, incheckningOptions } from '@/station-kit/incheckning/incheckning'
@@ -26,7 +28,6 @@ import IncheckningScreen from '@/station-kit/incheckning/IncheckningScreen.vue'
 import { spela, arSkrivare, appLage } from './ljus'
 
 import ReporterConsole from './components/ReporterConsole.vue'
-import ResultWalkthrough from './components/ResultWalkthrough.vue'
 import PilotPanel from './components/PilotPanel.vue'
 import FacilitatorControls from './components/FacilitatorControls.vue'
 import PauseOverlay from './components/PauseOverlay.vue'
@@ -65,6 +66,11 @@ const entered = ref(false)
 //     + sidindelningen, sedan rollval-klipp → valet → ombalansering → "gå till sida A/B".
 //     Sida A = lag1 (Sändebud), sida B = lag2 (Rapportör) — config ENTRE. ---
 const rotation = initRotation(rotationOptions(ROTATION))
+// Resultatet ut (station-kit/resultat): på när rotationen är på, överstyrs med ?result=1|0 / VITE_RESULT.
+{
+  const rot = rotationOptions(ROTATION)
+  initResultat(resultatOptions({ stationN: ROTATION.stationN, enabled: rot.enabled, mqttUrl: rot.mqttUrl }))
+}
 const entre = initEntre({
   stationN: ROTATION.stationN,
   config: ENTRE,
@@ -95,7 +101,7 @@ function onEntreDone(): void {
   store.setRoster({ lag1: team('A'), lag2: team('B') })
 }
 // --- Lek-läget (lila, efter done): "Vem där?" — XY-VANTUPPGIFTER.md 1A. Sidorna ur
-//     entrén (sida A = Valv Syd/lag1, B = Valv Nord/lag2); saknas de (t.ex. omladdning i
+//     entrén (sida A = lag1, sida B = lag2); saknas de (t.ex. omladdning i
 //     lek) gissar man bland hela gruppen. ?lek=1 visar leken direkt (förhandsvisning). ---
 const lekPreview = lekPreviewFromUrl()
 const lekPeople = computed<VemPerson[]>(() => {
@@ -302,10 +308,10 @@ onUnmounted(() => {
         </CrtScreen>
       </div>
 
-      <!-- Avslöjande: en gemensam vy. Samma result-genomgång som efter testet
-           (steg 9) — stegar vinnaren/varför på det riktiga resultat-UI:t. -->
+      <!-- Avslöjande: avslutet i fem takter (station-kit/resultat, XY-RESULTAT-OCH-VINST §2.3) —
+           går av sig självt fram till vinnaren, samma takter på båda skärmarna. -->
       <div v-else-if="showReveal" class="app__single">
-        <CrtScreen><ResultWalkthrough mode="live" @finish="onLiveFinish" /></CrtScreen>
+        <CrtScreen><ForhandlingAvslut @finish="onLiveFinish" /></CrtScreen>
       </div>
 
       <!-- Delad vy: båda konsolerna sida vid sida -->
