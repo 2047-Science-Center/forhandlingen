@@ -15,7 +15,9 @@
  *
  * APPAR (SOM.md "Appar i riggen"): i fasen `reveal` visas xy-reveal (`:5188`) med gruppen som
  * står vid stationen (retained station<N>/group, sista rundan) — follower, utom på den ENDA
- * driver-skärmen. I fasen `syv` visas syvverktyget (`:8791`) med stationens valv och sida.
+ * driver-skärmen. I fasen `sortering` visas VALdi-ceremonin (xy-sortering `:8790`, `?valdi=1`) för
+ * stationens eget hål (station<N>/hal, gruppen ur station<N>/group). I fasen `syv` visas
+ * syvverktyget (`:8791`) med stationens valv och sida.
  *
  * Koppla in: initFilm(filmOptions({ enabled, mqttUrl, stationN, sida })) vid start +
  * <FilmOverlay /> i appens rot.
@@ -48,6 +50,8 @@ export interface FilmOptions {
   revealUrl?: string
   /** syvverktyget på broker-NUC:en. Tom → samma värd som mqttUrl, port 8791. */
   syvUrl?: string
+  /** xy-sortering (VALdi) på broker-NUC:en. Tom → samma värd som mqttUrl, port 8790. */
+  sorteringUrl?: string
 }
 
 export interface FilmSignal {
@@ -63,6 +67,7 @@ export interface FilmSignal {
 export const REGI_PORT = 8090
 export const REVEAL_PORT = 5188
 export const SYV_PORT = 8791
+export const SORTERING_PORT = 8790
 
 /** Stationens valv i SYV-verktyget (XY-ROTATION: st1 Diplomatkåren, st2 Teknologerna, …). */
 export const SYV_VALV: Record<number, string> = {
@@ -73,7 +78,7 @@ export const SYV_VALV: Record<number, string> = {
 }
 
 /** Det som visas i overlayen just nu. */
-export type OverlayLage = 'film' | 'reveal' | 'syv' | null
+export type OverlayLage = 'film' | 'reveal' | 'sortering' | 'syv' | null
 
 const state = reactive({
   enabled: false,
@@ -94,6 +99,7 @@ const state = reactive({
   revealDriver: false,
   revealUrl: '',
   syvUrl: '',
+  sorteringUrl: '',
 })
 
 /** Visas filmen nu? Signal finns, har skärmpaket och riggen står i filmens fas. */
@@ -108,6 +114,9 @@ const lage = computed<OverlayLage>(() => {
   if (!state.enabled) return null
   if (filmSynlig.value) return 'film'
   if (state.regiFas === 'reveal' && state.revealUrl) return 'reveal'
+  // EN VALdi per hål: bara sida A (eller delad vy) kör ceremonin — två skulle båda reagera på handen,
+  // styra ringen och skicka sortering/dom dubbelt.
+  if (state.regiFas === 'sortering' && state.sorteringUrl && state.stationN != null && state.sida !== 'B') return 'sortering'
   if (state.regiFas === 'syv' && state.syvUrl && state.stationN != null && SYV_VALV[state.stationN]) return 'syv'
   return null
 })
@@ -122,6 +131,12 @@ const src = computed(() => {
         grupp: state.grupp,
         sessionId: state.sessionId,
         driver: state.revealDriver,
+      })
+    case 'sortering':
+      return sorteringSrc(state.sorteringUrl, {
+        stationN: state.stationN!,
+        sessionId: state.sessionId,
+        mqttUrl: state.mqttUrl,
       })
     case 'syv':
       return syvSrc(state.syvUrl, {
@@ -181,6 +196,18 @@ export function syvSrc(
 ): string {
   const tail = q({ valv: o.valv, screen: o.sida ?? 'A', session: o.sessionId, broker: o.mqttUrl, autostart: 1 })
   return `${bas(syvUrl)}/?${tail}`
+}
+
+/**
+ * VALdi-ceremonin (xy-sortering): stationens hål (station<N>/hal + station<N>/group), körningens session
+ * (→ sortering/dom till regi), broker för sömmen. Ringen styrs via station<N>/valdi (SOM.md).
+ */
+export function sorteringSrc(
+  sorteringUrl: string,
+  o: { stationN: number; sessionId: string | number | null; mqttUrl: string },
+): string {
+  const tail = q({ valdi: 1, station: o.stationN, session: o.sessionId, broker: o.mqttUrl })
+  return `${bas(sorteringUrl)}/?${tail}`
 }
 
 /** Skärmpaketets adress: start_at på regi-klockan, klockan mäts mot regi /time (samma origin). */
@@ -263,6 +290,7 @@ export function initFilm(o: FilmOptions, injected?: FilmClient): StationFilm {
   state.revealDriver = !!o.revealDriver
   state.revealUrl = bas(o.revealUrl || brokerHttp(o.mqttUrl, REVEAL_PORT))
   state.syvUrl = bas(o.syvUrl || brokerHttp(o.mqttUrl, SYV_PORT))
+  state.sorteringUrl = bas(o.sorteringUrl || brokerHttp(o.mqttUrl, SORTERING_PORT))
   if (!o.enabled) return api
   if (injected) client = injected
   else if (o.mqttUrl) {
@@ -290,10 +318,10 @@ export function initFilm(o: FilmOptions, injected?: FilmClient): StationFilm {
 
 /**
  * Bygg FilmOptions med överstyrning utifrån (före appens default):
- *   ?film=1|0, ?mqtt=ws://…, ?regi=http://…, ?revealurl=…, ?syvurl=…, ?revealdriver=1|0  i URL:en
- *   VITE_FILM=1|0, VITE_MQTT_URL, VITE_REGI_URL, VITE_REVEAL_URL, VITE_SYV_URL,
+ *   ?film=1|0, ?mqtt=ws://…, ?regi=http://…, ?revealurl=…, ?syvurl=…, ?sorteringurl=…, ?revealdriver=1|0
+ *   VITE_FILM=1|0, VITE_MQTT_URL, VITE_REGI_URL, VITE_REVEAL_URL, VITE_SYV_URL, VITE_SORTERING_URL,
  *   VITE_REVEAL_DRIVER=1|0 vid bygget (riggen: VITE_MQTT_URL=ws://192.168.10.10:9001)
- * Ingen IP i koden: regi/reveal/SYV härleds ur broker-adressen (samma värd, 8090/5188/8791).
+ * Ingen IP i koden: regi/reveal/VALdi/SYV härleds ur broker-adressen (samma värd, 8090/5188/8790/8791).
  */
 export function filmOptions(defaults: FilmOptions): FilmOptions {
   const out: FilmOptions = { ...defaults }
@@ -303,6 +331,7 @@ export function filmOptions(defaults: FilmOptions): FilmOptions {
   if (env.VITE_REGI_URL) out.regiUrl = env.VITE_REGI_URL
   if (env.VITE_REVEAL_URL) out.revealUrl = env.VITE_REVEAL_URL
   if (env.VITE_SYV_URL) out.syvUrl = env.VITE_SYV_URL
+  if (env.VITE_SORTERING_URL) out.sorteringUrl = env.VITE_SORTERING_URL
   if (env.VITE_REVEAL_DRIVER === '1' || env.VITE_REVEAL_DRIVER === '0') out.revealDriver = env.VITE_REVEAL_DRIVER === '1'
   if (typeof window !== 'undefined') {
     const p = new URLSearchParams(window.location.search)
@@ -316,6 +345,8 @@ export function filmOptions(defaults: FilmOptions): FilmOptions {
     if (ru) out.revealUrl = ru
     const su = p.get('syvurl')
     if (su) out.syvUrl = su
+    const so = p.get('sorteringurl')
+    if (so) out.sorteringUrl = so
     const d = p.get('revealdriver')
     if (d === '1' || d === '0') out.revealDriver = d === '1'
   }
@@ -340,4 +371,5 @@ export function __resetFilmForTest(): void {
   state.revealDriver = false
   state.revealUrl = ''
   state.syvUrl = ''
+  state.sorteringUrl = ''
 }
