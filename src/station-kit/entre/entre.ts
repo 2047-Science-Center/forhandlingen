@@ -244,8 +244,6 @@ function pickClipSet(): number {
 /** Tryck på "Ställ er på rätt sida" → (rotationens begin) → stationsintrot (om det finns) → rollvalet. */
 function start(): void {
   if (state.step !== 'attract') return
-  // Startspärren: regi har inte spelat trailern + instruktionen än (regi/phase före rotation).
-  if (rotation.startLocked.value) return
   // Rotationen väntar på regi / står i lek → overlayen äger skärmen, ingen start.
   if (rotation.state.phase === 'waiting' || rotation.state.phase === 'lek') return
   if (rotation.state.phase === 'group') rotation.begin()

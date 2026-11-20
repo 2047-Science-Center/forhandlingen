@@ -23,7 +23,7 @@
  * sida skickar done {…, side} och går till lek själv; den andra sidans done ignoreras
  * (halva stationen kan vara lila medan andra halvan fortfarande är orange).
  */
-import { computed, reactive, readonly } from 'vue'
+import { reactive, readonly } from 'vue'
 import mqtt from 'mqtt'
 import type {
   GroupMember,
@@ -34,14 +34,6 @@ import type {
   RotationPhase,
   SessionId,
 } from './types'
-
-/**
- * Startspärren (SOM.md "Incheckningen vid stationerna", Josef 2026-11-19): regi publicerar runda 1:s
- * grupp redan i incheckningen, så gruppen får SE hur de ska ställa sig — men ingen kan starta stationen
- * förrän trailern och instruktionsfilmen spelats. Faserna nedan (regi/phase .phase) spärrar starten;
- * rotation och senare/okända faser släpper. Aldrig fått regi/phase (pilot/dev) = ingen spärr.
- */
-export const START_LOCK_PHASES: readonly string[] = ['idle', 'incheckning', 'trailer', 'intro']
 
 const DEFAULT_ORDER = [1, 4, 3, 2] // medsols, ändrad 2026-11-18 (inga diagonala byten)
 
@@ -63,14 +55,7 @@ const state = reactive({
   setId: null as number | null,
   /** Rollen som presenteras kvinnlig i setet vid stationen (station<N>/group female_role). */
   femaleRole: null as 'A' | 'B' | null,
-  /** Senaste regi/phase .phase (retained). null = aldrig fått någon (pilot, dev, ingen regi). */
-  regiPhase: null as string | null,
 })
-
-/** Starten spärrad: regi står före rotationen (trailer/instruktion inte spelade). Se START_LOCK_PHASES. */
-const startLocked = computed(
-  () => state.phase !== 'off' && state.regiPhase != null && START_LOCK_PHASES.includes(state.regiPhase),
-)
 
 let opts: (Required<Omit<RotationOptions, 'side'>> & { side: 'A' | 'B' | null }) | null = null
 let client: RotationClient | null = null
@@ -184,10 +169,7 @@ function onMessage(topic: string, raw: string): void {
     return
   }
   if (!d || typeof d !== 'object') return
-  if (topic === 'regi/phase') {
-    const ph = (d as { phase?: unknown }).phase
-    state.regiPhase = typeof ph === 'string' ? ph : null
-  } else if (topic === groupTopic()) onGroup(d as GroupMessage)
+  if (topic === groupTopic()) onGroup(d as GroupMessage)
   else if (topic === doneTopic()) onDone(d as { session_id?: SessionId; round?: number; group?: number; side?: string })
 }
 
@@ -195,7 +177,7 @@ function onMessage(topic: string, raw: string): void {
 
 /** Touch på gruppskärmen → appens eget flöde (tutorial) börjar. */
 function begin(): void {
-  if (state.phase !== 'group' || startLocked.value) return
+  if (state.phase !== 'group') return
   state.phase = 'running'
   setMode('tutorial')
 }
@@ -253,8 +235,6 @@ export function tagResult<T extends object>(payload: T): T & { round?: number; g
 
 const api = {
   state: readonly(state),
-  /** true = gruppen visas men får inte starta än (regi före rotationen). Entrén/Ankomst läser den. */
-  startLocked,
   begin,
   markSkarp,
   finishSkarp,
@@ -298,7 +278,6 @@ export function initRotation(o: RotationOptions, injected?: RotationClient): Rot
     client.on('message', (topic, payload) => onMessage(topic, payload.toString()))
     client.subscribe(groupTopic())
     client.subscribe(doneTopic())
-    client.subscribe('regi/phase')
   }
   armManual()
   return api
@@ -337,7 +316,6 @@ export function __resetRotationForTest(): void {
     members: [],
     setId: null,
     femaleRole: null,
-    regiPhase: null,
     manual: false,
     showManual: false,
     connected: false,

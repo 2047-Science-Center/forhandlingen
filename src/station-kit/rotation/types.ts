@@ -10,8 +10,6 @@
  *                     side = bara på DELADE stationer (st2: två sidor, två spel) — varje sida sitt done
  *   station<N>/mode   station → hälsovy (retained) {mode} ∈ tutorial | skarp | lek
  *   station<N>/result märks med round + group    (tagResult)
- *   regi/phase        regi → alla (retained)     {phase, …} — startspärren: idle/incheckning/trailer/intro
- *                     = gruppen visas men kan inte starta (rotation.startLocked). SOM.md "Incheckningen…".
  *
  * Modulen beror INTE på appens @/config — allt kommer in via RotationOptions,
  * så filerna kan kopieras byte-identiskt mellan stationsrepona.
