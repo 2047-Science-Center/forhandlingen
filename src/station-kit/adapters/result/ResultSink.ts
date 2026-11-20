@@ -12,6 +12,12 @@ export interface ResultPerson {
   assigned_role: 'A' | 'B'
   role_presented_as: 'manlig' | 'kvinnlig' | null
   result_value: number
+  /** VALdi (SOM.md "Mått per person för VALdi", 2026-11-20): rollplatsen, t.ex. `sandebud`. Tillägg — ändrar inte result_value. */
+  plats?: string
+  /** VALdi: mått per person (tal, aldrig strängar). Mått som inte gick att mäta utelämnas. */
+  matt?: Record<string, number>
+  /** VALdi: kort, städat transkriptutdrag (≤ 200 tecken, bara st2). */
+  utdrag?: string
 }
 
 export interface ResultPayload {
