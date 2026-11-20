@@ -110,6 +110,15 @@ describe('station-kit/film', () => {
       expect(film.lage.value).toBe('reveal')
       expect(film.src.value).toBe('http://h:5188/?group=3&session=12&follower')
       f.msg('regi/phase', { phase: 'sortering', session_id: 12 })
+      expect(film.lage.value).toBe('sortering')
+      expect(film.src.value).toBe('http://h:8790/?valdi=1&station=4&session=12&broker=ws%3A%2F%2Fh%3A9001')
+    })
+
+    it('sortering: VALdi bara på sida A / delad vy (ett hål = en ceremoni), aldrig på sida B', () => {
+      const f = fakeClient()
+      const film = initFilm({ ...OPTS, sida: 'B' }, f.c)
+      f.msg('regi/phase', { phase: 'sortering', session_id: 12 })
+      expect(film.lage.value).toBe(null)
       expect(film.synlig.value).toBe(false)
     })
 
