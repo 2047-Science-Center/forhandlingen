@@ -4,6 +4,9 @@
  *
  *   attract ──start()──▶ intro ──introDone()──▶ rollval ──clipsDone()──▶ valet ──(alla röstat)──▶ vantar ─▶ utfall ──finish()──▶ klar
  *
+ *   synkIntro (två skärmar): attract ──start()──▶ redo (väntar på andra sidan) ──båda redo──▶ sekvens
+ *   (stationsintro + rollsekvens, ledaren leder: entre:seq {steg, at}) ──sista steget──▶ valet …
+ *
  * Koppla in i en station (samma i alla appar):
  *   1. initEntre({ stationN, config, mqttUrl }) en gång vid start (efter initRotation).
  *   2. store.init() → attachTransport(appens transport) + setScreen({ side, leader }).
@@ -32,7 +35,11 @@ import type {
   VoteMode,
 } from './types'
 
-export type EntreStep = 'attract' | 'intro' | 'rollval' | 'valet' | 'vantar' | 'utfall' | 'klar'
+export type EntreStep = 'attract' | 'redo' | 'sekvens' | 'intro' | 'rollval' | 'valet' | 'vantar' | 'utfall' | 'klar'
+
+/** Stegen i den synkade sekvensen (synkIntro): stationsintrot + rollsekvensen. */
+export type SeqSteg = 'intro' | 'brygga1' | 'kortA' | 'klippA' | 'brygga2' | 'kortB' | 'klippB'
+const ROLLSEKVENS: SeqSteg[] = ['brygga1', 'kortA', 'klippA', 'brygga2', 'kortB', 'klippB']
 
 interface Msg {
   kind: string
@@ -64,7 +71,12 @@ const state = reactive({
   bandlost: true,
   /** Stationsintrot (config.introClip) finns och kan spelas (sonderas vid start). */
   introAvailable: false,
+  /** synkIntro: vilka sidor som tryckt "Vi står rätt" i den här körningen. */
+  redo: { A: false, B: false } as Record<SideId, boolean>,
+  /** synkIntro: var sekvensen står (ledaren sätter, följaren följer). `at` = epoch-ms då steget började. */
+  seq: null as { steg: SeqSteg; at: number } | null,
 })
+let redoTimer: ReturnType<typeof setInterval> | null = null
 
 let opts: EntreOptions | null = null
 let transport: EntreTransport | null = null
@@ -113,6 +125,9 @@ function send(kind: string, payload: object): void {
 
 function resetLocal(): void {
   state.step = 'attract'
+  state.redo = { A: false, B: false }
+  state.seq = null
+  stoppaRedoTimer()
   state.votes = {}
   state.result = null
   state.turn = 0
@@ -123,7 +138,12 @@ function resetLocal(): void {
 
 function setResult(personer: EntrePerson[]): void {
   state.result = personer
-  if (state.step === 'valet' || state.step === 'vantar') state.step = 'utfall'
+  if (['valet', 'vantar', 'redo', 'sekvens'].includes(state.step)) {
+    // (facilitatorns "lotta nu" kan komma medan skärmen väntar in andra sidan / spelar sekvensen)
+    stoppaRedoTimer()
+    state.seq = null
+    state.step = 'utfall'
+  }
 }
 
 function recordVote(bandId: string, role: RoleLetter, broadcast: boolean): void {
@@ -171,6 +191,19 @@ function onTransport(msg: Msg): void {
       break
     case 'entre:hello':
       send('entre:sync', { run: state.run, votes: state.votes, result: state.result, mode: state.voteMode })
+      if (state.leader && state.seq) send('entre:seq', { run: state.run, ...state.seq, clipSet: state.clipSet })
+      break
+    case 'entre:redo':
+      if (p.side === 'A' || p.side === 'B') {
+        state.redo = { ...state.redo, [p.side]: true }
+        startaSekvensOmBadaRedo()
+      }
+      break
+    case 'entre:seq':
+      if (!state.leader) foljSeq(p)
+      break
+    case 'entre:seqNext':
+      if (state.leader && typeof p.steg === 'string') seqNext(p.steg as SeqSteg)
       break
     case 'entre:sync': {
       const v = (p.votes ?? {}) as Record<string, RoleLetter>
@@ -248,8 +281,89 @@ function start(): void {
   if (rotation.state.phase === 'waiting' || rotation.state.phase === 'lek') return
   if (rotation.state.phase === 'group') rotation.begin()
   state.clipSet = pickClipSet()
+  if (synk()) {
+    // Vänta in andra sidan; skicka "redo" tills sekvensen startat (tål en missad/omladdad mottagare).
+    state.step = 'redo'
+    state.redo = { ...state.redo, [state.screenSide!]: true }
+    const skickaRedo = () => send('entre:redo', { run: state.run, side: state.screenSide })
+    skickaRedo()
+    stoppaRedoTimer()
+    redoTimer = setInterval(() => (state.step === 'redo' ? skickaRedo() : stoppaRedoTimer()), 1500)
+    startaSekvensOmBadaRedo()
+    return
+  }
   if (state.introAvailable) state.step = 'intro'
   else afterIntro()
+}
+
+/* ---------- synkIntro: båda skärmarna i takt ---------- */
+
+/** Synkat läge: stationen vill det, skärmen har en sida (två skärmar) och det finns en transport. */
+function synk(): boolean {
+  return !!cfg().synkIntro && state.screenSide != null && transport != null
+}
+function stoppaRedoTimer(): void {
+  if (redoTimer) clearInterval(redoTimer)
+  redoTimer = null
+}
+/** Stegen i den här körningens sekvens: intro (om filen finns) + rollsekvensen (om klipp + rollkort). */
+function seqOrdning(): SeqSteg[] {
+  const ut: SeqSteg[] = state.introAvailable ? ['intro'] : []
+  if (cfg().clips !== false && cfg().rollkort) ut.push(...ROLLSEKVENS)
+  return ut
+}
+/** Ledaren: båda sidor redo → starta sekvensen (eller direkt valet om den är tom). */
+function startaSekvensOmBadaRedo(): void {
+  if (!state.leader || state.step !== 'redo' || !state.redo.A || !state.redo.B) return
+  stoppaRedoTimer()
+  const forsta = seqOrdning()[0]
+  if (forsta) satSeq(forsta)
+  else seqKlar()
+}
+function satSeq(steg: SeqSteg): void {
+  state.seq = { steg, at: Date.now() }
+  state.step = 'sekvens'
+  send('entre:seq', { run: state.run, ...state.seq, clipSet: state.clipSet })
+}
+/** Sekvensen slut (eller tom) → valet, på båda skärmarna. */
+function seqKlar(): void {
+  state.seq = null
+  if (state.leader) send('entre:seq', { run: state.run, steg: 'klar', at: Date.now() })
+  if (state.step === 'redo' || state.step === 'sekvens') {
+    state.step = 'valet'
+    enterValet()
+  }
+}
+/**
+ * Steget `fran` är klart (spelat klart, överhoppat med ett tryck, saknas). Ledaren går vidare;
+ * följaren ber ledaren. Ett steg som redan passerats ignoreras (båda skärmarna rapporterar samma steg).
+ */
+function seqNext(fran: SeqSteg): void {
+  if (state.step !== 'sekvens' || state.seq?.steg !== fran) return
+  if (!state.leader) {
+    send('entre:seqNext', { run: state.run, steg: fran })
+    return
+  }
+  stoppaRedoTimer()
+  const ordning = seqOrdning()
+  const nasta = ordning[ordning.indexOf(fran) + 1]
+  if (nasta) satSeq(nasta)
+  else seqKlar()
+}
+/** Följaren: ledarens position i sekvensen. */
+function foljSeq(p: Record<string, unknown>): void {
+  if (state.step !== 'attract' && state.step !== 'redo' && state.step !== 'sekvens') return
+  stoppaRedoTimer()
+  if (typeof p.clipSet === 'number') state.clipSet = p.clipSet
+  if (p.steg === 'klar') {
+    state.seq = null
+    state.step = 'valet'
+    enterValet()
+    return
+  }
+  if (typeof p.steg !== 'string' || typeof p.at !== 'number') return
+  state.seq = { steg: p.steg as SeqSteg, at: p.at }
+  state.step = 'sekvens'
 }
 
 /** Efter introt: rollval-klippen eller direkt valet. */
@@ -305,8 +419,12 @@ function finish(): void {
 
 /** Facilitator: hoppa över valet (lotta alla som inte valt). */
 function skipVote(): void {
-  if (state.step === 'intro' || state.step === 'rollval' || state.step === 'valet' || state.step === 'vantar') {
-    if (state.step === 'intro' || state.step === 'rollval') state.step = 'vantar'
+  if (['redo', 'sekvens', 'intro', 'rollval', 'valet', 'vantar'].includes(state.step)) {
+    if (['redo', 'sekvens', 'intro', 'rollval'].includes(state.step)) {
+      stoppaRedoTimer()
+      state.seq = null
+      state.step = 'vantar'
+    }
     resolve()
   }
 }
@@ -375,6 +493,8 @@ const api = {
   arrived: introDone,
   setIntroAvailable,
   clipsDone,
+  /** synkIntro: sekvenssteget `steg` är klart (spelat klart / överhoppat). */
+  seqNext,
   showQuestion,
   vote,
   resolve,
@@ -445,4 +565,5 @@ export function __resetEntreForTest(rng?: (run: string) => () => number): void {
   if (rng) rngFactory = rng
   resetLocal()
   Object.assign(state, { voteMode: 'skarm', screenSide: null, leader: true, run: 'pilot', mqttConnected: false, bandlost: true, introAvailable: false })
+  stoppaRedoTimer()
 }

@@ -502,3 +502,103 @@ describe('entrén — klippset per grupp ur DB (station<N>/group set_id + female
     expect(e.presentedAs({ chosen_role: 'A', assigned_role: 'A' })).toBeNull()
   })
 })
+
+describe('entrén — synkIntro (två skärmar väntar in varandra och spelar sekvensen i takt)', () => {
+  const SYNK: EntreConfig = {
+    ...CONFIG,
+    clips: true,
+    synkIntro: true,
+    introClip: '/media/stationsintro/x.mp4',
+    rollkort: { A: 'LABBTEKNIKER', B: 'FORENSIKER' },
+  }
+  /** Två entré-instanser går inte (singleton) → ledaren testas mot en "följare" som bara är bussen. */
+  function ledare() {
+    __resetRotationForTest()
+    __resetEntreForTest(() => seededRng(3))
+    const b = bus()
+    const e = initEntre({ stationN: 3, config: SYNK })
+    e.setScreen({ side: 'A', leader: true })
+    e.attachTransport(b.endpoint())
+    e.setIntroAvailable(true)
+    const fran: { kind: string; payload: Record<string, unknown> }[] = []
+    const foljare = b.endpoint()
+    foljare.subscribe((m) => fran.push(m as (typeof fran)[number]))
+    return { e, foljare, fran }
+  }
+
+  it('ledaren väntar på andra sidan; när båda står rätt startar sekvensen med introt', () => {
+    const { e, foljare, fran } = ledare()
+    e.start()
+    expect(e.state.step).toBe('redo')
+    expect(fran.some((m) => m.kind === 'entre:redo' && m.payload.side === 'A')).toBe(true)
+    foljare.send({ kind: 'entre:redo', payload: { run: 'pilot', side: 'B' } })
+    expect(e.state.step).toBe('sekvens')
+    expect(e.state.seq?.steg).toBe('intro')
+    expect(fran.some((m) => m.kind === 'entre:seq' && m.payload.steg === 'intro')).toBe(true)
+  })
+
+  it('andra sidan redo först → sekvensen startar när ledaren trycker', () => {
+    const { e, foljare } = ledare()
+    foljare.send({ kind: 'entre:redo', payload: { run: 'pilot', side: 'B' } })
+    expect(e.state.step).toBe('attract')
+    e.start()
+    expect(e.state.seq?.steg).toBe('intro')
+  })
+
+  it('ledaren går igenom stegen; följarens "nästa" för fel steg ignoreras; sist → valet', () => {
+    const { e, foljare, fran } = ledare()
+    e.start()
+    foljare.send({ kind: 'entre:redo', payload: { run: 'pilot', side: 'B' } })
+    const ordning = ['intro', 'brygga1', 'kortA', 'klippA', 'brygga2', 'kortB', 'klippB'] as const
+    for (const [i, s] of ordning.entries()) {
+      expect(e.state.seq?.steg).toBe(s)
+      if (i > 0) foljare.send({ kind: 'entre:seqNext', payload: { run: 'pilot', steg: ordning[i - 1] } }) // gammalt steg
+      expect(e.state.seq?.steg).toBe(s)
+      if (i % 2) e.seqNext(s) // ledarens eget "klart"
+      else foljare.send({ kind: 'entre:seqNext', payload: { run: 'pilot', steg: s } }) // tryck på följaren
+    }
+    expect(e.state.step).toBe('valet')
+    expect(fran.some((m) => m.kind === 'entre:seq' && m.payload.steg === 'klar')).toBe(true)
+  })
+
+  it('lotta nu medan skärmen väntar → utfall', () => {
+    const { e } = ledare()
+    e.start()
+    e.skipVote()
+    expect(e.state.step).toBe('utfall')
+  })
+
+  it('följaren: väntar, följer ledarens steg och klippset, och ber ledaren om nästa', () => {
+    __resetRotationForTest()
+    __resetEntreForTest(() => seededRng(4))
+    const b = bus()
+    const e = initEntre({ stationN: 3, config: SYNK })
+    e.setScreen({ side: 'B', leader: false })
+    e.attachTransport(b.endpoint())
+    const led = b.endpoint()
+    const fran: { kind: string; payload: Record<string, unknown> }[] = []
+    led.subscribe((m) => fran.push(m as (typeof fran)[number]))
+    e.start()
+    expect(e.state.step).toBe('redo')
+    led.send({ kind: 'entre:seq', payload: { run: 'pilot', steg: 'brygga1', at: 123, clipSet: 1 } })
+    expect(e.state.step).toBe('sekvens')
+    expect(e.state.seq).toEqual({ steg: 'brygga1', at: 123 })
+    expect(e.state.clipSet).toBe(1)
+    e.seqNext('brygga1')
+    expect(e.state.seq?.steg).toBe('brygga1') // följaren går inte själv
+    expect(fran.some((m) => m.kind === 'entre:seqNext' && m.payload.steg === 'brygga1')).toBe(true)
+    led.send({ kind: 'entre:seq', payload: { run: 'pilot', steg: 'klar', at: 456 } })
+    expect(e.state.step).toBe('valet')
+  })
+
+  it('utan synkIntro (eller en delad skärm) beter sig entrén som förut', () => {
+    __resetRotationForTest()
+    __resetEntreForTest(() => seededRng(5))
+    const e = initEntre({ stationN: 3, config: SYNK })
+    e.setScreen({ side: null, leader: true })
+    e.attachTransport(bus().endpoint())
+    e.setIntroAvailable(true)
+    e.start()
+    expect(e.state.step).toBe('intro')
+  })
+})

@@ -6,7 +6,7 @@
  */
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from './store/gameStore'
-import { config, LIVE_DATASET_ID, ROLLVAL, ROTATION, ENTRE, BANDLOST, SIDE_TO_TEAM, LJUS } from '@/config'
+import { config, LIVE_DATASET_ID, ROLLVAL, ROLLVAL_OVERLAY_SETS, ROLLVAL_PORTRATT_SETS, ROTATION, ENTRE, BANDLOST, SIDE_TO_TEAM, LJUS } from '@/config'
 
 import CrtScreen from '@/station-kit/components/CrtScreen.vue'
 import AttractScreen from '@/station-kit/components/AttractScreen.vue'
@@ -273,7 +273,7 @@ onUnmounted(() => {
     <!-- Entrén: attract (testgrupp + sidindelning) → rollval → valet → utfall -->
     <div v-if="!entreDone" class="app__single">
       <CrtScreen>
-        <Entre :rollval="ROLLVAL" @start="entered = true" @done="onEntreDone">
+        <Entre :rollval="ROLLVAL" :overlay-sets="ROLLVAL_OVERLAY_SETS" :portratt-sets="ROLLVAL_PORTRATT_SETS" @start="entered = true" @done="onEntreDone">
           <template #attract="{ start }"><AttractScreen @start="start" /></template>
         </Entre>
       </CrtScreen>

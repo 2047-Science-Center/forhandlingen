@@ -1,0 +1,17 @@
+{
+  "klipp": "Ida sändebud",
+  "fil": "Ida sändebud.mp4",
+  "duration_s": 25.2,
+  "sprak": [
+    "sv",
+    "no"
+  ],
+  "_no_status": "UTKAST - ersätts av Josefs norska översättning",
+  "_undertext_status": "Extraherad ur bakat original, timing ögonmått. Verifiera sv-text/timing mot Premiere. Inga overlay-texter i originalet (ren bildvlogg).",
+  "titel": {
+    "sv": "Sändebud",
+    "no": "Sendebud"
+  },
+  "portratt": "Ida sändebud.portratt.jpg",
+  "undertext": []
+}

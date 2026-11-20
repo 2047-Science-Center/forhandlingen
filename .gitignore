@@ -8,6 +8,10 @@ coverage
 .claude/worktrees/
 
 # Original-assets (dubbletter — de använda kopiorna ligger i public/)
+# Rollklippen + textlagret (overlay.json) + rollvalsporträtt (portratt.jpg) spåras dock,
+# NUC:en får dem via git pull (XY-TEXTLAGER).
 /assets/*
 !/assets/*.mp4
+!/assets/*.overlay.json
+!/assets/*.portratt.jpg
 /Sound/

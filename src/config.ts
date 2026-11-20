@@ -13,6 +13,7 @@ import { bandlostFran } from '@/station-kit/band/band'
 import type { Dataset, Person, TeamId } from './stations/forhandlingen/engine/types'
 import type { RollvalConfig } from './station-kit/rollval/types'
 import type { EntreConfig } from './station-kit/entre/types'
+import type { OverlayData } from './station-kit/undertext/undertext'
 import type { Valv } from './station-kit/ljus/kanon'
 
 export type Mode = 'pilot' | 'production'
@@ -352,6 +353,23 @@ function rollvalClip(file: string): string {
   return hit?.[1] ?? ''
 }
 
+/** Textlager (overlay.json) + rollvalsporträtt bredvid varje klipp i assets/ (XY-TEXTLAGER). */
+const ROLLVAL_OVERLAYS = import.meta.glob('../assets/*.overlay.json', { eager: true, import: 'default' }) as Record<string, unknown>
+const ROLLVAL_PORTRATTER = import.meta.glob('../assets/*.portratt.jpg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
+
+function globHit<T>(map: Record<string, T>, file: string): T | undefined {
+  const target = ('/' + file).normalize('NFC')
+  return Object.entries(map).find(([k]) => k.normalize('NFC').endsWith(target))?.[1]
+}
+/** Overlay-data för ett klipp: "Namn roll.mp4" → "Namn roll.overlay.json". */
+function clipOverlay(file: string): OverlayData | null {
+  return (globHit(ROLLVAL_OVERLAYS, file.replace(/\.mp4$/i, '.overlay.json')) as OverlayData | undefined) ?? null
+}
+/** Rollvalsporträtt för ett klipp: "Namn roll.mp4" → "Namn roll.portratt.jpg". */
+function clipPortratt(file: string): string {
+  return globHit(ROLLVAL_PORTRATTER, file.replace(/\.mp4$/i, '.portratt.jpg')) ?? ''
+}
+
 export const ROLLVAL: RollvalConfig = {
   stationTitle: 'Förhandlingen',
   intro: 'Två sätt att göra skillnad i ett rum. Titta på hur en dag ser ut — välj sedan vilken du vill kliva in i.',
@@ -377,6 +395,17 @@ export const ROLLVAL: RollvalConfig = {
     { sandebud: rollvalClip('Jakob Sändebud.mp4'), rapportor: rollvalClip('Mary rapportör.mp4') },
   ],
 }
+
+/** Textlager (overlay.json) per klippset, parallellt med ROLLVAL.clipSets — undertexten på de textfria klippen. */
+export const ROLLVAL_OVERLAY_SETS: Array<Record<string, OverlayData | null>> = [
+  { sandebud: clipOverlay('Ida sändebud.mp4'), rapportor: clipOverlay('Ossian rapportör.mp4') },
+  { sandebud: clipOverlay('Jakob Sändebud.mp4'), rapportor: clipOverlay('Mary rapportör.mp4') },
+]
+/** Rollvalsporträtt per klippset (personen som spelar rollen i setet), parallellt med ROLLVAL.clipSets. */
+export const ROLLVAL_PORTRATT_SETS: Array<Record<string, string>> = [
+  { sandebud: clipPortratt('Ida sändebud.mp4'), rapportor: clipPortratt('Ossian rapportör.mp4') },
+  { sandebud: clipPortratt('Jakob Sändebud.mp4'), rapportor: clipPortratt('Mary rapportör.mp4') },
+]
 
 /* ------------------------------------------------------------------ *
  * ENTRÉN (station-kit/entre, gemensam för st1–3): attract med testgrupp +
@@ -410,6 +439,8 @@ export const ENTRE: EntreConfig = {
   /** Rollsekvensen efter introt (inga klick): brygga → kort A → klipp A → brygga → kort B → klipp B → valet.
    *  Rollnamn/valvfärg enligt station-kit/stationsintro/README.md (Josef 2026-11-19). */
   rollkort: { A: 'SÄNDEBUD', B: 'RAPPORTÖR', valvfarg: '#7ad14f', sprak: config.lang === 'no' ? 'no' : 'sv' },
+  /** Båda skärmarna (sida A + B på samma NUC) väntar in varandra och spelar introt + rollsekvensen i takt (Josef 2026-11-20). */
+  synkIntro: true,
   clips: ROLLVAL_ENABLED,
   clipSet: ROLLVAL_START_SET,
   clipSetCount: ROLLVAL.clipSets.length,
