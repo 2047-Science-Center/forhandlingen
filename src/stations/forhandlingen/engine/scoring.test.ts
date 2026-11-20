@@ -98,3 +98,41 @@ describe('personResults', () => {
     expect(a1).toHaveProperty('role_presented_as')
   })
 })
+
+describe('personResults — VALdi-mått (SOM.md 2026-11-20)', () => {
+  it('sidan säkrade sin kritiska och gissade rätt', () => {
+    let s = fullGame()
+    s = reduce(s, { type: 'submitGuess', team: 'lag1', resource: 'medicin' }) // rätt
+    s = reduce(s, { type: 'submitGuess', team: 'lag2', resource: 'sadesfro' })
+    const pr = personResults(s)
+    const a1 = pr.lag1.find((p) => p.assigned_role === 'A')!
+    const b1 = pr.lag1.find((p) => p.assigned_role === 'B')!
+    expect(a1.plats).toBe('sandebud')
+    expect(b1.plats).toBe('rapportor')
+    const want = { lagpoang: 80, sakrad: 1, gissade_ratt: 1, vunna_luckor: 2, kapital_kvar: 40 }
+    expect(a1.matt).toEqual(want)
+    expect(b1.matt).toEqual(want)
+    // Additivt: result_value oförändrat.
+    expect(a1.result_value).toBe(40)
+    expect(b1.result_value).toBe(40)
+    expect(a1).not.toHaveProperty('utdrag')
+  })
+
+  it('sidan säkrade inte sin kritiska och gissade fel', () => {
+    let s = fullGame()
+    s = reduce(s, { type: 'submitGuess', team: 'lag1', resource: 'medicin' })
+    s = reduce(s, { type: 'submitGuess', team: 'lag2', resource: 'sadesfro' }) // fel (lag1:s är vatten)
+    const pr = personResults(s)
+    for (const p of pr.lag2) {
+      expect(p.matt).toEqual({ lagpoang: 0, sakrad: 0, gissade_ratt: 0, vunna_luckor: 1, kapital_kvar: 90 })
+      for (const v of Object.values(p.matt!)) expect(typeof v).toBe('number')
+    }
+    expect(pr.lag2.find((p) => p.assigned_role === 'B')!.result_value).toBe(0)
+  })
+
+  it('utelämnar gissade_ratt när sidan inte gissat', () => {
+    const pr = personResults(fullGame())
+    expect(pr.lag1[0].matt).not.toHaveProperty('gissade_ratt')
+    expect(pr.lag1[0].matt).toHaveProperty('lagpoang')
+  })
+})

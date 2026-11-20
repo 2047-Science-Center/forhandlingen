@@ -31,7 +31,16 @@ export interface PersonResult {
   assigned_role: Role
   role_presented_as: 'manlig' | 'kvinnlig' | null
   result_value: number
+  /** VALdi (SOM.md "Mått per person för VALdi", 2026-11-20): rollplatsen. */
+  plats?: string
+  /** VALdi: mått (tal). Ett mått som inte gick att mäta utelämnas. */
+  matt?: Record<string, number>
+  /** VALdi: transkriptutdrag (bara st2) — används inte här. */
+  utdrag?: string
 }
+
+/** Rollplatsen per roll (SOM.md): A = sändebud, B = rapportör. */
+const PLATS: Record<Role, string> = { A: 'sandebud', B: 'rapportor' }
 
 const OTHER: Record<TeamId, TeamId> = { lag1: 'lag2', lag2: 'lag1' }
 
@@ -62,6 +71,28 @@ export function scoreAll(state: GameState): Record<TeamId, TeamScore> {
   }
 }
 
+/** Antal luckor `team` vann (köpte) i auktionen. */
+export function wonHatches(state: GameState, team: TeamId): number {
+  return Object.values(state.results).filter((r) => r.winner === team).length
+}
+
+/**
+ * VALdi-mått för en sida (samma för sändebud och rapportör på sidan; vilka som
+ * räknas som grupp/individ står i gatewayens config). Stationen mäter, bedömer inte.
+ * `gissade_ratt` utelämnas om sidan inte gissat (går inte att mäta).
+ */
+export function teamMatt(state: GameState, team: TeamId): Record<string, number> {
+  const s = scoreTeam(state, team)
+  const matt: Record<string, number> = {
+    lagpoang: s.teamScore,
+    sakrad: s.securedCritical ? 1 : 0,
+  }
+  if (state.guesses[team] != null) matt.gissade_ratt = s.guessedRight ? 1 : 0
+  matt.vunna_luckor = wonHatches(state, team)
+  matt.kapital_kvar = s.capitalLeft
+  return matt
+}
+
 /**
  * Per-person result_value (placeholder tills system 1 kopplas):
  *  - Roll A (förhandlare): kapital kvar.
@@ -71,6 +102,7 @@ export function personResults(state: GameState): Record<TeamId, PersonResult[]> 
   const out = {} as Record<TeamId, PersonResult[]>
   for (const team of TEAMS) {
     const s = scoreTeam(state, team)
+    const matt = teamMatt(state, team)
     out[team] = state.members[team].map((p) => ({
       band_id: p.band_id,
       chosen_role: p.chosen_role,
@@ -82,6 +114,8 @@ export function personResults(state: GameState): Record<TeamId, PersonResult[]> 
           : s.guessedRight
             ? s.capitalLeft
             : 0,
+      plats: PLATS[p.assigned_role],
+      matt: { ...matt },
     }))
   }
   return out
