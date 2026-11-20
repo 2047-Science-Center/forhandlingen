@@ -133,7 +133,7 @@ describe('station-kit/film', () => {
       f.msg('regi/phase', { phase: 'syv', session_id: 7 })
       expect(film.lage.value).toBe('syv')
       expect(film.src.value).toBe(
-        'http://h:8791/?valv=driften&screen=B&session=7&broker=ws%3A%2F%2Fh%3A9001&autostart=1',
+        'http://h:8791/?valv=driften&screen=B&station=4&session=7&broker=ws%3A%2F%2Fh%3A9001&autostart=1',
       )
       expect(syvSrc('http://x:1', { valv: 'diplomatkaren', sida: null, sessionId: null, mqttUrl: '' })).toBe(
         'http://x:1/?valv=diplomatkaren&screen=A&autostart=1',

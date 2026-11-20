@@ -142,6 +142,7 @@ const src = computed(() => {
       return syvSrc(state.syvUrl, {
         valv: SYV_VALV[state.stationN!],
         sida: state.sida,
+        stationN: state.stationN,
         sessionId: state.sessionId,
         mqttUrl: state.mqttUrl,
       })
@@ -189,12 +190,28 @@ export function revealSrc(
   return `${bas(revealUrl)}/?${tail}`
 }
 
-/** syvverktyget: stationens valv + sida, broker för RFID/syv-sömmen, startar direkt. */
+/**
+ * syvverktyget: stationens valv + sida + nummer, broker för RFID/syv-sömmen, startar direkt.
+ * `station` gör att SYV i band-läget lyssnar på DEN HÄR stationens station<N>/rfidja|rfidnej (SOM.md 2026-11-19).
+ */
 export function syvSrc(
   syvUrl: string,
-  o: { valv: string; sida: 'A' | 'B' | null; sessionId: string | number | null; mqttUrl: string },
+  o: {
+    valv: string
+    sida: 'A' | 'B' | null
+    stationN?: number | null
+    sessionId: string | number | null
+    mqttUrl: string
+  },
 ): string {
-  const tail = q({ valv: o.valv, screen: o.sida ?? 'A', session: o.sessionId, broker: o.mqttUrl, autostart: 1 })
+  const tail = q({
+    valv: o.valv,
+    screen: o.sida ?? 'A',
+    station: o.stationN,
+    session: o.sessionId,
+    broker: o.mqttUrl,
+    autostart: 1,
+  })
   return `${bas(syvUrl)}/?${tail}`
 }
 
