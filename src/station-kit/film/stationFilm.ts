@@ -114,9 +114,9 @@ const lage = computed<OverlayLage>(() => {
   if (!state.enabled) return null
   if (filmSynlig.value) return 'film'
   if (state.regiFas === 'reveal' && state.revealUrl) return 'reveal'
-  // EN VALdi per hål: bara sida A (eller delad vy) kör ceremonin — två skulle båda reagera på handen,
-  // styra ringen och skicka sortering/dom dubbelt.
-  if (state.regiFas === 'sortering' && state.sorteringUrl && state.stationN != null && state.sida !== 'B') return 'sortering'
+  // VALdi på BÅDA sidorna: den styrande sidan kör hålet/ringen/rösten, den andra följer tyst (folj=1),
+  // så att handen, ringen och sortering/dom aldrig hanteras dubbelt (SOM.md skarmsynk, 2026-11-20).
+  if (state.regiFas === 'sortering' && state.sorteringUrl && state.stationN != null) return 'sortering'
   if (state.regiFas === 'syv' && state.syvUrl && state.stationN != null && SYV_VALV[state.stationN]) return 'syv'
   return null
 })
@@ -137,6 +137,7 @@ const src = computed(() => {
         stationN: state.stationN!,
         sessionId: state.sessionId,
         mqttUrl: state.mqttUrl,
+        folj: valdiFoljer(state.stationN!, state.sida),
       })
     case 'syv':
       return syvSrc(state.syvUrl, {
@@ -216,14 +217,27 @@ export function syvSrc(
 }
 
 /**
+ * Vilken sida som STYR VALdi-ceremonin (hålet, ringen, rösten, sortering/dom). Josef 2026-11-20:
+ * station 2 styrs från sida B (Lögndetektorn, stationens högtalare), övriga från sida A.
+ */
+export const VALDI_STYRANDE_SIDA: Record<number, 'A' | 'B'> = { 2: 'B' }
+
+/** Följer den här skärmen bara (tyst, ingen sensor/ring/regi)? Delad vy (ingen sida) = styrande. */
+export function valdiFoljer(stationN: number, sida: 'A' | 'B' | null): boolean {
+  if (!sida) return false
+  return sida !== (VALDI_STYRANDE_SIDA[stationN] ?? 'A')
+}
+
+/**
  * VALdi-ceremonin (xy-sortering): stationens hål (station<N>/hal + station<N>/group), körningens session
  * (→ sortering/dom till regi), broker för sömmen. Ringen styrs via station<N>/valdi (SOM.md).
+ * `folj` = följarskärmen (tyst, synkas från den styrande via station<N>/skarmsynk).
  */
 export function sorteringSrc(
   sorteringUrl: string,
-  o: { stationN: number; sessionId: string | number | null; mqttUrl: string },
+  o: { stationN: number; sessionId: string | number | null; mqttUrl: string; folj?: boolean },
 ): string {
-  const tail = q({ valdi: 1, station: o.stationN, session: o.sessionId, broker: o.mqttUrl })
+  const tail = q({ valdi: 1, station: o.stationN, session: o.sessionId, broker: o.mqttUrl, folj: o.folj ? 1 : null })
   return `${bas(sorteringUrl)}/?${tail}`
 }
 

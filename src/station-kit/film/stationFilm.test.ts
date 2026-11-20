@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { initFilm, useFilm, filmSrc, regiFranMqtt, revealSrc, syvSrc, __resetFilmForTest, type FilmClient } from './stationFilm'
+import { initFilm, useFilm, filmSrc, regiFranMqtt, revealSrc, syvSrc, valdiFoljer, __resetFilmForTest, type FilmClient } from './stationFilm'
 
 function fakeClient() {
   const handlers: Record<string, (...a: any[]) => void> = {}
@@ -114,12 +114,20 @@ describe('station-kit/film', () => {
       expect(film.src.value).toBe('http://h:8790/?valdi=1&station=4&session=12&broker=ws%3A%2F%2Fh%3A9001')
     })
 
-    it('sortering: VALdi bara på sida A / delad vy (ett hål = en ceremoni), aldrig på sida B', () => {
+    it('sortering: VALdi på båda sidorna — sida A styr, sida B följer (folj=1)', () => {
       const f = fakeClient()
       const film = initFilm({ ...OPTS, sida: 'B' }, f.c)
       f.msg('regi/phase', { phase: 'sortering', session_id: 12 })
-      expect(film.lage.value).toBe(null)
-      expect(film.synlig.value).toBe(false)
+      expect(film.lage.value).toBe('sortering')
+      expect(film.src.value).toBe('http://h:8790/?valdi=1&station=4&session=12&broker=ws%3A%2F%2Fh%3A9001&folj=1')
+    })
+
+    it('sortering: station 2 styrs från sida B (Lögndetektorn), sida A följer', () => {
+      expect(valdiFoljer(2, 'B')).toBe(false)
+      expect(valdiFoljer(2, 'A')).toBe(true)
+      expect(valdiFoljer(1, 'A')).toBe(false)
+      expect(valdiFoljer(4, 'B')).toBe(true)
+      expect(valdiFoljer(3, null)).toBe(false)
     })
 
     it('reveal: driver-skärmen får autostart i stället för follower', () => {
