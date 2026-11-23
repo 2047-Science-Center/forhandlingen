@@ -181,6 +181,9 @@ function enterGate() {
   // Lokalt i det här fönstret → kvitto på egen sida (ljudet = headset, ovan).
   ljus.gest('kvitto', egnaSidor(store.view), { tyst: true })
 }
+function coachBack() {
+  if (coachStep.value > 0) coachStep.value -= 1
+}
 function coachNext() {
   audio.play('blip')
   if (coachStep.value >= coachSpecs.value.length - 1) openingStep.value = 'clip'
@@ -229,6 +232,9 @@ const testCoachSpecs = computed<CoachSpec[]>(() => [
   },
 ])
 const testCoach = computed(() => testCoachSpecs.value[testCoachStep.value])
+function testCoachBack() {
+  if (testCoachStep.value > 0) testCoachStep.value -= 1
+}
 function testCoachNext() {
   audio.play('blip')
   if (testCoachStep.value >= testCoachSpecs.value.length - 1) onTestPopupsFinish()
@@ -322,7 +328,9 @@ const showTestConsole = computed(() => stage.value === 'test' && store.phase !==
           :reinforce="coach.reinforce"
           :step="coachStep"
           :steps="coachSpecs.length"
+          :show-back="coachStep > 0"
           @next="coachNext"
+          @back="coachBack"
         >
           <template #visual>
             <CoachAnim :key="coach.anim" :kind="coach.anim" :resource="coach.animRes" />
@@ -369,7 +377,9 @@ const showTestConsole = computed(() => stage.value === 'test' && store.phase !==
         :body="testCoach.body"
         :step="testCoachStep"
         :steps="testCoachSpecs.length"
+        :show-back="testCoachStep > 0"
         @next="testCoachNext"
+        @back="testCoachBack"
       >
         <template #visual>
           <CoachAnim :key="testCoach.anim" :kind="testCoach.anim" :resource="testCoach.animRes" />

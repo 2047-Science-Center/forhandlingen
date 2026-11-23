@@ -4,7 +4,8 @@
  * stort framåt-steg (KLAR ▸ / NÄSTA ▸ / KÖR LIVE ▸) som tänds FÖRST när
  * momentet är gjort (canAdvance), och en diskret hoppa-över. Självtempo.
  * Innehållet (stage) kommer via default-slot; att dämpa allt utom aktivt
- * element är stegets eget ansvar.
+ * element är stegets eget ansvar. `canBack` visar TILLBAKA (→ `back`) bredvid
+ * framåt-steget (Josef 2026-11-23: bläddra fram och tillbaka).
  */
 import { useI18n } from '../i18n'
 
@@ -15,11 +16,12 @@ withDefaults(
     canAdvance: boolean
     forwardKey?: string
     showSkip?: boolean
+    canBack?: boolean
   }>(),
-  { forwardKey: 'onboarding.next', showSkip: false },
+  { forwardKey: 'onboarding.next', showSkip: false, canBack: false },
 )
 
-const emit = defineEmits<{ advance: []; skip: [] }>()
+const emit = defineEmits<{ advance: []; skip: []; back: [] }>()
 const { t } = useI18n()
 </script>
 
@@ -44,6 +46,9 @@ const { t } = useI18n()
     </div>
 
     <div class="shell__foot">
+      <button v-if="canBack" class="crt-button shell__back" @click="emit('back')">
+        ◂ {{ t('onboarding.back') }}
+      </button>
       <button
         class="crt-button crt-button--strong shell__forward"
         :disabled="!canAdvance"
@@ -109,6 +114,13 @@ const { t } = useI18n()
 .shell__foot {
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 1rem;
+}
+.shell__back {
+  font-size: 1.1rem;
+  padding: 0.5em 1.2em;
+  opacity: 0.85;
 }
 .shell__forward {
   font-size: 1.5rem;

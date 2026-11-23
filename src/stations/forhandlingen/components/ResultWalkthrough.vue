@@ -127,6 +127,11 @@ function fire(i: number) {
 onMounted(() => fire(0))
 watch(beat, (i) => fire(i))
 
+/** Tillbaka (Josef 2026-11-23). Inte från vinnar-beaten: den startar utfallet och ska inte köras om. */
+const kanBakat = computed(() => beat.value > 0 && !last.value)
+function back() {
+  if (kanBakat.value) beat.value -= 1
+}
 function next() {
   if (!last.value) beat.value += 1
   else if (!locked.value) finish()
@@ -211,7 +216,9 @@ function next() {
       :cta="ctaLabel"
       :step="beat"
       :steps="BEATS.length"
+      :show-back="kanBakat"
       @next="next"
+      @back="back"
     >
       <template v-if="spec.anim" #visual>
         <CoachAnim :key="spec.anim" :kind="spec.anim" :resource="animRes" />

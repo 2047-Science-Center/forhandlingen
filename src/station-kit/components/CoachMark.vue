@@ -11,6 +11,7 @@
  * overlayn mäter dess rect (fixed → viewport-koordinater) och ritar hålet där.
  * Saknas målet visas bubblan centrerad utan hål. Klick var som helst ELLER på
  * knappen → `next`. Prick-rad via `step`/`steps`. Reduced-motion: ingen puls.
+ * `showBack` visar TILLBAKA bredvid NÄSTA → `back` (Josef 2026-11-23: bläddra fram och tillbaka).
  *
  * Färg ärvs via --color-primary (blå i tutorial, bärnsten i skarpt) — ingen
  * hårdkodad läges-färg. Overlayn blockerar interaktion med grund-UI:t bakom.
@@ -35,10 +36,12 @@ const props = withDefaults(
     pad?: number
     /** Framtvinga bubbelplacering; auto = ovanför/under beroende på målet. */
     placement?: 'auto' | 'top' | 'bottom' | 'center'
+    /** Visa TILLBAKA-knappen (→ `back`). Sätts av föräldern när det finns ett steg bakåt. */
+    showBack?: boolean
   }>(),
   { target: null, pad: 12, placement: 'auto' },
 )
-const emit = defineEmits<{ next: [] }>()
+const emit = defineEmits<{ next: []; back: [] }>()
 const { t } = useI18n()
 
 interface Rect {
@@ -203,9 +206,14 @@ function advance() {
 
       <slot />
 
-      <button class="crt-button crt-button--strong cm__btn" @click="advance">
-        {{ cta ?? t('onboarding.next') }} ▸
-      </button>
+      <div class="cm__nav">
+        <button v-if="showBack" class="crt-button cm__btn cm__btn--back" @click.stop="emit('back')">
+          ◂ {{ t('onboarding.back') }}
+        </button>
+        <button class="crt-button crt-button--strong cm__btn" @click="advance">
+          {{ cta ?? t('onboarding.next') }} ▸
+        </button>
+      </div>
 
       <div v-if="steps && steps > 1" class="cm__dots">
         <span
@@ -245,6 +253,15 @@ function advance() {
 @keyframes cm-ring {
   0%, 100% { box-shadow: 0 0 0 100vmax rgba(3, 12, 8, 0.82), 0 0 16px rgba(var(--mode-accent-rgb), 0.5), inset 0 0 12px rgba(var(--mode-accent-rgb), 0.25); }
   50% { box-shadow: 0 0 0 100vmax rgba(3, 12, 8, 0.82), 0 0 30px rgba(var(--mode-accent-rgb), 0.85), inset 0 0 16px rgba(var(--mode-accent-rgb), 0.45); }
+}
+.cm__nav {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.cm__btn--back {
+  opacity: 0.85;
 }
 .cm__bubble {
   position: absolute;
