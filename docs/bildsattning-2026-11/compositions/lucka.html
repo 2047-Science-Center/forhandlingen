@@ -1,0 +1,154 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "IBM Plex Mono", monospace; }
+    #lk-etikett { position: absolute; left: 60px; top: 40px; font-weight: 700; font-size: 28px; letter-spacing: 0.2em; color: #6f8a7e; }
+    .lk-fas { position: absolute; right: 60px; top: 30px; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 44px; color: #ff9500; opacity: 0; }
+    /* Luckväggen */
+    #lk-vagg { position: absolute; left: 360px; top: 80px; width: 1200px; height: 290px; border-radius: 16px;
+      background: linear-gradient(180deg, #2f5a54 0%, #234641 100%); border: 3px solid #3f6f68; box-shadow: inset 0 -20px 40px rgba(0,0,0,0.35); }
+    .lk-niet { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: #5d8a82; }
+    .lk-lampa { position: absolute; top: 104px; width: 26px; height: 26px; border-radius: 50%; background: #1a2b27; border: 3px solid #4c7a72; }
+    .lk-ram { position: absolute; top: 150px; width: 170px; height: 170px; border-radius: 10px; background: #12201c; border: 4px solid #4c7a72; overflow: hidden; }
+    .lk-dorr { position: absolute; inset: 0; background: linear-gradient(135deg, #3f6d66, #2d524c); border-radius: 6px; transform-origin: 0% 50%; }
+    .lk-dorr::after { content: ""; position: absolute; right: 18px; top: 72px; width: 14px; height: 26px; border-radius: 4px; background: #8fb3ab; }
+    .lk-chip { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); font-weight: 700; font-size: 30px; padding: 2px 12px; border-radius: 8px; }
+    #lk-glod { position: absolute; inset: 0; background: radial-gradient(circle at 50% 60%, #ffd894 0%, #b8690f 55%, #3b2408 100%); }
+    /* Rummet */
+    #lk-mur { position: absolute; left: 950px; top: 420px; width: 20px; height: 600px; border-radius: 6px; background: linear-gradient(#9fb2c0, #5b6b74); opacity: 0.55; }
+    .lk-fig { position: absolute; top: 560px; width: 150px; height: 210px; }
+    .lk-bubbla { position: absolute; top: 470px; padding: 10px 26px 14px; border-radius: 26px; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 64px; line-height: 1; opacity: 0; }
+    .lk-bubbla.a { background: #fff1d6; color: #1d1a14; }
+    .lk-bubbla.b { background: #ff3cc8; color: #1d0a17; }
+    .lk-stack { position: absolute; top: 760px; width: 190px; height: 240px; }
+    .lk-mynt { position: absolute; left: 35px; width: 120px; height: 34px; border-radius: 50%; background: radial-gradient(ellipse at 40% 35%, #ffe08a, #d79a1c 70%, #8a5b07); border: 2px solid #6b4504; }
+    .lk-summa { position: absolute; left: 0; width: 190px; top: 0; text-align: center; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 54px; color: #f5f5f0; }
+    #lk-vara { position: absolute; left: 860px; top: 460px; width: 200px; height: 200px; }
+    #lk-ring { position: absolute; left: 790px; top: 390px; width: 340px; height: 340px; }
+    #lk-stampel { position: absolute; left: 960px; top: 560px; transform: translate(-50%, -50%) rotate(-6deg); padding: 8px 30px 12px; border: 8px solid #ff9500; border-radius: 10px;
+      font-family: "Oswald", sans-serif; font-weight: 700; font-size: 70px; color: #ff9500; white-space: nowrap; background: rgba(5,16,11,0.85); opacity: 0; }
+    #lk-klubba { position: absolute; left: 1120px; top: 360px; width: 220px; height: 220px; opacity: 0; transform-origin: 85% 85%; }
+    /* Klubb-rutan i bild */
+    #lk-panel { position: absolute; left: 620px; top: 800px; width: 680px; height: 200px; display: flex; gap: 24px; justify-content: center; opacity: 0; }
+    .lk-val { width: 200px; height: 190px; border: 4px solid #6b5a3a; border-radius: 16px; background: #0d1a14; display: flex; align-items: center; justify-content: center; }
+    #lk-fot { position: absolute; left: 0; right: 0; top: 760px; text-align: center; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 60px; color: #35e0d0; opacity: 0; }
+    #lk-fot small { display: block; margin-top: 16px; font-family: "IBM Plex Mono", monospace; font-weight: 700; font-size: 30px; color: #c9d4cc; letter-spacing: 0.04em; }
+  </style>
+  <div id="root" data-composition-id="lucka" data-width="1920" data-height="1080" data-layout-allow-overlap>
+    <div id="lk-etikett">SKISS · EN LUCKA I BILD</div>
+    <div id="lk-f1" class="lk-fas">1 · LUCKAN ÖPPNAS</div>
+    <div id="lk-f2" class="lk-fas">2 · BUD I HEADSETET</div>
+    <div id="lk-f3" class="lk-fas">3 · KLUBBA</div>
+    <div id="lk-f4" class="lk-fas">4 · NÄSTA LUCKA</div>
+
+    <div id="lk-vagg">
+      <i class="lk-niet" style="left:14px;top:14px"></i><i class="lk-niet" style="right:14px;top:14px"></i>
+      <i class="lk-niet" style="left:14px;bottom:14px"></i><i class="lk-niet" style="right:14px;bottom:14px"></i>
+    </div>
+    <!-- lampor över luckorna (centrum 480/720/960/1200/1440) -->
+    <i id="lk-l1" class="lk-lampa" style="left:467px;background:#fff1d6;box-shadow:0 0 18px #fff1d6"></i>
+    <i id="lk-l2" class="lk-lampa" style="left:707px;background:#5b6b64"></i>
+    <i id="lk-l3" class="lk-lampa" style="left:947px"></i>
+    <i id="lk-l4" class="lk-lampa" style="left:1187px"></i>
+    <i id="lk-l5" class="lk-lampa" style="left:1427px"></i>
+    <div class="lk-ram" style="left:395px"><div class="lk-dorr"></div><span class="lk-chip" style="background:#fff1d6;color:#1d1a14">A 25</span></div>
+    <div class="lk-ram" style="left:635px"><div class="lk-dorr" style="filter:brightness(0.7)"></div><span class="lk-chip" style="background:#3a4740;color:#c9d4cc">–</span></div>
+    <div class="lk-ram" style="left:875px"><div id="lk-glod"></div><div id="lk-d3" class="lk-dorr"></div><span id="lk-c3" class="lk-chip" style="background:#fff1d6;color:#1d1a14;opacity:0">A 30</span></div>
+    <div class="lk-ram" style="left:1115px"><div class="lk-dorr"></div></div>
+    <div class="lk-ram" style="left:1355px"><div class="lk-dorr"></div></div>
+
+    <div id="lk-mur"></div>
+    <!-- Sida A (varmvitt) och sida B (magenta): sändebud med headset -->
+    <svg id="lk-figA" class="lk-fig" style="left:330px" viewBox="0 0 150 210"><circle cx="75" cy="48" r="34" fill="#fff1d6"/><path d="M33 210 V130 Q33 92 75 92 Q117 92 117 130 V210 Z" fill="#fff1d6"/><path d="M38 48 A37 37 0 0 1 112 48" fill="none" stroke="#2b2b2b" stroke-width="8"/><rect x="30" y="40" width="14" height="26" rx="5" fill="#2b2b2b"/><rect x="106" y="40" width="14" height="26" rx="5" fill="#2b2b2b"/><path d="M112 62 Q118 84 96 84" fill="none" stroke="#2b2b2b" stroke-width="5"/></svg>
+    <svg id="lk-figB" class="lk-fig" style="left:1440px" viewBox="0 0 150 210"><circle cx="75" cy="48" r="34" fill="#ff3cc8"/><path d="M33 210 V130 Q33 92 75 92 Q117 92 117 130 V210 Z" fill="#ff3cc8"/><path d="M38 48 A37 37 0 0 1 112 48" fill="none" stroke="#2b2b2b" stroke-width="8"/><rect x="30" y="40" width="14" height="26" rx="5" fill="#2b2b2b"/><rect x="106" y="40" width="14" height="26" rx="5" fill="#2b2b2b"/><path d="M38 62 Q32 84 54 84" fill="none" stroke="#2b2b2b" stroke-width="5"/></svg>
+    <div id="lk-bA1" class="lk-bubbla a" style="left:510px">20</div>
+    <div id="lk-bB1" class="lk-bubbla b" style="left:1260px">25</div>
+    <div id="lk-bA2" class="lk-bubbla a" style="left:510px">30</div>
+    <div id="lk-bB2" class="lk-bubbla b" style="left:1260px">…</div>
+
+    <!-- Pengarna som mynt: 1 mynt = 10 kr -->
+    <div id="lk-sA" class="lk-stack" style="left:90px">
+      <div id="lk-sumA1" class="lk-summa">100</div><div id="lk-sumA2" class="lk-summa" style="opacity:0;color:#ffc46b">70</div>
+      <i class="lk-mynt" style="top:204px"></i><i class="lk-mynt" style="top:192px"></i><i class="lk-mynt" style="top:180px"></i><i class="lk-mynt" style="top:168px"></i>
+      <i class="lk-mynt" style="top:156px"></i><i class="lk-mynt" style="top:144px"></i><i class="lk-mynt" style="top:132px"></i>
+      <i id="lk-m8" class="lk-mynt" style="top:120px"></i><i id="lk-m9" class="lk-mynt" style="top:108px"></i><i id="lk-m10" class="lk-mynt" style="top:96px"></i>
+    </div>
+    <div id="lk-sB" class="lk-stack" style="left:1640px">
+      <div class="lk-summa">100</div>
+      <i class="lk-mynt" style="top:204px"></i><i class="lk-mynt" style="top:192px"></i><i class="lk-mynt" style="top:180px"></i><i class="lk-mynt" style="top:168px"></i>
+      <i class="lk-mynt" style="top:156px"></i><i class="lk-mynt" style="top:144px"></i><i class="lk-mynt" style="top:132px"></i>
+      <i class="lk-mynt" style="top:120px"></i><i class="lk-mynt" style="top:108px"></i><i class="lk-mynt" style="top:96px"></i>
+    </div>
+
+    <!-- Varan (illustrerad, här ritad — med bildgen blir den en renderad ikon) -->
+    <svg id="lk-vara" viewBox="0 0 200 200">
+      <rect x="22" y="92" width="156" height="86" rx="14" fill="#e9f3f1" stroke="#7fb8ae" stroke-width="5"/>
+      <rect x="22" y="92" width="156" height="22" rx="10" fill="#35e0d0"/>
+      <rect x="40" y="56" width="128" height="26" rx="13" fill="#f5f5f0" stroke="#9aa" stroke-width="3" transform="rotate(-18 104 69)"/>
+      <rect x="132" y="38" width="34" height="26" rx="8" fill="#ff9500" transform="rotate(-18 104 69)"/>
+      <path d="M86 150 h28 M100 136 v28" stroke="#ff5a3c" stroke-width="9" stroke-linecap="round"/>
+    </svg>
+    <svg id="lk-ring" viewBox="0 0 340 340"><circle cx="170" cy="170" r="160" fill="none" stroke="#2a3a30" stroke-width="12"/>
+      <circle id="lk-ringfg" cx="170" cy="170" r="160" fill="none" stroke="#ff9500" stroke-width="12" stroke-linecap="round" stroke-dasharray="1005" stroke-dashoffset="0" transform="rotate(-90 170 170)"/></svg>
+
+    <!-- Klubb-rutan med bilder: A, B, tom lucka -->
+    <div id="lk-panel">
+      <div id="lk-vA" class="lk-val"><svg width="110" height="150" viewBox="0 0 150 210"><circle cx="75" cy="48" r="34" fill="#fff1d6"/><path d="M33 210 V130 Q33 92 75 92 Q117 92 117 130 V210 Z" fill="#fff1d6"/></svg></div>
+      <div class="lk-val"><svg width="110" height="150" viewBox="0 0 150 210"><circle cx="75" cy="48" r="34" fill="#ff3cc8"/><path d="M33 210 V130 Q33 92 75 92 Q117 92 117 130 V210 Z" fill="#ff3cc8"/></svg></div>
+      <div class="lk-val"><svg width="120" height="120" viewBox="0 0 120 120"><rect x="10" y="10" width="100" height="100" rx="10" fill="none" stroke="#6f8a7e" stroke-width="8"/><path d="M30 30 L90 90 M90 30 L30 90" stroke="#6f8a7e" stroke-width="8"/></svg></div>
+    </div>
+    <svg id="lk-klubba" viewBox="0 0 220 220"><rect x="20" y="30" width="120" height="70" rx="14" fill="#8a5a2b" stroke="#4a2f14" stroke-width="5"/><rect x="100" y="80" width="22" height="130" rx="10" fill="#b07a3e" transform="rotate(-40 111 145)"/></svg>
+    <div id="lk-stampel">SÅLD · A · 30</div>
+
+    <div id="lk-fot">Samma lucka – nästan utan ord<small>lampa = vem tog den · mynt = pengar kvar · bubblor = bud · ring = tid</small></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const fas = (id, at, ut) => { tl.fromTo(id, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.3, ease: "expo.out" }, at); tl.to(id, { opacity: 0, duration: 0.15 }, ut); };
+    tl.fromTo(["#lk-vagg", ".lk-ram", ".lk-lampa"], { opacity: 0.3 }, { opacity: 1, duration: 0.4 }, 0);
+    tl.fromTo(["#lk-figA", "#lk-figB", "#lk-sA", "#lk-sB", "#lk-mur"], { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out", stagger: 0.06 }, 0.2);
+    tl.set(["#lk-vara", "#lk-ring"], { opacity: 0 }, 0);
+    fas("#lk-f1", 0.6, 3.4);
+    // 1 · luckan öppnas
+    tl.fromTo("#lk-l3", { backgroundColor: "#1a2b27", boxShadow: "0 0 0px #ff9500" }, { backgroundColor: "#ff9500", boxShadow: "0 0 22px #ff9500", duration: 0.25 }, 0.8);
+    tl.fromTo("#lk-d3", { scaleX: 1 }, { scaleX: 0.06, duration: 0.6, ease: "power2.inOut" }, 1.0);
+    tl.fromTo("#lk-vara", { opacity: 0, scale: 0.35, x: 0, y: -330 }, { opacity: 1, scale: 1, y: 0, duration: 0.9, ease: "expo.out" }, 1.6);
+    // 2 · bud
+    fas("#lk-f2", 3.5, 8.9);
+    tl.fromTo("#lk-ring", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 2.6);
+    tl.fromTo("#lk-ringfg", { attr: { "stroke-dashoffset": 0 } }, { attr: { "stroke-dashoffset": 1005 }, duration: 6.4, ease: "none" }, 2.6);
+    [["#lk-bA1", 3.6, -1], ["#lk-bB1", 5.0, 1], ["#lk-bA2", 6.4, -1], ["#lk-bB2", 7.8, 1]].forEach(([id, at, sida], i, arr) => {
+      tl.fromTo(id, { opacity: 0, scale: 0.4, x: 60 * sida }, { opacity: 1, scale: 1, x: 0, duration: 0.35, ease: "back.out(1.6)" }, at);
+      tl.to(id, { opacity: 0, y: -30, duration: 0.25, ease: "power3.in" }, at + 1.2);
+    });
+    tl.to("#lk-figA", { y: -10, duration: 0.15, yoyo: true, repeat: 1 }, 3.6);
+    tl.to("#lk-figB", { y: -10, duration: 0.15, yoyo: true, repeat: 1 }, 5.0);
+    tl.to("#lk-figA", { y: -10, duration: 0.15, yoyo: true, repeat: 1 }, 6.4);
+    // 3 · klubba
+    fas("#lk-f3", 9.0, 11.6);
+    tl.to("#lk-ring", { opacity: 0, duration: 0.2 }, 9.0);
+    tl.fromTo("#lk-panel", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.35, ease: "expo.out" }, 9.0);
+    tl.fromTo("#lk-vA", { borderColor: "#6b5a3a", backgroundColor: "#0d1a14" }, { borderColor: "#ff9500", backgroundColor: "#2a2010", duration: 0.2 }, 9.5);
+    tl.fromTo("#lk-klubba", { opacity: 0, rotation: -55 }, { opacity: 1, rotation: -55, duration: 0.15 }, 9.7);
+    tl.to("#lk-klubba", { rotation: 0, duration: 0.14, ease: "power4.in" }, 9.96);
+    tl.fromTo("#lk-stampel", { opacity: 0, scale: 2.2 }, { opacity: 1, scale: 1, duration: 0.14, ease: "power4.in" }, 10.1);
+    tl.to("#lk-vara", { x: -8, duration: 0.06, yoyo: true, repeat: 3 }, 10.24);
+    // mynten: tre mynt från A:s hög till luckan
+    ["#lk-m10", "#lk-m9", "#lk-m8"].forEach((id, i) => {
+      tl.fromTo(id, { x: 0, y: 0, opacity: 1 }, { x: 830, y: -560 + i * 6, opacity: 0, duration: 0.7, ease: "power2.in" }, 10.4 + i * 0.12);
+    });
+    tl.to("#lk-sumA1", { opacity: 0, duration: 0.1 }, 10.9);
+    tl.fromTo("#lk-sumA2", { opacity: 0, scale: 1.4 }, { opacity: 1, scale: 1, duration: 0.3, ease: "expo.out" }, 10.9);
+    // 4 · nästa lucka
+    fas("#lk-f4", 11.7, 13.2);
+    tl.to(["#lk-stampel", "#lk-panel", "#lk-klubba"], { opacity: 0, duration: 0.2 }, 11.6);
+    tl.to("#lk-vara", { scale: 0.35, y: -330, opacity: 0, duration: 0.55, ease: "power3.in" }, 11.7);
+    tl.to("#lk-d3", { scaleX: 1, duration: 0.45, ease: "power2.inOut" }, 12.1);
+    tl.to("#lk-l3", { backgroundColor: "#fff1d6", boxShadow: "0 0 18px #fff1d6", duration: 0.25 }, 12.4);
+    tl.fromTo("#lk-c3", { opacity: 0 }, { opacity: 1, duration: 0.25 }, 12.5);
+    tl.fromTo("#lk-l4", { backgroundColor: "#1a2b27" }, { backgroundColor: "#ff9500", duration: 0.2, yoyo: true, repeat: 1 }, 12.9);
+    tl.fromTo("#lk-fot", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.3 }, 13.3);
+    tl.to(["#lk-figA", "#lk-figB", "#lk-mur", "#lk-sA", "#lk-sB"], { opacity: 0.15, duration: 0.3 }, 13.2);
+    tl.to("#root > *", { opacity: 0, duration: 0.22, ease: "power3.in" }, 15.7);
+    window.__timelines["lucka"] = tl;
+  </script>
+</template>

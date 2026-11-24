@@ -1,0 +1,88 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Oswald", sans-serif; }
+    #td-rubrik { position: absolute; left: 120px; top: 90px; font-weight: 700; font-size: 76px; color: #f5f5f0; }
+    #td-rubrik b { color: #ff9500; }
+    #td-under { position: absolute; left: 124px; top: 190px; font-family: "IBM Plex Mono", monospace; font-weight: 700;
+      font-size: 28px; letter-spacing: 0.12em; color: #9fb2c0; }
+    .td-lbl { position: absolute; left: 120px; width: 170px; font-family: "IBM Plex Mono", monospace; font-weight: 700;
+      font-size: 30px; letter-spacing: 0.12em; color: #9fb2c0; }
+    #td-lbl-nu { top: 418px; }
+    #td-lbl-fo { top: 658px; color: #35e0d0; }
+    .td-seg { position: absolute; height: 96px; border-radius: 6px; transform-origin: left center; overflow: hidden;
+      border: 3px solid #05100b; display: flex; align-items: center; justify-content: center; }
+    .td-seg span { font-family: "IBM Plex Mono", monospace; font-weight: 700; font-size: 24px; color: #05100b; white-space: nowrap; }
+    .nu { top: 395px; }
+    .fo { top: 635px; }
+    .entre { background: #4d5f58; }
+    .entre span { color: #f5f5f0; }
+    .tut { background: #35e0d0; }
+    .test { background: repeating-linear-gradient(135deg, #35e0d0 0 18px, #23a89c 18px 36px); }
+    .skarp { background: #ff9500; }
+    .avs { background: #ffc46b; }
+    .td-linje { position: absolute; top: 330px; width: 4px; height: 530px; }
+    #td-l9 { left: 1224px; background: #f5f5f0; }
+    #td-l12 { left: 1532px; background: repeating-linear-gradient(to bottom, #ff5a3c 0 14px, transparent 14px 26px); }
+    .td-ltext { position: absolute; top: 284px; font-family: "IBM Plex Mono", monospace; font-weight: 700; font-size: 24px;
+      letter-spacing: 0.06em; text-align: left; width: 240px; }
+    #td-lt9 { left: 1240px; color: #f5f5f0; }
+    #td-lt12 { left: 1548px; color: #ff5a3c; }
+    #td-axel { position: absolute; left: 300px; top: 880px; width: 1440px; height: 40px; font-family: "IBM Plex Mono", monospace;
+      font-size: 22px; color: #6f8a7e; }
+    #td-axel i { position: absolute; font-style: normal; transform: translateX(-50%); }
+    .td-sum { position: absolute; font-weight: 700; font-size: 64px; line-height: 1; }
+    #td-sum-nu { left: 1690px; top: 408px; color: #ff5a3c; }
+    #td-sum-fo { left: 1158px; top: 648px; color: #35e0d0; }
+  </style>
+  <div id="root" data-composition-id="tid" data-width="1920" data-height="1080">
+    <div id="td-rubrik">En runda är <b>6–9 min</b>. Förhandlingen tar ~13.</div>
+    <div id="td-under">REGI STARTAR BYTET FÖRST NÄR ALLA FYRA STATIONER ÄR KLARA · LÅNGSAMMAST STYR TAKTEN</div>
+
+    <div id="td-l9" class="td-linje"></div>
+    <div id="td-l12" class="td-linje"></div>
+    <div id="td-lt9" class="td-ltext">9 MIN · RUNDANS TAK</div>
+    <div id="td-lt12" class="td-ltext">12 MIN · REGI VARNAR</div>
+
+    <div id="td-lbl-nu" class="td-lbl">NULÄGE</div>
+    <div id="td-n1" class="td-seg nu entre" style="left:300px;width:206px"><span>ENTRÉ 2:00</span></div>
+    <div id="td-n2" class="td-seg nu tut" style="left:506px;width:144px"><span>ÖPPNING</span></div>
+    <div id="td-n3" class="td-seg nu test" style="left:650px;width:411px"><span>3 PROVLUCKOR ~4:00</span></div>
+    <div id="td-n4" class="td-seg nu skarp" style="left:1061px;width:556px"><span>5 LUCKOR ~5:25</span></div>
+    <div id="td-n5" class="td-seg nu avs" style="left:1617px;width:52px"><span></span></div>
+    <div id="td-sum-nu" class="td-sum">≈13</div>
+
+    <div id="td-lbl-fo" class="td-lbl">FÖRSLAG</div>
+    <div id="td-f1" class="td-seg fo entre" style="left:300px;width:221px"><span>ENTRÉ + LÄGE</span></div>
+    <div id="td-f2" class="td-seg fo tut" style="left:521px;width:180px"><span>1 PROVLUCKA</span></div>
+    <div id="td-f3" class="td-seg fo skarp" style="left:701px;width:381px"><span>5 LUCKOR ~3:40</span></div>
+    <div id="td-f4" class="td-seg fo avs" style="left:1082px;width:52px"><span></span></div>
+    <div id="td-sum-fo" class="td-sum">≈8</div>
+
+    <div id="td-axel">
+      <i style="left:0px">0</i><i style="left:206px">2</i><i style="left:411px">4</i><i style="left:617px">6</i>
+      <i style="left:823px">8</i><i style="left:1029px">10</i><i style="left:1234px">12</i><i style="left:1440px">14 min</i>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#td-rubrik", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power4.out" }, 0.2);
+    tl.fromTo("#td-under", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 0.6);
+    tl.fromTo(["#td-l9", "#td-l12"], { scaleY: 0, transformOrigin: "50% 100%" }, { scaleY: 1, duration: 0.6, ease: "expo.out", stagger: 0.15 }, 0.8);
+    tl.fromTo(["#td-lt9", "#td-lt12", "#td-axel"], { opacity: 0 }, { opacity: 1, duration: 0.3, stagger: 0.1 }, 1.1);
+    tl.fromTo("#td-lbl-nu", { opacity: 0 }, { opacity: 1, duration: 0.2 }, 1.3);
+    const nu = ["#td-n1", "#td-n2", "#td-n3", "#td-n4", "#td-n5"];
+    const nuDur = [0.7, 0.55, 1.3, 1.6, 0.3];
+    let t = 1.5;
+    nu.forEach((id, i) => { tl.fromTo(id, { scaleX: 0 }, { scaleX: 1, duration: nuDur[i], ease: "none" }, t); t += nuDur[i]; });
+    tl.fromTo("#td-sum-nu", { opacity: 0, scale: 1.4 }, { opacity: 1, scale: 1, duration: 0.3, ease: "expo.out" }, 6.6);
+    tl.fromTo("#td-l12", { opacity: 1 }, { opacity: 0.35, duration: 0.15, yoyo: true, repeat: 3 }, 6.6);
+    tl.fromTo("#td-lbl-fo", { opacity: 0 }, { opacity: 1, duration: 0.2 }, 7.6);
+    const fo = ["#td-f1", "#td-f2", "#td-f3", "#td-f4"];
+    const foDur = [0.75, 0.6, 1.2, 0.3];
+    t = 7.8;
+    fo.forEach((id, i) => { tl.fromTo(id, { scaleX: 0 }, { scaleX: 1, duration: foDur[i], ease: "none" }, t); t += foDur[i]; });
+    tl.fromTo("#td-sum-fo", { opacity: 0, scale: 1.4 }, { opacity: 1, scale: 1, duration: 0.3, ease: "expo.out" }, 12.6);
+    tl.to("#root > *", { opacity: 0, duration: 0.22, ease: "power3.in" }, 13.7);
+    window.__timelines["tid"] = tl;
+  </script>
+</template>

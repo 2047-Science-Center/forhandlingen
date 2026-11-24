@@ -13,6 +13,8 @@ import { audio } from '../audio/AudioEngine'
 const props = withDefaults(
   defineProps<{
     title: string
+    /** Valfri rad under rubriken (spelläget ④: "SIDA MOT SIDA"). Symbolen läggs i slotten `symbol`. */
+    under?: string
     /** Startar på detta tal och räknar ner till 1. */
     from?: number
     /** Hur länge rubriken visas innan nedräkningen (ms). */
@@ -55,7 +57,9 @@ function runCount(n: number) {
   <div class="mc" role="status" aria-live="assertive">
     <div class="mc__backdrop" />
     <div class="mc__inner">
+      <div v-if="$slots.symbol" class="mc__symbol"><slot name="symbol" /></div>
       <p class="mc__title ink-strong">{{ title }}</p>
+      <p v-if="under" class="mc__under">{{ under }}</p>
       <div v-if="count != null" :key="count" class="mc__num mono">{{ count }}</div>
     </div>
   </div>
@@ -92,6 +96,18 @@ function runCount(n: number) {
   margin: 0;
   animation: mc-title-in 0.6s ease-out both;
 }
+.mc__symbol {
+  animation: mc-title-in 0.6s ease-out both;
+}
+.mc__under {
+  margin: -0.6rem 0 0;
+  font-family: var(--font-rubrik);
+  font-weight: 700;
+  font-size: clamp(1.4rem, 3.4vw, 2.4rem);
+  letter-spacing: 0.1em;
+  color: var(--color-ink-strong);
+  animation: mc-title-in 0.6s 0.15s ease-out both;
+}
 .mc__num {
   font-size: clamp(7rem, 24vw, 16rem);
   line-height: 1;
@@ -110,7 +126,19 @@ function runCount(n: number) {
 }
 @media (prefers-reduced-motion: reduce) {
   .mc__title,
-  .mc__num {
+  .mc__symbol {
+  animation: mc-title-in 0.6s ease-out both;
+}
+.mc__under {
+  margin: -0.6rem 0 0;
+  font-family: var(--font-rubrik);
+  font-weight: 700;
+  font-size: clamp(1.4rem, 3.4vw, 2.4rem);
+  letter-spacing: 0.1em;
+  color: var(--color-ink-strong);
+  animation: mc-title-in 0.6s 0.15s ease-out both;
+}
+.mc__num {
     animation: none;
   }
 }

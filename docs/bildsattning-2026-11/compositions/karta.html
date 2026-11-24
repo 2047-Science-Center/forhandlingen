@@ -1,0 +1,35 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "IBM Plex Mono", monospace; }
+    #ka-rubrik { position: absolute; left: 80px; top: 50px; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 60px; color: #f5f5f0; }
+    #ka-rubrik b { color: #ff9500; }
+    .ka-rad { position: absolute; left: 80px; width: 1760px; height: 74px; display: grid; grid-template-columns: 300px 560px 640px 260px; align-items: center;
+      border-bottom: 1px solid #23352c; font-size: 28px; color: #f5f5f0; }
+    .ka-rad.huvud { color: #6f8a7e; font-weight: 700; letter-spacing: 0.1em; border-bottom: 2px solid #3a4a40; }
+    .ka-rad span:nth-child(1) { font-family: "Oswald", sans-serif; font-weight: 700; font-size: 34px; }
+    .ka-rad span:nth-child(2) { color: #ff9c87; }
+    .ka-rad span:nth-child(3) { color: #35e0d0; }
+    .ka-gen { font-weight: 700; }
+    .ja { color: #ffc46b; } .nej { color: #6f8a7e; }
+  </style>
+  <div id="root" data-composition-id="karta" data-width="1920" data-height="1080">
+    <div id="ka-rubrik">Från text till bild, <b>skärm för skärm</b></div>
+    <div class="ka-rad huvud" style="top:150px"><span>SKÄRM</span><span>IDAG</span><span>I BILD</span><span>BILDGEN?</span></div>
+    <div class="ka-rad" style="top:228px"><span>Luckraden</span><span>5 små prickar</span><span>luckvägg, lampa i sidans färg</span><span class="ka-gen ja">miljöbild</span></div>
+    <div class="ka-rad" style="top:302px"><span>Varan</span><span>emoji + ord</span><span>illustrerad vara ur luckan</span><span class="ka-gen ja">5 varor</span></div>
+    <div class="ka-rad" style="top:376px"><span>Budgivning</span><span>"BUDGIVNING PÅGÅR" 0:26</span><span>tidsring + bud som bubblor A/B</span><span class="ka-gen nej">ritat</span></div>
+    <div class="ka-rad" style="top:450px"><span>Klubban</span><span>"Vem fick …?" 3 textknappar</span><span>A-figur · B-figur · tom lucka</span><span class="ka-gen nej">ritat</span></div>
+    <div class="ka-rad" style="top:524px"><span>Pengar</span><span>"KAPITAL 100 kr"</span><span>myntstapel som krymper</span><span class="ka-gen nej">ritat</span></div>
+    <div class="ka-rad" style="top:598px"><span>Livsviktig</span><span>rubrik + 25 ord berättelse</span><span>varukort, LIVSVIKTIG-tagg, puls</span><span class="ka-gen ja">samma varor</span></div>
+    <div class="ka-rad" style="top:672px"><span>Instruktionen</span><span>≈ 40 ord per bubbla</span><span>3 bildregler, 3 ord var</span><span class="ka-gen nej">ritat</span></div>
+    <div class="ka-rad" style="top:746px"><span>Gissningen</span><span>lista med resursnamn</span><span>5 varukort som vänds, ×2</span><span class="ka-gen ja">samma varor</span></div>
+    <div class="ka-rad" style="top:820px"><span>Väntan</span><span>"Väntar på sida B …"</span><span>andra sidans figur + ring</span><span class="ka-gen nej">ritat</span></div>
+    <div class="ka-rad" style="top:894px"><span>Avslutet</span><span>tal och rader</span><span>mynten räknas om till poäng</span><span class="ka-gen nej">ritat</span></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#ka-rubrik", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.25 }, 0.1);
+    tl.fromTo(".ka-rad", { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.35, ease: "expo.out", stagger: 0.12 }, 0.4);
+    window.__timelines["karta"] = tl;
+  </script>
+</template>

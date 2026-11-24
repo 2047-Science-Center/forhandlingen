@@ -17,7 +17,6 @@ import { personResults } from '../engine/scoring'
 
 import { createAdapters, type Adapters } from '@/station-kit/adapters'
 import type { ResultPayload } from '@/station-kit/adapters/result/ResultSink'
-import type { IdentityGroup } from '@/station-kit/adapters/identity/Identity'
 import { audio } from '@/station-kit/audio/AudioEngine'
 import { tagResult } from '@/station-kit/rotation/rotation'
 import { skickaResultat } from '@/station-kit/resultat'
@@ -28,23 +27,21 @@ import {
   DATASETS,
   ALL_DATASETS,
   TRIAL_DATASET,
-  TEST1_DATASET,
   LIVE_DATASET_ID,
   ROUND_TIMERS,
+  KLUBBA,
   IDLE_RESTART,
   TEAMS,
   defaultRoster,
-  ROLLVAL_ENABLED,
 } from '@/config'
 
 const IDLE_MS = IDLE_RESTART.minutes * 60_000
 const IDLE_WARN_MS = IDLE_RESTART.warnSeconds * 1000
 
-// Första onboarding-stage. Det standardiserade rollvalet körs FÖRE onboardingen
-// (app-skalet) och ersätter då den gamla bipp-start-rutan ('identify'): med
-// rollvalet på startar onboardingen direkt vid 'headset'. Är rollvalet av faller
-// vi tillbaka på den gamla bipp-starten.
-const ONB_START = ROLLVAL_ENABLED ? 'headset' : 'identify'
+// Första onboarding-stage (entrén med rollvalet ligger före, i app-skalet):
+// 'lage' (spellägeskortet, båda skärmarna i takt) → 'intro' (instruktionen, självtempo
+// per skärm) → 'prov' (provluckan) → 'live'.
+export const ONB_START = 'lage'
 
 export type ViewSide = 'lag1' | 'lag2' | 'shared'
 
@@ -69,8 +66,6 @@ export const useGameStore = defineStore('forhandlingen', () => {
   const state = ref<GameState>(initialState(defaultRoster()))
   const view = ref<ViewSide>(viewFromHash())
   const now = ref<number>(Date.now())
-  /** Epoch-ms när intro-klippet startades (delas mellan skärmar → synkat ljud). */
-  const introStartedAt = ref<number | null>(null)
   /** Facilitator-paus (synkad). Fryser nedräkningen och lägger paus-overlay. */
   const paused = ref(false)
   /** Epoch-ms när pausen startade (för att förskjuta nedräkningen vid resume). */
@@ -82,7 +77,6 @@ export const useGameStore = defineStore('forhandlingen', () => {
   let lastActivityBroadcast = 0
   /** Sant när stationen är i en körning (efter attract) → idle-återstart aktiv. */
   const sessionActive = ref(false)
-  const selectedDataset = ref<string>(DATASETS[0].id)
   /** Efter ett köp hålls nästa lucka släckt ~1 s innan den tänds (§4.5). */
   const holdActiveUntil = ref(0)
 
@@ -167,7 +161,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
 
   // --- Sidoeffekter efter varje state-ändring ---
   let prevPhase: Phase = 'intro'
-  let prevStep: BiddingStep = 'negotiating'
+  let prevStep: BiddingStep = 'getready'
   let prevResultCount = 0
   let resultSent = false
 
@@ -190,12 +184,9 @@ export const useGameStore = defineStore('forhandlingen', () => {
     const skrivare = arSkrivare(view.value)
 
     if (s.phase !== prevPhase) {
-      if (s.phase === 'bidding' && prevPhase === 'intro') {
-        audio.play('hatch')
-        if (skrivare) ljus.gest('oppnar', ['A', 'B'], { tyst: true })
-      }
-      // Reveal: kanon `resultat` (förut `win` här + `win` igen på vinnar-beaten).
+      // Reveal: kanon `resultat`.
       if (s.phase === 'reveal') ljus.ljud('resultat')
+      if (s.phase === 'guessing') audio.play('popup')
       prevPhase = s.phase
     }
     if (s.step !== prevStep) {
@@ -203,18 +194,21 @@ export const useGameStore = defineStore('forhandlingen', () => {
         audio.play('hatch')
         if (skrivare) ljus.gest('oppnar', ['A', 'B'], { tyst: true })
       }
-      if (s.step === 'confirm') audio.play('confirm')
+      // Tiden ute / KLAR → klubb-rutan slår upp på båda skärmarna.
+      if (s.step === 'klubba' && prevStep === 'negotiating') audio.play('popup')
+      // Klubbslaget: samma ögonblick på båda skärmarna (synkat state). Vinnarsidan får `rätt`.
+      if (s.step === 'sald' && s.pending) {
+        audio.play(s.pending.winner ? 'klubba' : 'nobuy')
+        if (skrivare && s.pending.winner) ljus.gest('ratt', [SIDA_FOR_LAG[s.pending.winner]], { tyst: true })
+      }
+      if (s.step === 'klubba' && prevStep === 'sald') audio.play('deny') // ångrat
       prevStep = s.step
     }
 
     const rc = Object.keys(s.results).length
     if (rc > prevResultCount) {
-      const last = s.results[Math.max(...Object.keys(s.results).map(Number))]
-      if (last?.winner) {
-        audio.play('hatch')
-        // Köp bekräftat: sidan som tog luckan får `rätt` (lockin/hatch spelas redan).
-        if (skrivare) ljus.gest('ratt', [SIDA_FOR_LAG[last.winner]], { tyst: true })
-      }
+      // Köpet bokfört → nästa lucka hålls släckt en stund (§4.5).
+      holdActiveUntil.value = Date.now() + config.nextHatchDelayMs
       prevResultCount = rc
     }
 
@@ -238,10 +232,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
       applyEffects()
     } else if (msg.kind === 'hello') {
       broadcast()
-      // Sen-anslutande skärm: dela pågående intro-start + onboarding-stage.
-      if (introStartedAt.value != null) {
-        adapters.value?.transport.send({ kind: 'introStart', payload: introStartedAt.value })
-      }
+      // Sen-anslutande skärm: dela pågående onboarding-stage.
       if (onbStage.value !== ONB_START) {
         adapters.value?.transport.send({
           kind: 'onbStage',
@@ -251,9 +242,6 @@ export const useGameStore = defineStore('forhandlingen', () => {
       if (paused.value) {
         adapters.value?.transport.send({ kind: 'pause', payload: { paused: true, since: pausedSince.value } })
       }
-    } else if (msg.kind === 'introStart') {
-      const ts = msg.payload as number
-      if (introStartedAt.value == null || ts < introStartedAt.value) introStartedAt.value = ts
     } else if (msg.kind === 'onbStage') {
       const p = msg.payload as { stage: string; epoch: number | null }
       if (onbStage.value !== p.stage) {
@@ -306,20 +294,12 @@ export const useGameStore = defineStore('forhandlingen', () => {
     if (v) lastActivityAt.value = Date.now()
   }
 
-  /** Starta intro-klippet synkat på BÅDA skärmarna (delad starttid). */
-  function beginIntro() {
-    if (introStartedAt.value == null) introStartedAt.value = Date.now()
-    adapters.value?.transport.send({ kind: 'introStart', payload: introStartedAt.value })
-  }
-
-  // --- Onboarding-koordinator (synkad mellan valv) ---
-  // Första stage = ONB_START. Med rollvalet på = 'headset' (rollvalet uppströms
-  // har redan ersatt bipp-starten); annars 'identify' (bippa bandet eller klicka
-  // igenom). Sedan 'headset' → 'test' → 'testresult' → 'live'.
+  // --- Onboarding-koordinator (synkad mellan skärmarna) ---
+  // ONB_START 'lage' → 'lagekort' → 'intro' → 'prov' → 'live' (onboarding/Onboarding.vue).
   const onbStage = ref<string>(ONB_START)
-  /** Delad starttid för aktuellt ljudblock (epoch-ms), eller null. */
+  /** Delad starttid för aktuellt synkat moment (spellägeskortet), epoch-ms, eller null. */
   const onbEpoch = ref<number | null>(null)
-  /** Vilka valv som är klara med aktuellt test (barriär). */
+  /** Vilka sidor som är klara i aktuell väntpunkt. */
   const onbReady = ref<{ lag1: boolean; lag2: boolean }>({ lag1: false, lag2: false })
 
   /** Gå till ett nytt stage (synkat). Nollställer barriären. Idempotent. */
@@ -335,12 +315,6 @@ export const useGameStore = defineStore('forhandlingen', () => {
     if (onbReady.value[vault]) return
     onbReady.value = { ...onbReady.value, [vault]: true }
     adapters.value?.transport.send({ kind: 'onbReady', payload: { vault } })
-  }
-
-  /** Lyssna på inkommande identiteter (hårdvaru-bipp via regi → station1/rfid
-   *  → identitetstjänst → station1/identity). No-op i pilot (mock). */
-  function listenIdentity(cb: (group: IdentityGroup) => void): () => void {
-    return adapters.value?.identity.listen(cb) ?? (() => {})
   }
 
   /** Facilitator-paus (synkad). Vid resume förskjuts aktiv nedräkning framåt så
@@ -378,8 +352,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
     getReadyFirst: number | null
     getReady: number | null
     negotiation: number | null
-    /** 0 = ingen reveal-popup (popupar visas av test-vyn); >0 timad; null klick. */
-    reveal: number | null
+    guess: number | null
   }
   function start(datasetId: string, opts: StartOpts) {
     const dataset = ALL_DATASETS.find((d) => d.id === datasetId) ?? DATASETS[0]
@@ -389,63 +362,34 @@ export const useGameStore = defineStore('forhandlingen', () => {
       negotiationSeconds: opts.negotiation,
       getReadyFirstSeconds: opts.getReadyFirst,
       getReadySeconds: opts.getReady,
-      revealSeconds: opts.reveal,
+      undoSeconds: KLUBBA.angraSekunder,
+      guessSeconds: opts.guess,
       now: Date.now(),
     })
   }
-  /** Test 1: 1 resurs, 50 kr. Startar PAUSAD (popupar visas över UI:t) → armas. */
-  function startTest1() {
-    const tm = ROUND_TIMERS.test1
-    start(TEST1_DATASET.id, { getReadyFirst: null, getReady: tm.getReady, negotiation: tm.negotiation, reveal: 0 })
+  /** Provluckan (tutorial): EN lucka, kortare budgivning, ingen gissning. */
+  function startProv() {
+    const tm = ROUND_TIMERS.prov
+    start(TRIAL_DATASET.id, { getReadyFirst: tm.getReadyFirst, getReady: tm.getReady, negotiation: tm.negotiation, guess: null })
   }
-  /** Test 2: 3 resurser, 60 kr. Startar PAUSAD → armas efter popupar. */
-  function startTest2() {
-    const tm = ROUND_TIMERS.test2
-    start(TRIAL_DATASET.id, { getReadyFirst: null, getReady: tm.getReady, negotiation: tm.negotiation, reveal: 0 })
-  }
-  /** Starta den pausade getready-nedräkningen (efter test-popuparna). */
-  function armGetReady(seconds: number) {
-    dispatch({ type: 'armGetReady', seconds, now: Date.now() })
-  }
-  /** Skarp körning: 5 resurser, 100 kr. */
+  /** Skarp körning: 5 resurser, 100 kr, gissning med tidsgräns. */
   function startLive() {
     const tm = ROUND_TIMERS.live
-    start(LIVE_DATASET_ID, {
-      getReadyFirst: tm.getReadyFirst,
-      getReady: tm.getReady,
-      negotiation: tm.negotiation,
-      reveal: 0,
-    })
+    start(LIVE_DATASET_ID, { getReadyFirst: tm.getReadyFirst, getReady: tm.getReady, negotiation: tm.negotiation, guess: tm.guess })
   }
-  const isTrial = computed(() => state.value.datasetId === 'trial')
-  const isTest = computed(() => ['test1', 'trial'].includes(state.value.datasetId))
-  function finishReveal() {
-    dispatch({ type: 'finishReveal', now: Date.now() })
-  }
+  const isProv = computed(() => state.value.datasetId === TRIAL_DATASET.id)
   function beginNegotiation() {
     dispatch({ type: 'beginNegotiation', now: Date.now() })
   }
   function finishNegotiation() {
     dispatch({ type: 'finishNegotiation', now: Date.now() })
   }
-  function chooseWinner(winner: TeamId) {
-    dispatch({ type: 'chooseWinner', winner })
+  /** KLUBBA: från vilken skärm som helst. `by` = den här skärmens sida. */
+  function klubba(winner: TeamId | null, price: number, by: TeamId) {
+    dispatch({ type: 'klubba', winner, price, by, now: Date.now() })
   }
-  function enterPrice(price: number) {
-    dispatch({ type: 'enterPrice', price })
-  }
-  function noBuy() {
-    audio.play('nobuy')
-    dispatch({ type: 'noBuy', now: Date.now() })
-  }
-  function cancelEntry() {
-    audio.play('deny')
-    dispatch({ type: 'cancelEntry' })
-  }
-  function confirmPurchase() {
-    audio.play('lockin')
-    holdActiveUntil.value = Date.now() + config.nextHatchDelayMs
-    dispatch({ type: 'confirmPurchase', now: Date.now() })
+  function angra() {
+    dispatch({ type: 'angra' })
   }
   function submitGuess(team: TeamId, resource: string) {
     dispatch({ type: 'submitGuess', team, resource })
@@ -455,11 +399,10 @@ export const useGameStore = defineStore('forhandlingen', () => {
   function reset(broadcastReset = true) {
     resultSent = false
     prevPhase = 'intro'
-    prevStep = 'negotiating'
+    prevStep = 'getready'
     prevResultCount = 0
     lastHatchLights = ''
     if (arSkrivare(view.value)) adapters.value?.lights.reset()
-    introStartedAt.value = null
     paused.value = false
     pausedSince.value = 0
     sessionActive.value = false
@@ -514,11 +457,13 @@ export const useGameStore = defineStore('forhandlingen', () => {
       // holdActiveUntil går ut på tid → kolla luckljuset, men skicka bara vid ändring.
       pushHatchLights()
       const s = state.value
-      // Nedräkningar: reveal → getready → förhandling → avräkning. Fryst vid paus.
-      if (!paused.value && s.phase === 'bidding' && s.hatchTimerEndsAt != null && now.value >= s.hatchTimerEndsAt) {
-        if (s.step === 'reveal') finishReveal()
-        else if (s.step === 'getready') beginNegotiation()
-        else if (s.step === 'negotiating') finishNegotiation()
+      // Nedräkningar: getready → förhandling → ångra-fönstret → gissningen. Fryst vid paus.
+      if (!paused.value && s.hatchTimerEndsAt != null && now.value >= s.hatchTimerEndsAt) {
+        if (s.phase === 'bidding') {
+          if (s.step === 'getready') beginNegotiation()
+          else if (s.step === 'negotiating') finishNegotiation()
+          else if (s.step === 'sald') dispatch({ type: 'commitSale', now: now.value })
+        } else if (s.phase === 'guessing') dispatch({ type: 'guessTimeout' })
       }
       // Idle-återstart: ingen aktivitet på länge → ledaren nollställer (synkat).
       const leaderView = view.value === 'shared' || view.value === 'lag1'
@@ -548,7 +493,6 @@ export const useGameStore = defineStore('forhandlingen', () => {
     // state
     state,
     view,
-    selectedDataset,
     phase,
     step,
     lights,
@@ -560,9 +504,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
     opponentOf,
     teamName,
     teamConfig,
-    isTrial,
-    isTest,
-    introStartedAt,
+    isProv,
     onbStage,
     onbEpoch,
     onbReady,
@@ -573,28 +515,20 @@ export const useGameStore = defineStore('forhandlingen', () => {
     idleWarn,
     idleSecondsLeft,
     // actions
-    beginIntro,
     onbGoto,
     onbMarkReady,
-    listenIdentity,
     setPaused,
     togglePause,
     notifyActivity,
     setSessionActive,
     quitStation,
     start,
-    startTest1,
-    startTest2,
+    startProv,
     startLive,
-    armGetReady,
-    finishReveal,
     beginNegotiation,
     finishNegotiation,
-    chooseWinner,
-    enterPrice,
-    noBuy,
-    cancelEntry,
-    confirmPurchase,
+    klubba,
+    angra,
     submitGuess,
     reset,
     setView,

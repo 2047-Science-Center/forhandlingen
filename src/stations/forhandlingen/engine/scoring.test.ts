@@ -31,22 +31,21 @@ function buy(winner: TeamId, price: number): Action[] {
   return [
     { type: 'beginNegotiation', now: 0 },
     { type: 'finishNegotiation', now: 0 },
-    { type: 'chooseWinner', winner },
-    { type: 'enterPrice', price },
-    { type: 'confirmPurchase', now: 0 },
+    { type: 'klubba', winner, price, by: winner, now: 0 },
+    { type: 'commitSale', now: 0 },
   ]
 }
 const skip: Action[] = [
   { type: 'beginNegotiation', now: 0 },
   { type: 'finishNegotiation', now: 0 },
-  { type: 'noBuy', now: 0 },
+  { type: 'klubba', winner: null, price: 0, by: 'lag1', now: 0 },
+  { type: 'commitSale', now: 0 },
 ]
 
 /** lag1 köper vatten (sin kritiska) för 40 + medicin för 20; lag2 köper energi 10. */
 function fullGame(): GameState {
   return run([
-    { type: 'start', dataset, negotiationSeconds: null, getReadyFirstSeconds: null, getReadySeconds: null, revealSeconds: null, now: 0 },
-    { type: 'finishReveal', now: 0 },
+    { type: 'start', dataset, negotiationSeconds: null, getReadyFirstSeconds: null, getReadySeconds: null, undoSeconds: 5, guessSeconds: null, now: 0 },
     ...skip, // metall
     ...buy('lag1', 40), // vatten (lag1:s kritiska)
     ...buy('lag2', 10), // energi

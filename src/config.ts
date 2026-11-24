@@ -35,17 +35,6 @@ export const config = {
   /** Antal resurser på bordet. */
   resourceCount: 5,
 
-  /** Sekunder per förhandling. Timern är knuten till VARJE lucka och räknar
-   *  ner från detta; ingen total tid. null = ingen timer (spela för hand). */
-  negotiationSeconds: 30,
-
-  /** "Gör er redo"-nedräkning (s) innan varje förhandling startar. */
-  getReadySeconds: 10,
-
-  /** Intro-popup innan första luckan: kritisk resurs (~5 s) → flyger → pengar
-   *  (~5 s). Totala längden i sekunder (kritisk + flyg + pengar). */
-  revealSeconds: 11,
-
   /** Fördröjning (ms) innan nästa lucka tänds efter en vunnen resurs. */
   nextHatchDelayMs: 1000,
 
@@ -153,46 +142,43 @@ export const DATASETS: Dataset[] = [
 export const LIVE_DATASET_ID = 'set-1'
 
 /**
- * Trial-omgången (§7): hela aktiviteten med 3 resurser och 60 kr, spelas
- * tvåsidigt mot motparten. Leder in i skarpt spel (5 resurser, 100 kr).
+ * Provluckan (tutorial, ljusblå): EN lucka med en resurs som ingen sida behöver.
+ * Gruppen övar det som är svårt — prata i headsetet och klubba — en gång, sedan skarpt.
+ * Kritiska sätts som i skarpt (samma konsol), men ingen gissning och inga poäng.
  */
 export const TRIAL_DATASET: Dataset = {
-  id: 'trial',
+  id: 'prov',
   kritisk_lag1: 'insulin',
   kritisk_lag2: 'membranfilter',
-  ordning: ['styrkort', 'insulin', 'membranfilter'],
-  kapital: 60,
-}
-
-/** Test 1: förhandla om EN resurs (styrkort), 50 kr per valv. */
-export const TEST1_DATASET: Dataset = {
-  id: 'test1',
-  kritisk_lag1: 'styrkort',
-  kritisk_lag2: 'styrkort',
   ordning: ['styrkort'],
-  kapital: 50,
+  kapital: 100,
 }
 
 /** Alla dataset som store.start kan slå upp (test + trial + skarpa). */
-export const ALL_DATASETS: Dataset[] = [TEST1_DATASET, TRIAL_DATASET, ...DATASETS]
+export const ALL_DATASETS: Dataset[] = [TRIAL_DATASET, ...DATASETS]
 
 /**
- * Per-omgångs-tider (sekunder). getReadyFirst = nedräkning före FÖRSTA
- * förhandlingen; getReady = mellan varje därefter; negotiation = tidsgräns per
- * förhandling.
+ * Tider (sekunder). getReadyFirst = "gör er redo" före FÖRSTA luckan; getReady = mellan
+ * luckorna; negotiation = budgivningen per lucka; guess = gissningen efter sista luckan.
  */
 export const ROUND_TIMERS = {
-  test1: { getReadyFirst: 5, getReady: 5, negotiation: 15 },
-  test2: { getReadyFirst: 5, getReady: 5, negotiation: 30 },
-  live: { getReadyFirst: 10, getReady: 5, negotiation: 30 },
+  prov: { getReadyFirst: 3, getReady: 3, negotiation: 20 },
+  live: { getReadyFirst: 5, getReady: 4, negotiation: 30, guess: 20 },
+} as const
+
+/** Klubban: hur länge ÅNGRA gäller efter KLUBBA, och prisstegen på knapparna. */
+export const KLUBBA = {
+  angraSekunder: 5,
+  steg: [1, 5] as const,
+  startpris: 20,
 } as const
 
 /**
- * Hoppa över Test 1 (öva-att-buda-omgången). Den förvirrade mer än den hjälpte
- * i test — sekvensen går då block1 → block2 direkt. Sätt false för att få
- * tillbaka den.
+ * Väntpunkter mellan skärmarna (spelläget, instruktionen klar): går vidare av sig
+ * själv efter så här många sekunder med synlig nedräkning, så en tyst sida aldrig
+ * låser stationen.
  */
-export const SKIP_TEST1 = true
+export const VANTA_MAX_SEKUNDER = 20
 
 /**
  * Drift: om ingen rör stationen på så här länge återställs den till början
@@ -220,20 +206,8 @@ export function encodeAudio(name: string): string {
 }
 
 /**
- * Intro-klippet (Ljud 1 + foton + undertext). Ljud + .vtt + cue-tidslinje är
- * per språk. Foton och ljud ligger i public/. Undertexten (.vtt) släpps in av
- * Josef i public/subtitles/ — saknas den visas ingen text (renderaren är tålig).
- */
-export const INTRO_MEDIA = {
-  audio: asset('/Sound/Ljud 1.mp3'),
-  subtitles: asset('/subtitles/sv.vtt'),
-  /** Foto-url för Bild N (1..10). Filnamn har mellanslag → encodeURI. */
-  photo: (n: number) => asset(`/assets/Bild ${n}.png`),
-} as const
-
-/**
  * Lagen. Rollval/uppdelning sker UPPSTRÖMS i riggen — vi kommer rakt in i
- * dashboarden med lagen redan satta. Namn = A / B (visas som LAG A / LAG B).
+ * dashboarden med sidorna redan satta. Namn = A / B (visas som SIDA A / SIDA B).
  * Ingen färgmarkering per lag.
  *
  * Logotyp: lägg PNG/SVG i `public/teams/` och peka ut den här. Saknas filen
@@ -275,37 +249,6 @@ export const TEAMS: Record<TeamId, TeamConfig> = {
   },
 }
 
-/** vänster/höger-sida (för förhandlingsdemons talarmarkering). */
-export const TEAM_SIDE: Record<TeamId, 'vanster' | 'hoger'> = {
-  lag1: 'vanster', // sida A
-  lag2: 'hoger', // sida B
-}
-
-/**
- * Deltagarnamn som visas på öppningens deltagarskärm. Mockup i piloten —
- * kommer från RFID-inloggningen i drift. Frikopplat från spelmotorns `members`
- * (som är 2 per lag: sändebud/rapportör), så antalet kan skilja.
- */
-export const TEAM_PARTICIPANTS: Record<TeamId, string[]> = {
-  lag1: ['Alva', 'Noah', 'Iris'],
-  lag2: ['Ebba', 'Hugo', 'Milo'],
-}
-
-/**
- * SÖM: de incheckade deltagarna vid stationen (hela gruppen, båda valven).
- *
- * Används av väntläget (F1 "Vem sa det?") som namnlista. IDAG returnerar den
- * pilot-platshållarna i `TEAM_PARTICIPANTS` (båda valven ihop, ~6 namn). När
- * den riktiga incheckningen finns: byt BARA innehållet i den här funktionen
- * (t.ex. läs från identitetstjänsten/RFID-inloggningen) — allt UI och all
- * logik utgår från den och behöver inte röras. Returnerar unika, icke-tomma
- * namn i stabil ordning (sida A först, sedan B).
- */
-export function checkedInParticipants(): string[] {
-  const all = [...TEAM_PARTICIPANTS.lag1, ...TEAM_PARTICIPANTS.lag2]
-  return all.map((n) => n.trim()).filter((n, i, a) => n.length > 0 && a.indexOf(n) === i)
-}
-
 /** Deterministisk pilot-roster (delas av alla fönster). */
 export function defaultRoster(): Record<TeamId, Person[]> {
   return {
@@ -313,13 +256,6 @@ export function defaultRoster(): Record<TeamId, Person[]> {
     lag2: TEAMS.lag2.members.map((m) => ({ ...m })),
   }
 }
-
-/**
- * Riggens fulla rollflöde (två rollklipp → hemligt A/B-val → könskodad
- * presentation → ombalansering). Sker uppströms i riggen; här är rollerna
- * redan satta. Datamodellen bär ändå fälten från början.
- */
-export const ROLE_FLOW_ENABLED = false
 
 /* ------------------------------------------------------------------ *
  * ROLLVAL — nytt touchskärms-flöde FÖRE stationens eget flöde (Lager A).
@@ -423,8 +359,8 @@ export const ENTRE: EntreConfig = {
     { letter: 'B', rollvalRoleId: 'rapportor', name: 'Rapportör', min: 1, plats: 'rapportor' },
   ],
   sides: {
-    A: { id: 'A', label: 'Lag A' },
-    B: { id: 'B', label: 'Lag B' },
+    A: { id: 'A', label: '' },
+    B: { id: 'B', label: '' },
   },
   placement: 'roll-inom-sida',
   station3d: 'forh',

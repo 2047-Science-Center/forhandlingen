@@ -1,0 +1,93 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "IBM Plex Mono", monospace; }
+    #in-etikett { position: absolute; left: 60px; top: 40px; font-weight: 700; font-size: 28px; letter-spacing: 0.2em; color: #6f8a7e; }
+    #in-rubrik { position: absolute; left: 60px; top: 90px; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 62px; color: #f5f5f0; }
+    #in-rubrik b { color: #35e0d0; }
+    .in-panel { position: absolute; top: 230px; width: 540px; height: 640px; border: 3px solid #1f9f95; border-radius: 20px; background: #071a14; opacity: 0.35; }
+    #in-p1 { left: 60px; } #in-p2 { left: 690px; } #in-p3 { left: 1320px; }
+    .in-ord { position: absolute; left: 0; right: 0; bottom: 34px; text-align: center; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 58px; color: #35e0d0; }
+    .in-nr { position: absolute; left: 26px; top: 18px; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 44px; color: #1f9f95; }
+    /* 1 · livsviktig */
+    #in-kort { position: absolute; left: 150px; top: 80px; width: 240px; height: 300px; border-radius: 18px; background: #e9f3f1; box-shadow: 0 0 40px rgba(255,90,60,0.35); }
+    #in-tagg { position: absolute; left: 110px; top: 60px; padding: 4px 16px; border-radius: 8px; background: #ff5a3c; color: #fff; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 34px; transform: rotate(-8deg); }
+    #in-puls { position: absolute; left: 60px; top: 400px; width: 420px; height: 80px; }
+    #in-noll { position: absolute; left: 0; right: 0; top: 140px; text-align: center; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 220px; color: #ff5a3c; opacity: 0; }
+    /* 2 · pengar = poäng */
+    .in-mynt { position: absolute; left: 200px; width: 140px; height: 40px; border-radius: 50%; background: radial-gradient(ellipse at 40% 35%, #ffe08a, #d79a1c 70%, #8a5b07); border: 2px solid #6b4504; }
+    #in-poang { position: absolute; left: 0; right: 0; top: 400px; text-align: center; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 96px; line-height: 1; color: #f5f5f0; opacity: 0; }
+    #in-poang small { font-size: 54px; color: #35e0d0; }
+    /* 3 · gissa ×2 */
+    .in-gk { position: absolute; top: 120px; width: 84px; height: 120px; border-radius: 10px; background: linear-gradient(135deg, #1f9f95, #0f5a54); border: 3px solid #35e0d0; }
+    #in-vand { background: #e9f3f1; border-color: #ff3cc8; }
+    #in-x2 { position: absolute; left: 0; right: 0; top: 270px; text-align: center; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 150px; color: #ff3cc8; opacity: 0; }
+    #in-dubbel { position: absolute; left: 0; right: 0; top: 440px; text-align: center; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 60px; line-height: 1; color: #f5f5f0; opacity: 0; }
+    #in-nav { position: absolute; left: 0; right: 0; top: 920px; display: flex; justify-content: center; gap: 30px; }
+    .in-knapp { font-weight: 700; font-size: 32px; padding: 12px 34px; border: 3px solid #35e0d0; border-radius: 12px; color: #35e0d0; }
+    .in-knapp.svag { border-color: #1f9f95; color: #8fcfc8; }
+  </style>
+  <div id="root" data-composition-id="instr" data-width="1920" data-height="1080" data-layout-allow-overlap>
+    <div id="in-etikett">SKISS · INSTRUKTIONEN I BILD</div>
+    <div id="in-rubrik">Tre regler, <b>tre ord var</b> — resten visar bilden</div>
+
+    <div id="in-p1" class="in-panel">
+      <span class="in-nr">1</span>
+      <div id="in-kort"><svg viewBox="0 0 200 200" width="240" height="240" style="margin-top:30px">
+        <rect x="22" y="92" width="156" height="86" rx="14" fill="#e9f3f1" stroke="#7fb8ae" stroke-width="5"/><rect x="22" y="92" width="156" height="22" rx="10" fill="#35e0d0"/>
+        <rect x="40" y="56" width="128" height="26" rx="13" fill="#f5f5f0" stroke="#9aa" stroke-width="3" transform="rotate(-18 104 69)"/><rect x="132" y="38" width="34" height="26" rx="8" fill="#ff9500" transform="rotate(-18 104 69)"/>
+        <path d="M86 150 h28 M100 136 v28" stroke="#ff5a3c" stroke-width="9" stroke-linecap="round"/></svg></div>
+      <div id="in-tagg">LIVSVIKTIG</div>
+      <svg id="in-puls" viewBox="0 0 420 80"><path id="in-pulslinje" d="M0 40 H120 L140 10 L160 70 L180 40 H240 L260 10 L280 70 L300 40 H420" fill="none" stroke="#ff5a3c" stroke-width="6" stroke-dasharray="700" stroke-dashoffset="700"/></svg>
+      <div id="in-noll">0</div>
+      <div class="in-ord">Måste ha</div>
+    </div>
+
+    <div id="in-p2" class="in-panel">
+      <span class="in-nr">2</span>
+      <i class="in-mynt" style="top:340px"></i><i class="in-mynt" style="top:322px"></i><i class="in-mynt" style="top:304px"></i><i class="in-mynt" style="top:286px"></i>
+      <i id="in-m5" class="in-mynt" style="top:268px"></i><i id="in-m6" class="in-mynt" style="top:250px"></i><i id="in-m7" class="in-mynt" style="top:232px"></i>
+      <i id="in-m8" class="in-mynt" style="top:214px"></i><i id="in-m9" class="in-mynt" style="top:196px"></i><i id="in-m10" class="in-mynt" style="top:178px"></i>
+      <div id="in-poang">40<small> p</small></div>
+      <div class="in-ord">Kvar = poäng</div>
+    </div>
+
+    <div id="in-p3" class="in-panel">
+      <span class="in-nr">3</span>
+      <i class="in-gk" style="left:40px"></i><i class="in-gk" style="left:136px"></i><i id="in-vand" class="in-gk" style="left:232px"></i><i class="in-gk" style="left:328px"></i><i class="in-gk" style="left:424px"></i>
+      <div id="in-x2">×2</div>
+      <div id="in-dubbel">40 → 80 p</div>
+      <div class="in-ord">Rätt gissning</div>
+    </div>
+
+    <div id="in-nav"><span class="in-knapp svag">◂ TILLBAKA</span><span class="in-knapp">NÄSTA ▸</span></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo(["#in-etikett", "#in-rubrik"], { opacity: 0 }, { opacity: 1, duration: 0.3, stagger: 0.1 }, 0);
+    tl.fromTo(".in-panel", { y: 30 }, { y: 0, duration: 0.5, ease: "expo.out", stagger: 0.08 }, 0.1);
+    tl.fromTo("#in-nav", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 0.6);
+    // 1 · livsviktig: pulsen går, sedan "får ni den inte → 0"
+    tl.to("#in-p1", { opacity: 1, borderColor: "#35e0d0", duration: 0.3 }, 0.6);
+    tl.fromTo("#in-tagg", { scale: 2.2, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.15, ease: "power4.in" }, 1.0);
+    tl.fromTo("#in-pulslinje", { attr: { "stroke-dashoffset": 700 } }, { attr: { "stroke-dashoffset": 0 }, duration: 1.2, ease: "none" }, 1.0);
+    tl.to("#in-kort", { opacity: 0.25, duration: 0.3 }, 2.0);
+    tl.fromTo("#in-noll", { opacity: 0, scale: 1.6 }, { opacity: 1, scale: 1, duration: 0.2, ease: "power4.in" }, 2.0);
+    tl.to("#in-p1", { opacity: 0.35, duration: 0.3 }, 3.4);
+    // 2 · pengar: köp tar mynt, resten blir poäng
+    tl.to("#in-p2", { opacity: 1, borderColor: "#35e0d0", duration: 0.3 }, 3.5);
+    ["#in-m10", "#in-m9", "#in-m8", "#in-m7", "#in-m6", "#in-m5"].forEach((id, i) => {
+      tl.to(id, { y: -260, opacity: 0, duration: 0.45, ease: "power2.in" }, 4.0 + i * 0.16);
+    });
+    tl.fromTo("#in-poang", { opacity: 0, scale: 1.4 }, { opacity: 1, scale: 1, duration: 0.3, ease: "expo.out" }, 5.6);
+    tl.to("#in-p2", { opacity: 0.35, duration: 0.3 }, 6.9);
+    // 3 · gissa: ett kort vänds, ×2
+    tl.to("#in-p3", { opacity: 1, borderColor: "#35e0d0", duration: 0.3 }, 7.0);
+    tl.fromTo("#in-vand", { scaleX: 1, background: "linear-gradient(135deg, #1f9f95, #0f5a54)" }, { scaleX: 0, duration: 0.2, ease: "power2.in" }, 7.5);
+    tl.to("#in-vand", { scaleX: 1, background: "#e9f3f1", y: -20, duration: 0.25, ease: "power2.out" }, 7.7);
+    tl.fromTo("#in-x2", { opacity: 0, scale: 2 }, { opacity: 1, scale: 1, duration: 0.18, ease: "power4.in" }, 9.0);
+    tl.fromTo("#in-dubbel", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 9.5);
+    tl.to(".in-panel", { opacity: 1, duration: 0.3 }, 10.4);
+    tl.to("#root > *", { opacity: 0, duration: 0.22, ease: "power3.in" }, 11.7);
+    window.__timelines["instr"] = tl;
+  </script>
+</template>

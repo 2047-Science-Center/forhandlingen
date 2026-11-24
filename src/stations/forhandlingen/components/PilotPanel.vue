@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /**
- * Diskret pilotpanel — FINNS EJ i skarpt läge. Välj dataset, byt vy, starta,
- * nollställ, auto-fyll lag. Fälld ihop som default.
+ * Diskret pilotpanel — FINNS EJ i skarpt läge. Byt vy, hoppa direkt till skarpt,
+ * nollställ. Fälld ihop som default.
  */
 import { ref } from 'vue'
 import { useGameStore, type ViewSide } from '../store/gameStore'
-import { DATASETS, config } from '@/config'
+import { ROUND_TIMERS } from '@/config'
 import { useI18n } from '@/station-kit/i18n'
 
 const store = useGameStore()
@@ -22,16 +22,9 @@ const views: ViewSide[] = ['lag1', 'lag2', 'shared']
     </button>
 
     <div v-if="open" class="pilot__body">
-      <label class="pilot__row">
-        <span>{{ t('pilot.dataset') }}</span>
-        <select v-model="store.selectedDataset" class="pilot__select mono">
-          <option v-for="d in DATASETS" :key="d.id" :value="d.id">{{ d.id }}</option>
-        </select>
-      </label>
-
       <div class="pilot__row">
         <span>{{ t('pilot.timer') }}</span>
-        <span class="mono">{{ config.negotiationSeconds ?? '∞' }} s/lucka</span>
+        <span class="mono">{{ ROUND_TIMERS.live.negotiation }} s/lucka</span>
       </div>
 
       <div class="pilot__row">
@@ -50,7 +43,7 @@ const views: ViewSide[] = ['lag1', 'lag2', 'shared']
       </div>
 
       <div class="pilot__actions">
-        <button class="crt-button crt-button--strong" @click="store.startLive()">
+        <button class="crt-button crt-button--strong" @click="store.onbGoto('live')">
           {{ t('pilot.start') }}
         </button>
         <button class="crt-button crt-button--danger" @click="store.reset()">

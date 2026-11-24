@@ -1,0 +1,32 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "Oswald", sans-serif; }
+    #fs-rubrik { position: absolute; left: 160px; top: 90px; font-weight: 700; font-size: 78px; color: #f5f5f0; }
+    #fs-rubrik b { color: #ff9500; }
+    .fs-rad { position: absolute; left: 160px; width: 1600px; height: 120px; display: flex; align-items: center; gap: 36px; }
+    .fs-nr { width: 80px; font-weight: 700; font-size: 80px; color: #ff9500; text-align: right; }
+    .fs-txt { flex: 1; font-weight: 700; font-size: 50px; color: #f5f5f0; line-height: 1.05; }
+    .fs-txt small { display: block; font-family: "IBM Plex Mono", monospace; font-weight: 400; font-size: 28px; color: #9fb2c0; margin-top: 6px; }
+    .fs-insats { width: 220px; text-align: center; font-family: "IBM Plex Mono", monospace; font-weight: 700; font-size: 28px; letter-spacing: 0.1em;
+      padding: 8px 0; border: 3px solid; border-radius: 10px; }
+    .liten { color: #35e0d0; border-color: #35e0d0; }
+    .medel { color: #ff9500; border-color: #ff9500; }
+    #fs-fot { position: absolute; left: 160px; top: 940px; font-family: "IBM Plex Mono", monospace; font-weight: 700; font-size: 28px; letter-spacing: 0.1em; color: #6f8a7e; }
+  </style>
+  <div id="root" data-composition-id="forslag" data-width="1920" data-height="1080">
+    <div id="fs-rubrik">Fem förslag. <b>Josef väljer.</b></div>
+    <div id="fs-r1" class="fs-rad" style="top:230px"><div class="fs-nr">1</div><div class="fs-txt">En provlucka i stället för tre<small>handlingen är spärren, som i Reaktorkärnan · −3 min</small></div><div class="fs-insats medel">MEDEL</div></div>
+    <div id="fs-r2" class="fs-rad" style="top:370px"><div class="fs-nr">2</div><div class="fs-txt">Klubban: en skärm per lucka<small>vinnare + pris + KLUBBA, ångra 5 s · ~40 tryck färre</small></div><div class="fs-insats medel">MEDEL</div></div>
+    <div id="fs-r3" class="fs-rad" style="top:510px"><div class="fs-nr">3</div><div class="fs-txt">Stryk dubbletterna i öppningen<small>titel, deltagare, test-coach-marks, 4-stegsgenomgången</small></div><div class="fs-insats liten">LITEN</div></div>
+    <div id="fs-r4" class="fs-rad" style="top:650px"><div class="fs-nr">4</div><div class="fs-txt">3 coach-marks med ◂ ▸ + 3D-lucka<small>merga feedback-1123 · intro-3d-scenerna finns redan</small></div><div class="fs-insats medel">MEDEL</div></div>
+    <div id="fs-r5" class="fs-rad" style="top:790px"><div class="fs-nr">5</div><div class="fs-txt">Spellägeskortet TÄVLING<small>efter hype-klippet + "SIDA MOT SIDA" i nedräkningen</small></div><div class="fs-insats liten">LITEN</div></div>
+    <div id="fs-fot">forhandlingen/docs/ANALYS-FLODE-2026-11.md</div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#fs-rubrik", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power4.out" }, 0.15);
+    tl.fromTo(["#fs-r1", "#fs-r2", "#fs-r3", "#fs-r4", "#fs-r5"], { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.4, ease: "expo.out", stagger: 0.18 }, 0.6);
+    tl.fromTo("#fs-fot", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 2.0);
+    window.__timelines["forslag"] = tl;
+  </script>
+</template>

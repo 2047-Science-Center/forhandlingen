@@ -26,6 +26,7 @@ import { initFilm, filmOptions, FilmOverlay } from '@/station-kit/film'
 import { initIncheckning, incheckningOptions } from '@/station-kit/incheckning/incheckning'
 import IncheckningScreen from '@/station-kit/incheckning/IncheckningScreen.vue'
 import { spela, arSkrivare, appLage } from './ljus'
+import SpellageSymbol from '@/station-kit/spellage/SpellageSymbol.vue'
 
 import ReporterConsole from './components/ReporterConsole.vue'
 import PilotPanel from './components/PilotPanel.vue'
@@ -33,7 +34,6 @@ import FacilitatorControls from './components/FacilitatorControls.vue'
 import PauseOverlay from './components/PauseOverlay.vue'
 import IdleWarning from './components/IdleWarning.vue'
 import Onboarding from './onboarding/Onboarding.vue'
-import VemSaDet from './ventlage/VemSaDet.vue'
 import VemDarLek from './lek/VemDarLek.vue'
 import LekStandalone from '@/station-kit/lek/LekStandalone.vue'
 import { lekPreviewFromUrl } from '@/station-kit/lek/lekSync'
@@ -42,22 +42,6 @@ import type { TeamId } from './engine/types'
 
 const store = useGameStore()
 const { t } = useI18n()
-
-// --- Väntläge-entry: hash #vem öppnar väntleken "Vem sa det?" (F1) fristående,
-//     förbi attract/onboarding. "TILL START" rensar hashen → vanlig attract.
-//     Speglar hur gameStore läser #lag1/#shared ur hashen. ---
-const hashRoute = ref(readHashRoute())
-function readHashRoute(): string {
-  return (typeof window !== 'undefined' ? window.location.hash : '').replace('#', '')
-}
-function onHashChange() {
-  hashRoute.value = readHashRoute()
-}
-const showVem = computed(() => hashRoute.value === 'vem')
-function exitVem() {
-  if (typeof window !== 'undefined') window.location.hash = ''
-  hashRoute.value = ''
-}
 
 /** Sessionen pågår (entréns attract lämnad). */
 const entered = ref(false)
@@ -213,10 +197,11 @@ const stationMode = computed<'tutorial' | 'live'>(() =>
 )
 watch(stationMode, (m) => setMode(m), { immediate: true })
 
-// Tutorial-loop (beat 2.2): låg bakgrundsbädd under onboardingen, tonas ut när
-// skarpa rundan börjar. Bädden ligger utanför SFX-mastern (eget HTMLAudio).
-watch([stationMode, entered], ([m, isIn]) => {
-  if (isIn && m === 'tutorial') audio.bed('tutorial-loop.mp3', 0.18)
+// Tutorial-loop (beat 2.2): låg bakgrundsbädd under instruktionen och provluckan (inte under
+// spellägeskortet, där VALdi talar), tonas ut när skarpa rundan börjar. Eget HTMLAudio.
+const ovar = computed(() => ['intro', 'prov'].includes(store.onbStage))
+watch([stationMode, entered, ovar], ([m, isIn, o]) => {
+  if (isIn && m === 'tutorial' && o) audio.bed('tutorial-loop.mp3', 0.18)
   else audio.bedStop()
 })
 
@@ -249,12 +234,10 @@ onMounted(() => {
   store.init()
   entre.attachTransport(store.transport())
   window.addEventListener('contextmenu', onContextMenu)
-  window.addEventListener('hashchange', onHashChange)
   ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, onActivity, { passive: true }))
 })
 onUnmounted(() => {
   window.removeEventListener('contextmenu', onContextMenu)
-  window.removeEventListener('hashchange', onHashChange)
   ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, onActivity))
   audio.bedStop(0)
   store.dispose()
@@ -263,19 +246,6 @@ onUnmounted(() => {
 
 <template>
   <div class="app" :data-mode="stationMode">
-    <!-- Väntläge "Vem sa det?" (F1): fristående via #vem, förbi attract/onboarding.
-         Egen app-chrome + CRT-skärm; "TILL START" → exitVem → vanlig attract. -->
-    <template v-if="showVem">
-      <div class="app__chrome">
-        <span class="app__title">{{ t('app.title') }}</span>
-        <MuteButton />
-      </div>
-      <div class="app__single">
-        <CrtScreen><VemSaDet @exit="exitVem" /></CrtScreen>
-      </div>
-    </template>
-
-    <template v-else>
     <!-- Entrén: attract (testgrupp + sidindelning) → rollval → valet → utfall -->
     <div v-if="!entreDone" class="app__single">
       <CrtScreen>
@@ -295,13 +265,13 @@ onUnmounted(() => {
            innehållet — det var därför lag-/valv-skyltar kunde täcka texten i test
            1). Syns HELA tutorialen och försvinner i samma stund spelet blir
            skarpt. Blå --mode-tutorial oavsett tema. -->
-      <div v-if="!onboarded && store.onbStage !== 'identify'" class="app__practice" role="status">
+      <div v-if="!onboarded && ovar" class="app__practice" role="status">
         <span class="app__practice-dot" aria-hidden="true"></span>
         <span class="app__practice-main">{{ t('mode.testomgang') }}</span>
         <span class="app__practice-sub">{{ t('mode.practice_sub') }}</span>
       </div>
 
-      <!-- Onboarding (headset → 4 block → 3 tester) före skarp körning -->
+      <!-- Spelläget → instruktionen → provluckan före skarp körning -->
       <div v-if="!onboarded" class="app__single">
         <CrtScreen>
           <Onboarding :team="onboardTeam" />
@@ -339,10 +309,12 @@ onUnmounted(() => {
     <ModeCountdown
       v-if="showGoLive"
       :title="t('mode.golive_title')"
+      :under="t('mode.golive_under')"
       :from="3"
       @done="showGoLive = false"
-    />
-    </template>
+    >
+      <template #symbol><SpellageSymbol lage="tavling" :size="150" /></template>
+    </ModeCountdown>
 
     <!-- Rotationen: väntar / lek (overlay; "Testgrupp X — tryck" visas av entrén) -->
     <RotationScreens station-title="Förhandlingen">

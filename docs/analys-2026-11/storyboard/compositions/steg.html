@@ -1,0 +1,56 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "IBM Plex Mono", monospace; }
+    #sg-rubrik { position: absolute; left: 120px; top: 70px; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 70px; color: #f5f5f0; }
+    #sg-rubrik b { color: #35e0d0; }
+    .sg-kol { position: absolute; top: 172px; font-weight: 700; font-size: 28px; letter-spacing: 0.2em; }
+    #sg-k1 { left: 120px; color: #9fb2c0; }
+    #sg-k2 { left: 1040px; color: #35e0d0; }
+    .sg-rad { position: absolute; left: 120px; width: 1680px; height: 58px; display: flex; align-items: center; }
+    .sg-nu { position: relative; width: 820px; font-size: 28px; font-weight: 700; color: #f5f5f0; white-space: nowrap; }
+    .sg-nu small { color: #9fb2c0; font-weight: 400; font-size: 28px; }
+    .sg-stryk { position: absolute; left: -6px; top: 50%; width: 0; height: 5px; background: #ff5a3c; }
+    .sg-pil { width: 100px; text-align: center; font-size: 30px; color: #6f8a7e; }
+    .sg-fo { width: 760px; font-size: 28px; font-weight: 700; color: #35e0d0; white-space: nowrap; }
+    .sg-fo.bort { color: #ff5a3c; }
+    .sg-fo.orange { color: #ff9500; }
+    #sg-summa { position: absolute; left: 120px; top: 930px; width: 1680px; display: flex; justify-content: space-between;
+      font-family: "Oswald", sans-serif; font-weight: 700; font-size: 54px; }
+    #sg-summa .a { color: #9fb2c0; }
+    #sg-summa .b { color: #35e0d0; }
+  </style>
+  <div id="root" data-composition-id="steg" data-width="1920" data-height="1080">
+    <div id="sg-rubrik">Efter entrén: <b>färre steg, samma spel</b></div>
+    <div id="sg-k1" class="sg-kol">NULÄGE (EFTER ENTRÉN)</div>
+    <div id="sg-k2" class="sg-kol">FÖRSLAG</div>
+
+    <div class="sg-rad" style="top:224px"><div class="sg-nu" id="sg-n1">Titelskärm <small>· 1 tryck</small><i class="sg-stryk"></i></div><div class="sg-pil">→</div><div class="sg-fo bort" id="sg-f1">bort · hype-klippet sa det</div></div>
+    <div class="sg-rad" style="top:286px"><div class="sg-nu" id="sg-n2">Deltagarlista <small>· 1 tryck</small><i class="sg-stryk"></i></div><div class="sg-pil">→</div><div class="sg-fo bort" id="sg-f2">bort · "Så här blev det" visade det</div></div>
+    <div class="sg-rad" style="top:348px"><div class="sg-nu" id="sg-n3">4 coach-marks <small>· bara NÄSTA</small></div><div class="sg-pil">→</div><div class="sg-fo" id="sg-f3">3 steg · ◂ TILLBAKA  NÄSTA ▸</div></div>
+    <div class="sg-rad" style="top:410px"><div class="sg-nu" id="sg-n4">Demoklipp 19 s <small>· foton + animation</small></div><div class="sg-pil">→</div><div class="sg-fo" id="sg-f4">3D "så går en lucka" ~15 s</div></div>
+    <div class="sg-rad" style="top:472px"><div class="sg-nu" id="sg-n5">Headset-grind <small>· 1 tryck + vänta</small><i class="sg-stryk"></i></div><div class="sg-pil">→</div><div class="sg-fo bort" id="sg-f5">in i coach-steg 3</div></div>
+    <div class="sg-rad" style="top:534px"><div class="sg-nu" id="sg-n6">2 coach-marks igen <small>· samma text</small><i class="sg-stryk"></i></div><div class="sg-pil">→</div><div class="sg-fo bort" id="sg-f6">bort</div></div>
+    <div class="sg-rad" style="top:596px"><div class="sg-nu" id="sg-n7">3 provluckor <small>· ~3 min, ~15 tryck</small></div><div class="sg-pil">→</div><div class="sg-fo" id="sg-f7">1 provlucka · handlingen är spärren</div></div>
+    <div class="sg-rad" style="top:658px"><div class="sg-nu" id="sg-n8">Genomgång i 4 steg <small>· 8 tryck</small><i class="sg-stryk"></i></div><div class="sg-pil">→</div><div class="sg-fo bort" id="sg-f8">bort · en rad i provluckan</div></div>
+    <div class="sg-rad" style="top:720px"><div class="sg-nu" id="sg-n9">Nedräkning 3-2-1</div><div class="sg-pil">→</div><div class="sg-fo orange" id="sg-f9">+ "SIDA MOT SIDA"</div></div>
+    <div class="sg-rad" style="top:782px"><div class="sg-nu" id="sg-n10">5 luckor <small>· 3 skärmar inmatning var</small></div><div class="sg-pil">→</div><div class="sg-fo orange" id="sg-f10">5 luckor · KLUBBAN, 1 skärm</div></div>
+    <div class="sg-rad" style="top:844px"><div class="sg-nu" id="sg-n11">Gissning <small>· ingen timer</small></div><div class="sg-pil">→</div><div class="sg-fo orange" id="sg-f11">gissning · 20 s + kvitto</div></div>
+
+    <div id="sg-summa"><span class="a">≈ 70 tryck · ~11 min</span><span class="b">≈ 25 tryck · ~6 min</span></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#sg-rubrik", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power4.out" }, 0.15);
+    tl.fromTo(["#sg-k1", "#sg-k2"], { opacity: 0 }, { opacity: 1, duration: 0.25 }, 0.4);
+    const nu = Array.from({ length: 11 }, (_, i) => "#sg-n" + (i + 1));
+    const fo = Array.from({ length: 11 }, (_, i) => "#sg-f" + (i + 1));
+    tl.fromTo(nu, { opacity: 0 }, { opacity: 1, duration: 0.18, stagger: 0.08 }, 0.6);
+    tl.fromTo(".sg-pil", { opacity: 0 }, { opacity: 1, duration: 0.18, stagger: 0.05 }, 3.4);
+    tl.fromTo(".sg-stryk", { width: 0 }, { width: 760, duration: 0.35, ease: "power2.inOut", stagger: 0.12 }, 4.2);
+    tl.to(["#sg-n1", "#sg-n2", "#sg-n5", "#sg-n6", "#sg-n8"], { opacity: 0.4, duration: 0.3, stagger: 0.12 }, 4.5);
+    tl.fromTo(fo, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.3, ease: "expo.out", stagger: 0.09 }, 5.6);
+    tl.fromTo("#sg-summa", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.25 }, 7.6);
+    tl.to("#root > *", { opacity: 0, duration: 0.22, ease: "power3.in" }, 10.7);
+    window.__timelines["steg"] = tl;
+  </script>
+</template>

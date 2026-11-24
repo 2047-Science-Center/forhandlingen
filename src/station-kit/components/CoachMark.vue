@@ -138,9 +138,9 @@ const hole = computed<Rect | null>(() => {
 })
 
 // Bubbelplacering: väljs så att HELA bubblan ryms i viewporten (mäter dess
-// höjd). Under målet om det får plats, annars ovanför, annars vertikalt klampad.
+// höjd). Under målet om det får plats, annars ovanför, annars bredvid (vertikalt klampad).
 const MARGIN = 16
-const BUBBLE_W = 360
+const BUBBLE_W = 400
 const GAP = 14
 const bubbleStyle = computed(() => {
   const h = hole.value
@@ -159,7 +159,15 @@ const bubbleStyle = computed(() => {
   else if (props.placement === 'top') top = aboveTop
   else if (belowTop + bh <= vh.value - MARGIN) top = belowTop
   else if (aboveTop >= MARGIN) top = aboveTop
-  else top = (vh.value - bh) / 2
+  else {
+    // Ryms varken under eller ovanför (hög bubbla på låg skärm): lägg den BREDVID målet,
+    // på den sida där det finns plats, så den aldrig täcker det den pekar på.
+    const hogerOm = h.x + h.w + GAP
+    const vansterOm = h.x - GAP - BUBBLE_W
+    if (hogerOm + BUBBLE_W <= vw.value - MARGIN) left = hogerOm
+    else if (vansterOm >= MARGIN) left = vansterOm
+    top = h.y + h.h / 2 - bh / 2
+  }
   // Håll alltid hela bubblan inom skärmen.
   top = Math.max(MARGIN, Math.min(top, vh.value - bh - MARGIN))
   return { left: `${left}px`, top: `${top}px` }
@@ -258,14 +266,17 @@ function advance() {
   display: flex;
   gap: 0.6rem;
   justify-content: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+}
+.cm__nav .cm__btn {
+  white-space: nowrap;
 }
 .cm__btn--back {
   opacity: 0.85;
 }
 .cm__bubble {
   position: absolute;
-  width: min(360px, calc(100vw - 2rem));
+  width: min(400px, calc(100vw - 2rem));
   display: flex;
   flex-direction: column;
   align-items: center;

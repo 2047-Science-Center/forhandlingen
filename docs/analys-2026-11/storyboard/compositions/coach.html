@@ -1,0 +1,79 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "IBM Plex Mono", monospace; }
+    #co-rubrik { position: absolute; z-index: 5; left: 120px; top: 54px; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 62px; color: #f5f5f0; }
+    #co-rubrik b { color: #35e0d0; }
+    #co-under { position: absolute; z-index: 5; left: 124px; top: 140px; font-weight: 700; font-size: 28px; letter-spacing: 0.06em; color: #9fb2c0; }
+    #co-konsol { position: absolute; left: 260px; top: 200px; width: 1400px; height: 690px; border: 3px solid #35e0d0; border-radius: 18px;
+      background: #071a14; }
+    .co-box { position: absolute; border: 2px solid #1f9f95; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; padding: 0 30px; }
+    .co-box small { font-weight: 700; font-size: 28px; letter-spacing: 0.14em; color: #8fcfc8; }
+    .co-box b { font-family: "Oswald", sans-serif; font-weight: 700; font-size: 66px; color: #f5f5f0; line-height: 1.05; }
+    #co-kap { left: 300px; top: 240px; width: 360px; height: 150px; }
+    #co-liv { left: 1100px; top: 240px; width: 520px; height: 150px; }
+    #co-res { left: 710px; top: 520px; width: 500px; height: 230px; align-items: center; }
+    #co-res b { font-size: 76px; }
+    #co-luckor { position: absolute; left: 790px; top: 420px; display: flex; gap: 14px; }
+    #co-luckor i { width: 54px; height: 54px; border: 2px solid #1f9f95; border-radius: 8px; }
+    #co-luckor i:first-child { background: #35e0d0; }
+    #co-spot { position: absolute; left: 0; top: 0; width: 100px; height: 100px; border-radius: 14px; transform-origin: 0 0;
+      box-shadow: 0 0 0 4000px rgba(3, 12, 8, 0.80); border: 3px solid #35e0d0; }
+    #co-bubbla { position: absolute; z-index: 5; left: 470px; top: 800px; width: 980px; height: 230px; background: #0b231d; border: 3px solid #35e0d0;
+      border-radius: 16px; box-shadow: 0 0 40px rgba(53,224,208,0.3); }
+    .co-txt { position: absolute; left: 40px; top: 26px; width: 900px; }
+    .co-txt b { display: block; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 46px; color: #35e0d0; }
+    .co-txt span { display: block; font-size: 28px; color: #f5f5f0; margin-top: 4px; }
+    #co-prickar { position: absolute; left: 40px; bottom: 26px; display: flex; gap: 12px; }
+    #co-prickar i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #35e0d0; }
+    .co-btn { position: absolute; bottom: 20px; font-weight: 700; font-size: 28px; padding: 10px 26px; border: 3px solid #35e0d0;
+      border-radius: 10px; color: #35e0d0; }
+    #co-bak { left: 560px; border-color: #1f9f95; color: #8fcfc8; }
+    #co-fram { right: 36px; }
+    #co-t2, #co-t3, #co-p2f, #co-p3f { opacity: 0; }
+    #co-p1f, #co-p2f, #co-p3f { position: absolute; inset: -2px; border-radius: 50%; background: #35e0d0; }
+  </style>
+  <div id="root" data-composition-id="coach" data-width="1920" data-height="1080">
+    <div id="co-rubrik">Instruktionen: <b>3 steg, bläddra fram och tillbaka</b></div>
+    <div id="co-under">SAMMA COACH-MARK I ALLA STATIONER · TILLBAKA FINNS REDAN PÅ GRENEN feedback-1123</div>
+    <div id="co-konsol"></div>
+    <div id="co-kap" class="co-box"><small>KAPITAL</small><b>100 kr</b></div>
+    <div id="co-liv" class="co-box"><small>MÅSTE FÅ TAG PÅ</small><b>💉 Insulin</b></div>
+    <div id="co-luckor"><i></i><i></i><i></i><i></i><i></i></div>
+    <div id="co-res" class="co-box"><small>PÅ MARKNADEN NU</small><b>🔧 Styrkort</b></div>
+    <div id="co-spot"></div>
+    <div id="co-bubbla">
+      <div id="co-t1" class="co-txt"><b>Er livsviktiga resurs</b><span>Få tag på den — annars 0 poäng.</span></div>
+      <div id="co-t2" class="co-txt"><b>Era pengar</b><span>Det som är kvar i slutet blir er poäng.</span></div>
+      <div id="co-t3" class="co-txt"><b>En lucka i taget</b><span>Sändebuden budar i headset, 30 s. Klubba när ni är klara.</span></div>
+      <div id="co-prickar"><i style="position:relative"><em id="co-p1f"></em></i><i style="position:relative"><em id="co-p2f"></em></i><i style="position:relative"><em id="co-p3f"></em></i></div>
+      <div id="co-bak" class="co-btn">◂ TILLBAKA</div>
+      <div id="co-fram" class="co-btn">NÄSTA ▸</div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const spot = (r) => ({ x: r[0] - 8, y: r[1] - 8, scaleX: (r[2] + 16) / 100, scaleY: (r[3] + 16) / 100 });
+    const LIV = [1100, 240, 520, 150], KAP = [300, 240, 360, 150], RES = [710, 520, 500, 230];
+    const tryck = (sel, at) => tl.fromTo(sel, { scale: 0.92, backgroundColor: "#35e0d0", color: "#05100b" },
+      { scale: 1, backgroundColor: "rgba(0,0,0,0)", color: sel === "#co-bak" ? "#8fcfc8" : "#35e0d0", duration: 0.4, ease: "expo.out" }, at);
+    const steg = (n, at) => {
+      ["#co-t1", "#co-t2", "#co-t3"].forEach((id, i) => tl.to(id, { opacity: i + 1 === n ? 1 : 0, duration: 0.18 }, at));
+      ["#co-p1f", "#co-p2f", "#co-p3f"].forEach((id, i) => tl.to(id, { opacity: i + 1 === n ? 1 : 0, duration: 0.12 }, at));
+    };
+    tl.fromTo(["#co-rubrik", "#co-under"], { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.22, stagger: 0.12 }, 0.15);
+    tl.fromTo(["#co-konsol", "#co-kap", "#co-liv", "#co-luckor", "#co-res"], { opacity: 0 }, { opacity: 1, duration: 0.3, stagger: 0.05 }, 0.45);
+        tl.fromTo("#co-spot", { opacity: 0, ...spot(LIV) }, { opacity: 1, duration: 0.35, ease: "power2.out" }, 1.0);
+    tl.fromTo("#co-bubbla", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4, ease: "expo.out" }, 1.15);
+    tryck("#co-fram", 3.3);
+    tl.to("#co-spot", { ...spot(KAP), duration: 0.55, ease: "power2.inOut" }, 3.4);
+    steg(2, 3.55);
+    tryck("#co-fram", 5.8);
+    tl.to("#co-spot", { ...spot(RES), duration: 0.55, ease: "power2.inOut" }, 5.9);
+    steg(3, 6.05);
+    tryck("#co-bak", 8.3);
+    tl.to("#co-spot", { ...spot(KAP), duration: 0.55, ease: "power2.inOut" }, 8.4);
+    steg(2, 8.55);
+    tl.to("#root > *", { opacity: 0, duration: 0.22, ease: "power3.in" }, 10.7);
+    window.__timelines["coach"] = tl;
+  </script>
+</template>

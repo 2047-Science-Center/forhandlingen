@@ -19,22 +19,15 @@ export type Phase =
   | 'reveal' // avslöjande & resultat
 
 /**
- * Steg inom budgivningen av EN lucka (byggt i steg så det är självklart vad
- * man gör i varje läge — inget uppe samtidigt):
- *  - getready: "Nu ska ni förhandla om X" + nedräkning (10 s) innan start.
- *  - negotiating: fokuserad budgivning — "Budgivning pågår", bultande prick,
- *    nedräkning, resursen i mitten. 30 s-timer.
- *  - entry_winner: en (slumpad, varannan) rapportör fyller i "vem vann".
- *  - entry_price: samma rapportör drar slutpris (slider) / "ingen köpte" → skicka.
- *  - confirm: vinnarens skärm bekräftar.
+ * Steg inom budgivningen av EN lucka (ett läge i taget):
+ *  - getready: "Nu ska ni förhandla om X" + kort nedräkning innan start.
+ *  - negotiating: budgivning pågår (headset), nedräkning. KLAR avslutar i förtid.
+ *  - klubba: BÅDA skärmarna visar samma ruta — vem fick den (A/B/ingen) + pris
+ *    → KLUBBA. Den som står närmast trycker, på vilken skärm som helst.
+ *  - sald: klubbat. Stämpeln syns på båda skärmarna och ÅNGRA gäller några
+ *    sekunder; sedan bokförs köpet och nästa lucka öppnas.
  */
-export type BiddingStep =
-  | 'reveal' // (endast innan första luckan) popup: kritisk resurs → flyger → pengar
-  | 'getready'
-  | 'negotiating'
-  | 'entry_winner'
-  | 'entry_price'
-  | 'confirm'
+export type BiddingStep = 'getready' | 'negotiating' | 'klubba' | 'sald'
 
 /** Ett förbestämt dataset (config). */
 export interface Dataset {
@@ -59,13 +52,14 @@ export interface Person {
   role_presented_as: 'manlig' | 'kvinnlig' | null
 }
 
-/** En väntande köp-inmatning: förloraren har skrivit in, vinnaren ska bekräfta. */
-export interface PendingPurchase {
+/** Ett klubbat köp som väntar ut ångra-fönstret. winner=null = "ingen köpte". */
+export interface PendingSale {
   hatch: number // 1..5
   resource: string
-  winner: TeamId
+  winner: TeamId | null
   price: number
-  enteredBy: TeamId // förlorande lagets rapportör
+  /** Skärmen (sidan) som klubbade. */
+  by: TeamId
 }
 
 /** Utfall per lucka. winner=null = "ingen köpte". */
@@ -87,16 +81,10 @@ export interface GameState {
   currentHatch: number
   /** Steg inom aktuell luckas budgivning. */
   step: BiddingStep
-  /** Lag vars rapportör gör inmatningen (slumpad, varannan). null utanför inmatning. */
-  entryTeam: TeamId | null
-  /** Senaste inmatande laget — för alternering. */
-  lastEntryTeam: TeamId | null
-  /** Vald vinnare i steg entry_winner (innan pris satts). */
-  draftWinner: TeamId | null
   /** Utfall per lucka-index (0..4). */
   results: Record<number, HatchResult>
-  /** Väntande köp som vinnaren ska bekräfta, annars null. */
-  pending: PendingPurchase | null
+  /** Klubbat köp under ångra-fönstret (step 'sald'), annars null. */
+  pending: PendingSale | null
   /** Rapportörens gissning av motståndarens kritiska (resurs-id). */
   guesses: Record<TeamId, string | null>
   /** Sekunder per förhandling (från config vid start). */
@@ -105,7 +93,12 @@ export interface GameState {
   getReadyFirstSeconds: number | null
   /** "Gör er redo"-nedräkning mellan efterföljande förhandlingar. */
   getReadySeconds: number | null
-  /** Epoch-ms när AKTUELL luckas timer (getready ELLER negotiating) går ut. */
+  /** Sekunder som ÅNGRA gäller efter KLUBBA. */
+  undoSeconds: number
+  /** Sekunder för gissningen (null = ingen tidsgräns). */
+  guessSeconds: number | null
+  /** Epoch-ms när aktuell nedräkning går ut: getready, förhandling, ångra-fönstret
+   *  eller gissningen. null = ingen nedräkning. */
   hatchTimerEndsAt: number | null
   members: Record<TeamId, Person[]>
   /** Ökar vid varje ändring — används för snapshot-synk (högst vinner). */

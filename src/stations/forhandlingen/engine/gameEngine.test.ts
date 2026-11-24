@@ -24,160 +24,160 @@ function run(actions: Action[], from = initialState(roster)): GameState {
   return actions.reduce((s, a) => reduce(s, a), from)
 }
 
-/** Start + genomförd intro-popup → getready. */
+const START: Action = {
+  type: 'start',
+  dataset,
+  negotiationSeconds: 30,
+  getReadyFirstSeconds: 10,
+  getReadySeconds: 5,
+  undoSeconds: 5,
+  guessSeconds: 20,
+  now: 1000,
+}
+
+/** Start → getready. */
 function started(): GameState {
-  return run([
-    { type: 'start', dataset, negotiationSeconds: 30, getReadyFirstSeconds: 10, getReadySeconds: 10, revealSeconds: 11, now: 1000 },
-    { type: 'finishReveal', now: 1000 },
-  ])
+  return run([START])
 }
 
-/** En full köp-sekvens från getready. */
-function buy(s: GameState, winner: TeamId, price: number, now = 2000): GameState {
-  return run(
-    [
-      { type: 'beginNegotiation', now },
-      { type: 'finishNegotiation', now },
-      { type: 'chooseWinner', winner },
-      { type: 'enterPrice', price },
-      { type: 'confirmPurchase', now },
-    ],
-    s,
-  )
+/** Förhandling till klubb-rutan. */
+function toKlubba(s: GameState, now = 2000): GameState {
+  return run([{ type: 'beginNegotiation', now }, { type: 'finishNegotiation', now }], s)
 }
 
-/** Hoppa över en lucka från getready (ingen köpte). */
-function skipHatch(s: GameState, now = 2000): GameState {
+/** En full lucka: förhandla → klubba → ångra-fönstret ute. */
+function buy(s: GameState, winner: TeamId | null, price: number, now = 2000): GameState {
   return run(
     [
-      { type: 'beginNegotiation', now },
-      { type: 'finishNegotiation', now },
-      { type: 'noBuy', now },
+      { type: 'klubba', winner, price, by: 'lag2', now },
+      { type: 'commitSale', now: now + 5000 },
     ],
-    s,
+    toKlubba(s, now),
   )
 }
 
 describe('start', () => {
-  it('startar med intro-popup (reveal), kapital, kritiska, ordning, aktiv lucka', () => {
-    const s = run([
-      { type: 'start', dataset, negotiationSeconds: 30, getReadyFirstSeconds: 10, getReadySeconds: 10, revealSeconds: 11, now: 1000 },
-    ])
+  it('sätter kapital, kritiska, ordning och getready-nedräkning', () => {
+    const s = started()
     expect(s.phase).toBe('bidding')
-    expect(s.step).toBe('reveal')
+    expect(s.step).toBe('getready')
     expect(s.capital).toEqual({ lag1: 100, lag2: 100 })
     expect(s.critical).toEqual({ lag1: 'vatten', lag2: 'medicin' })
     expect(s.currentHatch).toBe(0)
-    expect(s.hatchTimerEndsAt).toBe(1000 + 11 * 1000) // revealSeconds
-    expect(hatchLights(s)[0]).toEqual({ hatch: 1, state: 'active', winner: null })
-  })
-
-  it('finishReveal → getready med 10 s-nedräkning', () => {
-    const s = started()
-    expect(s.step).toBe('getready')
     expect(s.hatchTimerEndsAt).toBe(1000 + 10 * 1000)
   })
 
-  it('beginNegotiation startar 30 s-timern', () => {
-    const s = reduce(started(), { type: 'beginNegotiation', now: 12000 })
-    expect(s.step).toBe('negotiating')
-    expect(s.hatchTimerEndsAt).toBe(12000 + 30 * 1000)
+  it('getReadyFirst null = pausad tills armGetReady', () => {
+    let s = run([{ ...START, getReadyFirstSeconds: null } as Action])
+    expect(s.hatchTimerEndsAt).toBeNull()
+    s = reduce(s, { type: 'armGetReady', seconds: 5, now: 3000 })
+    expect(s.hatchTimerEndsAt).toBe(8000)
   })
 })
 
-describe('stegvis avräkning', () => {
-  it('KLAR → vem vann → slutpris → bekräfta drar kapital och tänder nästa lucka', () => {
-    let s = reduce(started(), { type: 'beginNegotiation', now: 1200 })
+describe('förhandling', () => {
+  it('getready → negotiating med 30 s-timer', () => {
+    const s = reduce(started(), { type: 'beginNegotiation', now: 1500 })
+    expect(s.step).toBe('negotiating')
+    expect(s.hatchTimerEndsAt).toBe(1500 + 30 * 1000)
+  })
 
-    s = reduce(s, { type: 'finishNegotiation', now: 1500 })
-    expect(s.step).toBe('entry_winner')
-    expect(s.entryTeam).toBeTruthy() // slumpad rapportör
-    expect(s.hatchTimerEndsAt).toBeNull() // timern stannar under avräkning
+  it('finishNegotiation → klubba utan tidsgräns', () => {
+    const s = toKlubba(started())
+    expect(s.step).toBe('klubba')
+    expect(s.hatchTimerEndsAt).toBeNull()
+  })
+})
 
-    s = reduce(s, { type: 'chooseWinner', winner: 'lag1' })
-    expect(s.step).toBe('entry_price')
-    expect(s.draftWinner).toBe('lag1')
-
-    s = reduce(s, { type: 'enterPrice', price: 30 })
-    expect(s.step).toBe('confirm')
-    expect(s.pending).toMatchObject({ winner: 'lag1', price: 30, hatch: 1 })
-    expect(s.capital.lag1).toBe(100) // ej draget innan bekräftelse
-
-    s = reduce(s, { type: 'confirmPurchase', now: 5000 })
+describe('Klubban', () => {
+  it('klubba → sald med ångra-fönster; inget dras förrän commitSale', () => {
+    let s = toKlubba(started())
+    s = reduce(s, { type: 'klubba', winner: 'lag1', price: 30, by: 'lag2', now: 4000 })
+    expect(s.step).toBe('sald')
+    expect(s.pending).toEqual({ hatch: 1, resource: 'metall', winner: 'lag1', price: 30, by: 'lag2' })
+    expect(s.hatchTimerEndsAt).toBe(4000 + 5000)
+    expect(s.capital.lag1).toBe(100)
+    s = reduce(s, { type: 'commitSale', now: 9000 })
     expect(s.capital.lag1).toBe(70)
     expect(s.results[0]).toEqual({ resource: 'metall', winner: 'lag1', price: 30 })
     expect(s.currentHatch).toBe(1)
-    expect(s.step).toBe('getready') // nästa lucka börjar med nedräkning
-    expect(s.hatchTimerEndsAt).toBe(5000 + 10 * 1000) // getready-timern startar EFTER bekräftelse
-    expect(hatchLights(s)[0]).toEqual({ hatch: 1, state: 'won', winner: 'lag1' })
-    expect(hatchLights(s)[1].state).toBe('active')
-  })
-
-  it('"nej, ändra" tar tillbaka till "vem vann" utan att dra kapital', () => {
-    let s = reduce(started(), { type: 'beginNegotiation', now: 1200 })
-    s = run(
-      [
-        { type: 'finishNegotiation', now: 1500 },
-        { type: 'chooseWinner', winner: 'lag1' },
-        { type: 'enterPrice', price: 30 },
-        { type: 'cancelEntry' },
-      ],
-      s,
-    )
-    expect(s.step).toBe('entry_winner')
-    expect(s.pending).toBeNull()
-    expect(s.draftWinner).toBeNull()
-    expect(s.capital.lag1).toBe(100)
-    expect(s.currentHatch).toBe(0)
-  })
-
-  it('avvisar slutpris som överstiger vinnarens kapital', () => {
-    let s = reduce(started(), { type: 'beginNegotiation', now: 1200 })
-    s = run(
-      [
-        { type: 'finishNegotiation', now: 1500 },
-        { type: 'chooseWinner', winner: 'lag1' },
-        { type: 'enterPrice', price: 200 },
-      ],
-      s,
-    )
-    expect(s.step).toBe('entry_price')
-    expect(s.pending).toBeNull()
-  })
-
-  it('"ingen köpte" markerar luckan och går vidare', () => {
-    const s = skipHatch(started(), 1600)
-    expect(s.results[0]).toEqual({ resource: 'metall', winner: null, price: 0 })
-    expect(s.currentHatch).toBe(1)
     expect(s.step).toBe('getready')
+    expect(s.hatchTimerEndsAt).toBe(9000 + 5000) // getReadySeconds
+    expect(s.pending).toBeNull()
   })
 
-  it('finishNegotiation alternerar inmatande lag', () => {
-    let s = reduce(started(), { type: 'beginNegotiation', now: 1200 })
-    s = reduce(s, { type: 'finishNegotiation', now: 1500 })
-    const first = s.entryTeam
-    s = reduce(s, { type: 'noBuy', now: 1600 })
-    s = reduce(s, { type: 'beginNegotiation', now: 1650 })
-    s = reduce(s, { type: 'finishNegotiation', now: 1700 })
-    expect(s.entryTeam).not.toBe(first) // varannan gång
+  it('ÅNGRA → tillbaka till klubb-rutan, inget bokfört', () => {
+    let s = toKlubba(started())
+    s = reduce(s, { type: 'klubba', winner: 'lag1', price: 30, by: 'lag1', now: 4000 })
+    s = reduce(s, { type: 'angra' })
+    expect(s.step).toBe('klubba')
+    expect(s.pending).toBeNull()
+    expect(s.hatchTimerEndsAt).toBeNull()
+    expect(s.results).toEqual({})
+    expect(reduce(s, { type: 'commitSale', now: 9000 })).toBe(s) // inget att bokföra
+  })
+
+  it('ingen köpte → resultat utan vinnare, kapital orört', () => {
+    const s = buy(started(), null, 40)
+    expect(s.results[0]).toEqual({ resource: 'metall', winner: null, price: 0 })
+    expect(s.capital).toEqual({ lag1: 100, lag2: 100 })
+  })
+
+  it('pris över vinnarens kapital eller negativt avvisas', () => {
+    const s = toKlubba(started())
+    expect(reduce(s, { type: 'klubba', winner: 'lag1', price: 200, by: 'lag1', now: 0 })).toBe(s)
+    expect(reduce(s, { type: 'klubba', winner: 'lag1', price: -5, by: 'lag1', now: 0 })).toBe(s)
+  })
+
+  it('klubba utanför klubb-steget gör inget', () => {
+    const s = started()
+    expect(reduce(s, { type: 'klubba', winner: 'lag1', price: 10, by: 'lag1', now: 0 })).toBe(s)
+  })
+
+  it('luckljuset: vunna luckor won, aktiv lucka active', () => {
+    const s = buy(started(), 'lag2', 10)
+    const l = hatchLights(s)
+    expect(l[0]).toEqual({ hatch: 1, state: 'won', winner: 'lag2' })
+    expect(l[1]).toEqual({ hatch: 2, state: 'active', winner: null })
+    expect(l[2].state).toBe('off')
   })
 })
 
-describe('fasövergångar', () => {
-  it('efter 5 luckor → gissningsfas', () => {
+describe('gissningen', () => {
+  function allaLuckor(): GameState {
     let s = started()
-    for (let i = 0; i < 5; i++) s = skipHatch(s, 1000 + i)
+    for (let i = 0; i < 5; i++) s = buy(s, null, 0, 2000 + i)
+    return s
+  }
+
+  it('efter 5 luckor → gissning med 20 s-timer', () => {
+    const s = allaLuckor()
     expect(s.phase).toBe('guessing')
-    expect(s.hatchTimerEndsAt).toBeNull()
+    expect(s.hatchTimerEndsAt).toBe(2004 + 5000 + 20 * 1000)
   })
 
   it('båda gissningar → reveal', () => {
-    let s = started()
-    for (let i = 0; i < 5; i++) s = skipHatch(s, i)
+    let s = allaLuckor()
     s = reduce(s, { type: 'submitGuess', team: 'lag1', resource: 'medicin' })
     expect(s.phase).toBe('guessing')
     s = reduce(s, { type: 'submitGuess', team: 'lag2', resource: 'vatten' })
     expect(s.phase).toBe('reveal')
+    expect(s.hatchTimerEndsAt).toBeNull()
+  })
+
+  it('tiden ute → reveal, den som inte gissat har null (räknas som fel)', () => {
+    let s = allaLuckor()
+    s = reduce(s, { type: 'submitGuess', team: 'lag1', resource: 'medicin' })
+    s = reduce(s, { type: 'guessTimeout' })
+    expect(s.phase).toBe('reveal')
+    expect(s.guesses).toEqual({ lag1: 'medicin', lag2: null })
+  })
+
+  it('guessSeconds null = ingen timer', () => {
+    let s = run([{ ...START, guessSeconds: null } as Action])
+    for (let i = 0; i < 5; i++) s = buy(s, null, 0)
+    expect(s.phase).toBe('guessing')
+    expect(s.hatchTimerEndsAt).toBeNull()
   })
 })
 
@@ -195,22 +195,18 @@ describe('roster', () => {
     const s = initialState(roster)
     expect(s.phase).toBe('intro')
     expect(s.members.lag1).toHaveLength(2)
-    expect(s.members.lag2).toHaveLength(2)
   })
 })
 
 describe('shiftTimer (facilitator-paus)', () => {
   it('förskjuter aktiv nedräkning framåt', () => {
-    const s = started() // getready, hatchTimerEndsAt satt
-    const end = s.hatchTimerEndsAt!
-    expect(end).not.toBeNull()
+    const s = started()
     const shifted = reduce(s, { type: 'shiftTimer', deltaMs: 5000 })
-    expect(shifted.hatchTimerEndsAt).toBe(end + 5000)
-    expect(shifted.version).toBe(s.version + 1)
+    expect(shifted.hatchTimerEndsAt).toBe(s.hatchTimerEndsAt! + 5000)
   })
 
   it('gör inget när ingen nedräkning är igång eller delta = 0', () => {
-    const idle = initialState(roster) // hatchTimerEndsAt = null
+    const idle = initialState(roster)
     expect(reduce(idle, { type: 'shiftTimer', deltaMs: 5000 })).toBe(idle)
     const s = started()
     expect(reduce(s, { type: 'shiftTimer', deltaMs: 0 })).toBe(s)

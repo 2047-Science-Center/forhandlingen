@@ -6,10 +6,11 @@
  * tunt lager ovanpå detta. Inga sidoeffekter här — timers/ljus/ljud hanteras
  * av storet/adaptrarna utifrån state.
  *
- * Budgivningen av en lucka går i STEG (types.BiddingStep) så det alltid är
- * självklart vad man ska göra: negotiating → entry_winner → entry_price →
- * confirm. Timern är knuten till varje förhandling (räknar ner från
- * negotiationSeconds) och startar först när föregående köp är bekräftat.
+ * Budgivningen av en lucka går i STEG (types.BiddingStep): getready →
+ * negotiating → klubba → sald → nästa lucka. "Klubban": när tiden är ute visar
+ * båda skärmarna samma ruta (vem fick den + pris → KLUBBA). Köpet bokförs först
+ * när ångra-fönstret (undoSeconds) gått ut, så ett feltryck rättas med ÅNGRA
+ * i stället för ett eget bekräftelsesteg på andra skärmen.
  */
 
 import type {
@@ -32,22 +33,22 @@ export type Action =
       type: 'start'
       dataset: Dataset
       negotiationSeconds: number | null
+      /** null = getready startar pausad (armas med armGetReady). */
       getReadyFirstSeconds: number | null
       getReadySeconds: number | null
-      revealSeconds: number | null
+      undoSeconds: number
+      guessSeconds: number | null
       now: number
     }
-  | { type: 'finishReveal'; now: number } // intro-popup (kritisk → pengar) klar
   | { type: 'armGetReady'; seconds: number; now: number } // starta pausad getready-nedräkning
   | { type: 'shiftTimer'; deltaMs: number } // förskjut aktiv nedräkning (facilitator-paus)
   | { type: 'beginNegotiation'; now: number } // getready-nedräkning klar
   | { type: 'finishNegotiation'; now: number } // KLAR eller timer 0
-  | { type: 'chooseWinner'; winner: TeamId }
-  | { type: 'enterPrice'; price: number } // "skicka till vinnaren"
-  | { type: 'noBuy'; now: number } // ingen köpte
-  | { type: 'cancelEntry' } // "nej, ändra"
-  | { type: 'confirmPurchase'; now: number }
+  | { type: 'klubba'; winner: TeamId | null; price: number; by: TeamId; now: number }
+  | { type: 'angra' } // ångra klubbslaget (inom ångra-fönstret)
+  | { type: 'commitSale'; now: number } // ångra-fönstret ute → bokför, nästa lucka
   | { type: 'submitGuess'; team: TeamId; resource: string }
+  | { type: 'guessTimeout' } // gissningstiden ute → avslöjande (ej gissat = fel)
   | { type: 'reset'; members?: Record<TeamId, Person[]> }
   /** Adoptera en snapshot från en annan skärm (transport). */
   | { type: 'sync'; state: GameState }
@@ -61,15 +62,14 @@ export function initialState(members: Record<TeamId, Person[]> = emptyMembers())
     order: [],
     currentHatch: -1,
     step: 'getready',
-    entryTeam: null,
-    lastEntryTeam: null,
-    draftWinner: null,
     results: {},
     pending: null,
     guesses: { lag1: null, lag2: null },
     negotiationSeconds: null,
     getReadyFirstSeconds: null,
     getReadySeconds: null,
+    undoSeconds: 5,
+    guessSeconds: null,
     hatchTimerEndsAt: null,
     members,
     version: 0,
@@ -81,22 +81,14 @@ function clone(state: GameState): GameState {
   return JSON.parse(JSON.stringify(state)) as GameState
 }
 
-/** Vem gör nästa inmatning? Slumpa först, alternera sedan (varannan gång). */
-function nextEntryTeam(last: TeamId | null): TeamId {
-  if (last == null) return Math.random() < 0.5 ? 'lag1' : 'lag2'
-  return OTHER[last]
-}
-
 /** Gå vidare till nästa lucka, eller in i gissningsfasen om alla är klara. */
 function advance(state: GameState, now: number): void {
   state.currentHatch += 1
   state.pending = null
-  state.draftWinner = null
-  state.entryTeam = null
   if (state.currentHatch >= state.order.length) {
     state.phase = 'guessing'
     state.currentHatch = state.order.length
-    state.hatchTimerEndsAt = null
+    state.hatchTimerEndsAt = state.guessSeconds != null ? now + state.guessSeconds * 1000 : null
     state.step = 'getready'
     return
   }
@@ -133,43 +125,18 @@ export function reduce(state: GameState, action: Action): GameState {
       next.critical = { lag1: d.kritisk_lag1, lag2: d.kritisk_lag2 }
       next.order = [...d.ordning]
       next.currentHatch = 0
-      // Intro-popup (kritisk resurs → flyger → pengar) innan första luckan.
-      next.step = 'reveal'
-      next.entryTeam = null
-      next.lastEntryTeam = null
-      next.draftWinner = null
+      next.step = 'getready'
       next.results = {}
       next.pending = null
       next.guesses = { lag1: null, lag2: null }
       next.negotiationSeconds = action.negotiationSeconds
       next.getReadyFirstSeconds = action.getReadyFirstSeconds
       next.getReadySeconds = action.getReadySeconds
-      if (action.revealSeconds === 0) {
-        // Ingen reveal-popup → rakt till getready. getReadyFirst null = PAUSAD
-        // (t.ex. medan test-popupar visas) → armas senare via armGetReady.
-        next.step = 'getready'
-        next.hatchTimerEndsAt =
-          action.getReadyFirstSeconds != null
-            ? action.now + action.getReadyFirstSeconds * 1000
-            : null
-      } else {
-        // reveal-popup: timad (>0) eller klick-igenom (null).
-        next.step = 'reveal'
-        next.hatchTimerEndsAt =
-          action.revealSeconds != null ? action.now + action.revealSeconds * 1000 : null
-      }
-      next.version += 1
-      return next
-    }
-
-    case 'finishReveal': {
-      if (state.phase !== 'bidding' || state.step !== 'reveal') return state
-      const next = clone(state)
-      next.step = 'getready'
+      next.undoSeconds = action.undoSeconds
+      next.guessSeconds = action.guessSeconds
+      // getReadyFirst null = PAUSAD (armas senare via armGetReady).
       next.hatchTimerEndsAt =
-        state.getReadyFirstSeconds != null
-          ? action.now + state.getReadyFirstSeconds * 1000
-          : action.now
+        action.getReadyFirstSeconds != null ? action.now + action.getReadyFirstSeconds * 1000 : null
       next.version += 1
       return next
     }
@@ -205,76 +172,46 @@ export function reduce(state: GameState, action: Action): GameState {
     case 'finishNegotiation': {
       if (state.phase !== 'bidding' || state.step !== 'negotiating') return state
       const next = clone(state)
-      next.step = 'entry_winner'
-      next.entryTeam = nextEntryTeam(state.lastEntryTeam)
-      next.lastEntryTeam = next.entryTeam
-      next.hatchTimerEndsAt = null // timern stannar under avräkningen
+      next.step = 'klubba'
+      next.hatchTimerEndsAt = null // ingen tidsgräns: gruppen står vid skärmen och bestämmer
       next.version += 1
       return next
     }
 
-    case 'chooseWinner': {
-      if (state.phase !== 'bidding' || state.step !== 'entry_winner') return state
-      const next = clone(state)
-      next.draftWinner = action.winner
-      next.step = 'entry_price'
-      next.version += 1
-      return next
-    }
-
-    case 'enterPrice': {
-      if (state.phase !== 'bidding' || state.step !== 'entry_price') return state
-      if (!state.draftWinner) return state
-      if (action.price < 0) return state
-      if (action.price > state.capital[state.draftWinner]) return state
+    case 'klubba': {
+      if (state.phase !== 'bidding' || state.step !== 'klubba') return state
+      const price = action.winner ? Math.round(action.price) : 0
+      if (action.winner && (price < 0 || price > state.capital[action.winner])) return state
       const next = clone(state)
       next.pending = {
         hatch: state.currentHatch + 1,
         resource: state.order[state.currentHatch],
-        winner: state.draftWinner,
-        price: action.price,
-        enteredBy: state.entryTeam!,
+        winner: action.winner,
+        price,
+        by: action.by,
       }
-      next.step = 'confirm'
+      next.step = 'sald'
+      next.hatchTimerEndsAt = action.now + state.undoSeconds * 1000
       next.version += 1
       return next
     }
 
-    case 'noBuy': {
-      if (state.phase !== 'bidding') return state
-      if (state.step !== 'entry_winner' && state.step !== 'entry_price') return state
-      const next = clone(state)
-      next.results[next.currentHatch] = {
-        resource: state.order[state.currentHatch],
-        winner: null,
-        price: 0,
-      }
-      advance(next, action.now)
-      next.version += 1
-      return next
-    }
-
-    case 'cancelEntry': {
-      if (state.phase !== 'bidding') return state
-      if (state.step !== 'entry_price' && state.step !== 'confirm') return state
+    case 'angra': {
+      if (state.phase !== 'bidding' || state.step !== 'sald') return state
       const next = clone(state)
       next.pending = null
-      next.draftWinner = null
-      next.step = 'entry_winner' // tillbaka till "vem vann" (behåll entryTeam)
+      next.step = 'klubba'
+      next.hatchTimerEndsAt = null
       next.version += 1
       return next
     }
 
-    case 'confirmPurchase': {
-      if (state.phase !== 'bidding' || state.step !== 'confirm' || !state.pending) return state
+    case 'commitSale': {
+      if (state.phase !== 'bidding' || state.step !== 'sald' || !state.pending) return state
       const next = clone(state)
       const p = next.pending!
-      next.capital[p.winner] -= p.price
-      next.results[next.currentHatch] = {
-        resource: p.resource,
-        winner: p.winner,
-        price: p.price,
-      }
+      if (p.winner) next.capital[p.winner] -= p.price
+      next.results[next.currentHatch] = { resource: p.resource, winner: p.winner, price: p.winner ? p.price : 0 }
       advance(next, action.now)
       next.version += 1
       return next
@@ -286,7 +223,18 @@ export function reduce(state: GameState, action: Action): GameState {
       next.guesses[action.team] = action.resource
       if (next.guesses.lag1 && next.guesses.lag2) {
         next.phase = 'reveal'
+        next.hatchTimerEndsAt = null
       }
+      next.version += 1
+      return next
+    }
+
+    case 'guessTimeout': {
+      if (state.phase !== 'guessing') return state
+      const next = clone(state)
+      // Den som inte hann gissa har gissat fel (null räknas inte som rätt).
+      next.phase = 'reveal'
+      next.hatchTimerEndsAt = null
       next.version += 1
       return next
     }

@@ -9,6 +9,8 @@
  */
 
 @import url('https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;600&display=swap');
+/* Bryggkortens/spellägets rubrikfont (lokal fil, funkar offline): stämplar och stora rubriker. */
+@font-face { font-family: 'XY Oswald'; src: url('../stationsintro/fonts/oswald.woff2') format('woff2'); font-weight: 200 700; }
 
 :root {
   /* === GEMENSAMT LÄGES-/FÄRGSYSTEM (återanvänds av alla fyra X&Y-stationer) ===
@@ -53,6 +55,7 @@
 
   /* --- Typografi --- */
   --font-retro: 'VT323', 'Courier New', ui-monospace, monospace;
+  --font-rubrik: 'XY Oswald', 'Oswald', 'Arial Narrow', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
 
   /* Rörelse: stark ease-out för UI (emil — de inbyggda är för veka). */

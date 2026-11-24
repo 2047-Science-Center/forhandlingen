@@ -1,0 +1,67 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    #sp-ovan { position: absolute; left: 0; right: 0; top: 100px; text-align: center; font-family: "IBM Plex Mono", monospace; font-weight: 700;
+      font-size: 30px; letter-spacing: 0.3em; color: #9fb2c0; }
+    #sp-symbol { position: absolute; left: 700px; top: 170px; width: 520px; height: 380px; }
+    #sp-stampel { position: absolute; left: 1230px; top: 330px; padding: 10px 30px 14px; border: 9px solid #ff9500; border-radius: 10px;
+      font-family: "Oswald", sans-serif; font-weight: 700; font-size: 92px; line-height: 1; letter-spacing: 0.06em; color: #ff9500; white-space: nowrap; }
+    #sp-rubrik { position: absolute; left: 0; right: 0; top: 590px; text-align: center; font-family: "Oswald", sans-serif; font-weight: 700;
+      font-size: 110px; line-height: 1.05; color: #ff9500; text-shadow: 0 0 44px rgba(255,149,0,0.45); }
+    #sp-under { position: absolute; left: 0; right: 0; top: 730px; text-align: center; font-family: "Oswald", sans-serif; font-weight: 400;
+      font-size: 50px; color: #f3ead8; }
+    #sp-not { position: absolute; left: 0; right: 0; top: 880px; text-align: center; font-family: "IBM Plex Mono", monospace; font-weight: 700;
+      font-size: 28px; letter-spacing: 0.08em; color: #6f8a7e; }
+    #sp-ned { position: absolute; inset: 0; background: #05100b; }
+    #sp-ned-r { position: absolute; left: 0; right: 0; top: 260px; text-align: center; font-family: "Oswald", sans-serif; font-weight: 700;
+      font-size: 84px; color: #ff9500; letter-spacing: 0.04em; }
+    #sp-ned-r small { display: block; font-size: 44px; color: #f5f5f0; font-weight: 400; letter-spacing: 0.1em; }
+    .sp-siffra { position: absolute; left: 0; right: 0; top: 470px; text-align: center; font-family: "Oswald", sans-serif; font-weight: 700;
+      font-size: 300px; line-height: 1; color: #ff9500; text-shadow: 0 0 60px rgba(255,149,0,0.55); }
+    #sp-ned, .sp-siffra { opacity: 0; }
+    #sp-mini { position: absolute; left: 860px; top: 140px; width: 200px; height: 110px; }
+  </style>
+  <div id="root" data-composition-id="spellage" data-width="1920" data-height="1080">
+    <div id="sp-ovan">SPELLÄGE · FÖRHANDLINGEN</div>
+    <svg id="sp-symbol" viewBox="-260 -190 520 380" xmlns="http://www.w3.org/2000/svg">
+      <rect id="sp-vagg" x="-8" y="-170" width="16" height="340" fill="#9fb2c0" />
+      <path id="sp-halvA" d="M-40,-120 A120,120 0 0,0 -40,120 Z" fill="#fff1d6" />
+      <path id="sp-halvB" d="M40,-120 A120,120 0 0,1 40,120 Z" fill="#ff3cc8" />
+    </svg>
+    <div id="sp-stampel">TÄVLING</div>
+    <div id="sp-rubrik">HÄR TÄVLAR SIDA MOT SIDA</div>
+    <div id="sp-under">Sidan med flest poäng vinner.</div>
+    <div id="sp-not">SPELLÄGESKORTET · xy-produktion/spellage/FORSLAG.md ② + påminnelsen ④</div>
+    <div id="sp-ned" data-layout-allow-overlap>
+      <svg id="sp-mini" viewBox="-260 -190 520 380" xmlns="http://www.w3.org/2000/svg">
+        <rect x="-8" y="-170" width="16" height="340" fill="#9fb2c0" />
+        <path d="M-40,-120 A120,120 0 0,0 -40,120 Z" fill="#fff1d6" />
+        <path d="M40,-120 A120,120 0 0,1 40,120 Z" fill="#ff3cc8" />
+      </svg>
+      <div id="sp-ned-r">NU GÄLLER DET<small>SIDA MOT SIDA</small></div>
+      <div id="sp-3" class="sp-siffra">3</div>
+      <div id="sp-2" class="sp-siffra">2</div>
+      <div id="sp-1" class="sp-siffra">1</div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+        tl.fromTo("#sp-ovan", { opacity: 0 }, { opacity: 1, duration: 0.25 }, 0.1);
+    tl.fromTo("#sp-symbol", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 0.2);
+    tl.fromTo("#sp-halvA", { x: 40 }, { x: 0, duration: 0.6, ease: "power2.inOut" }, 0.6);
+    tl.fromTo("#sp-halvB", { x: -40 }, { x: 0, duration: 0.6, ease: "power2.inOut" }, 0.6);
+    tl.fromTo("#sp-vagg", { scaleY: 0, transformOrigin: "50% 100%" }, { scaleY: 1, duration: 0.5, ease: "expo.out" }, 0.8);
+    tl.fromTo("#sp-stampel", { opacity: 0, scale: 2.4, rotation: -8 }, { opacity: 1, scale: 1, rotation: -4, duration: 0.14, ease: "power4.in" }, 1.3);
+    tl.fromTo("#sp-symbol", { x: -8 }, { x: 0, duration: 0.3, ease: "elastic.out(1, 0.3)" }, 1.44);
+    tl.fromTo("#sp-rubrik", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power4.out" }, 1.6);
+    tl.fromTo("#sp-under", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 2.1);
+    tl.fromTo("#sp-not", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 2.4);
+    tl.to("#sp-ned", { opacity: 1, duration: 0.25, ease: "power2.inOut" }, 3.9);
+    tl.fromTo("#sp-ned-r", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2 }, 4.05);
+    [["#sp-3", 4.4], ["#sp-2", 5.2], ["#sp-1", 6.0]].forEach(([id, at]) => {
+      tl.fromTo(id, { opacity: 0, scale: 1.4 }, { opacity: 1, scale: 1, duration: 0.25, ease: "expo.out" }, at);
+      if (id !== "#sp-1") tl.to(id, { opacity: 0, duration: 0.12 }, at + 0.7);
+    });
+    window.__timelines["spellage"] = tl;
+  </script>
+</template>

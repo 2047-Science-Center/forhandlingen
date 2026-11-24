@@ -1,0 +1,109 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; font-family: "IBM Plex Mono", monospace; }
+    #lu-rubrik { position: absolute; left: 120px; top: 70px; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 70px; color: #f5f5f0; }
+    #lu-rubrik b { color: #ff9500; }
+    .lu-etikett { position: absolute; top: 180px; font-weight: 700; font-size: 28px; letter-spacing: 0.16em; }
+    #lu-e1 { left: 120px; color: #9fb2c0; }
+    #lu-e2 { left: 1000px; color: #ff9500; }
+    .lu-skarm { position: absolute; top: 236px; width: 800px; height: 560px; border: 3px solid #ff9500; border-radius: 18px;
+      background: #071a10; box-shadow: 0 0 40px rgba(255,149,0,0.18); overflow: hidden; }
+    #lu-s1 { left: 120px; border-color: #b8690f; }
+    #lu-s2 { left: 1000px; }
+    .lu-ram { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; }
+    .lu-q { font-family: "Oswald", sans-serif; font-weight: 700; font-size: 50px; color: #f5f5f0; text-align: center; line-height: 1.1; }
+    .lu-q small { display: block; font-family: "IBM Plex Mono", monospace; font-size: 28px; color: #c99a5b; font-weight: 700; letter-spacing: 0.1em; margin-bottom: 10px; }
+    .lu-rad { display: flex; gap: 22px; }
+    .lu-btn { font-weight: 700; font-size: 32px; padding: 14px 30px; border: 3px solid #ff9500; border-radius: 10px; color: #ff9500; background: transparent; }
+    .lu-btn.stor { font-size: 38px; padding: 16px 54px; }
+    .lu-btn.liten { font-size: 28px; border-color: #6f8a7e; color: #9fb2c0; padding: 8px 18px; }
+    .lu-pris { font-family: "Oswald", sans-serif; font-weight: 700; font-size: 80px; color: #f5f5f0; }
+    .lu-slider { width: 520px; height: 10px; background: #3a2a10; border-radius: 5px; position: relative; }
+    .lu-slider i { position: absolute; left: 28%; top: -13px; width: 36px; height: 36px; border-radius: 50%; background: #ff9500; }
+    .lu-annan { font-size: 28px; letter-spacing: 0.12em; color: #9fb2c0; font-weight: 700; }
+    .lu-raknare { position: absolute; top: 820px; width: 800px; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 46px; }
+    #lu-r1 { left: 120px; color: #ff5a3c; }
+    #lu-r2 { left: 1000px; color: #35e0d0; }
+    .lu-n { position: absolute; left: 0; top: 0; }
+    .lu-raknare small { margin-top: 62px; display: block; font-family: "IBM Plex Mono", monospace; font-size: 28px; color: #9fb2c0; letter-spacing: 0.06em; }
+    #lu-stampel { position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%) rotate(-6deg); padding: 10px 30px 14px;
+      border: 8px solid #ff9500; border-radius: 10px; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 66px;
+      color: #ff9500; white-space: nowrap; background: rgba(7,26,16,0.92); }
+    #lu-fb, #lu-fc, #lu-fd, #lu-n1, #lu-n2, #lu-n3, #lu-n4, #lu-stampel, #lu-kvitto { opacity: 0; }
+    #lu-kvitto { position: absolute; left: 0; right: 0; bottom: 34px; text-align: center; font-size: 28px; color: #35e0d0; font-weight: 700; }
+    .lu-res { display: flex; align-items: center; gap: 18px; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 46px; color: #f5f5f0; }
+  </style>
+  <div id="root" data-composition-id="lucka" data-width="1920" data-height="1080">
+    <div id="lu-rubrik">Efter varje lucka: <b>klubba, inte bokföra</b></div>
+    <div id="lu-e1" class="lu-etikett">NULÄGE · 3 STEG + BEKRÄFTELSE</div>
+    <div id="lu-e2" class="lu-etikett">FÖRSLAG · KLUBBAN</div>
+
+    <div id="lu-s1" class="lu-skarm">
+      <div id="lu-fa" class="lu-ram">
+        <div class="lu-q"><small>SIDA B · RAPPORTÖR</small>Vem vann?</div>
+        <div class="lu-rad"><div id="lu-fa-b1" class="lu-btn">SIDA A</div><div class="lu-btn">SIDA B</div></div>
+        <div class="lu-btn liten">Ingen köpte den här</div>
+      </div>
+      <div id="lu-fb" class="lu-ram">
+        <div class="lu-q"><small>SIDA B · RAPPORTÖR</small>Slutpris — sida A betalar</div>
+        <div class="lu-rad" style="align-items:center"><div id="lu-fb-m" class="lu-btn">−</div><div class="lu-pris">30 kr</div><div class="lu-btn">+</div></div>
+        <div class="lu-slider"><i></i></div>
+      </div>
+      <div id="lu-fc" class="lu-ram">
+        <div class="lu-q"><small>SIDA B · RAPPORTÖR</small>30 kr</div>
+        <div id="lu-fc-b" class="lu-btn stor">BEKRÄFTA</div>
+      </div>
+      <div id="lu-fd" class="lu-ram">
+        <div class="lu-annan">— ANDRA SKÄRMEN · SIDA A —</div>
+        <div class="lu-q" style="font-size:42px">Bekräfta: A köpte Insulin<br />för 30 kr?</div>
+        <div class="lu-rad"><div id="lu-fd-b" class="lu-btn">BEKRÄFTA</div><div class="lu-btn" style="border-color:#ff5a3c;color:#ff5a3c">NEJ, ÄNDRA</div></div>
+      </div>
+    </div>
+
+    <div id="lu-s2" class="lu-skarm">
+      <div id="lu-g" class="lu-ram">
+        <div class="lu-q"><small>BÅDA SKÄRMARNA · 0:00</small>💉 Insulin — vem fick den?</div>
+        <div class="lu-rad"><div id="lu-g-a" class="lu-btn">SIDA A</div><div class="lu-btn">SIDA B</div><div class="lu-btn" style="border-color:#6f8a7e;color:#9fb2c0">INGEN</div></div>
+        <div class="lu-rad" style="align-items:center"><div class="lu-btn">−</div><div class="lu-pris" style="font-size:64px">30 kr</div><div class="lu-btn">+</div></div>
+        <div id="lu-g-k" class="lu-btn stor">KLUBBA ▸</div>
+      </div>
+      <div id="lu-stampel" data-layout-allow-overlap>SÅLD · SIDA A · 30 KR</div>
+      <div id="lu-kvitto">andra sidan ser samma · ångra inom 5 s</div>
+    </div>
+
+    <div id="lu-r1" class="lu-raknare"><span class="lu-n" id="lu-n0">0 tryck</span><span class="lu-n" id="lu-n1">1 tryck</span><span class="lu-n" id="lu-n2">2 tryck</span><span class="lu-n" id="lu-n3">3 tryck</span><span class="lu-n" id="lu-n4">4–6 tryck</span><small>2 personer · två skärmar · ~20 s per lucka · × 8 luckor</small></div>
+    <div id="lu-r2" class="lu-raknare"><span class="lu-n">2 tryck</span><small>den som står närmast · ~5 s per lucka</small></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const tryck = (sel, at) => tl.fromTo(sel, { scale: 0.92, backgroundColor: "#ff9500", color: "#05100b" },
+      { scale: 1, backgroundColor: "rgba(0,0,0,0)", color: "#ff9500", duration: 0.4, ease: "expo.out" }, at);
+    const visa = (sel, at) => tl.fromTo(sel, { opacity: 0, scale: 1.03 }, { opacity: 1, scale: 1, duration: 0.25, ease: "expo.out" }, at);
+    const dolj = (sel, at) => tl.to(sel, { opacity: 0, duration: 0.15, ease: "power3.in" }, at);
+    tl.fromTo("#lu-rubrik", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power4.out" }, 0.15);
+    tl.fromTo(["#lu-e1", "#lu-s1", "#lu-r1"], { opacity: 0 }, { opacity: 1, duration: 0.3, stagger: 0.08 }, 0.5);
+        visa("#lu-fa", 1.0);
+    tryck("#lu-fa-b1", 2.0);
+    tl.set("#lu-n0", { opacity: 0 }, 2.0); tl.set("#lu-n1", { opacity: 1 }, 2.0);
+    dolj("#lu-fa", 2.6); visa("#lu-fb", 2.8);
+    tryck("#lu-fb-m", 3.6);
+    tl.set("#lu-n1", { opacity: 0 }, 3.6); tl.set("#lu-n2", { opacity: 1 }, 3.6);
+    dolj("#lu-fb", 4.2); visa("#lu-fc", 4.4);
+    tryck("#lu-fc-b", 5.2);
+    tl.set("#lu-n2", { opacity: 0 }, 5.2); tl.set("#lu-n3", { opacity: 1 }, 5.2);
+    dolj("#lu-fc", 5.8); visa("#lu-fd", 6.0);
+    tryck("#lu-fd-b", 6.8);
+    tl.set("#lu-n3", { opacity: 0 }, 6.8); tl.set("#lu-n4", { opacity: 1 }, 6.8);
+
+        tl.fromTo(["#lu-e2", "#lu-s2"], { opacity: 0, x: 40 }, { opacity: 1, x: 0, duration: 0.45, ease: "expo.out", stagger: 0.08 }, 7.3);
+    tryck("#lu-g-a", 8.4);
+    tryck("#lu-g-k", 9.3);
+    tl.to("#lu-g", { opacity: 0.25, duration: 0.2 }, 9.4);
+    tl.fromTo("#lu-stampel", { opacity: 0, scale: 2.2 }, { opacity: 1, scale: 1, duration: 0.16, ease: "power4.in" }, 9.4);
+    tl.fromTo("#lu-s2", { x: -10 }, { x: 0, duration: 0.25, ease: "elastic.out(1, 0.3)" }, 9.56);
+    tl.fromTo("#lu-kvitto", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 10.0);
+    tl.fromTo("#lu-r2", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.25 }, 10.2);
+    tl.to("#root > *", { opacity: 0, duration: 0.22, ease: "power3.in" }, 12.7);
+    window.__timelines["lucka"] = tl;
+  </script>
+</template>

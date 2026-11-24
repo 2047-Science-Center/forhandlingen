@@ -17,8 +17,6 @@ import TeamIdentity from './TeamIdentity.vue'
 import HatchRow from './HatchRow.vue'
 import BiddingZone from './BiddingZone.vue'
 import GuessView from './GuessView.vue'
-import RevealSequence from './RevealSequence.vue'
-import RoleIcon from './RoleIcon.vue'
 import type { HatchCell } from '../store/gameStore'
 
 // allowGuess=false i tutorialen: där får gissningen bara ske i det dedikerade
@@ -34,27 +32,24 @@ const props = withDefaults(
   defineProps<{
     team: TeamId
     allowGuess?: boolean
-    demo?: 'resource' | 'guess' | null
+    demo?: 'resource' | null
     demoCritical?: string
     demoCapital?: number
     demoResource?: string
-    demoGuessPick?: string
-    demoOptions?: string[]
     /** Antal luckor i demo-raden (default 3; intro-3D visar skarpa rundans 5). */
     demoHatches?: number
   }>(),
-  { allowGuess: true, demo: null },
+  { allowGuess: true, demo: null, demoHatches: 5 },
 )
 const store = useGameStore()
 const { t } = useI18n()
 
 const critical = computed(() => (props.demo ? (props.demoCritical ?? '') : store.state.critical[props.team]))
 const capital = computed(() => (props.demo ? (props.demoCapital ?? 0) : store.state.capital[props.team]))
-const members = computed(() => store.state.members[props.team])
 
 // Statiska demo-luckor (lugn progress-rad bakom coach-marks): en aktiv + två kvar.
 const demoCells = computed<HatchCell[]>(() =>
-  Array.from({ length: props.demoHatches ?? 3 }, (_, i) => ({
+  Array.from({ length: props.demoHatches }, (_, i) => ({
     index: i,
     hatch: i + 1,
     kind: i === 0 ? ('active' as const) : ('upcoming' as const),
@@ -63,14 +58,6 @@ const demoCells = computed<HatchCell[]>(() =>
   })),
 )
 
-function namesOf(role: 'A' | 'B'): string {
-  return (
-    members.value
-      .filter((m) => m.assigned_role === role)
-      .map((m) => m.name ?? m.band_id)
-      .join(' & ') || '—'
-  )
-}
 
 // Kapitalet bultar till när det dras (köp bekräftat).
 const capitalPulse = ref(false)
@@ -107,44 +94,19 @@ watch(capital, (nv, ov) => {
         </div>
       </div>
 
-      <HatchRow :cells="demoCells" />
+      <div data-tut="luckor" class="console__luckor"><HatchRow :cells="demoCells" /></div>
 
       <!-- Mitt: aktuell resurs på marknaden ELLER förvald gissning -->
       <div v-if="demo === 'resource'" class="console__rescard" data-tut="resource">
         <span class="console__res-icon">{{ resourceIcon(demoResource ?? '') }}</span>
         <span class="console__res-name ink-strong">{{ t('resource.' + demoResource) }}</span>
       </div>
-      <div v-else-if="demo === 'guess'" class="console__guesswrap" data-tut="guess">
-        <GuessView
-          :team="team"
-          :demo-pick="demoGuessPick"
-          :demo-double="true"
-          :demo-options="demoOptions"
-        />
-      </div>
+
     </template>
 
-    <!-- === START-skärm: superstora roller === -->
+    <!-- Innan första luckan (ett ögonblick, tills ledaren startat): bara gör er redo -->
     <div v-else-if="store.phase === 'intro'" class="intro">
-      <div class="intro__role">
-        <RoleIcon role="A" :size="52" class="intro__roleicon" />
-        <div class="intro__roletext">
-          <span class="intro__label">{{ t('role.A') }}</span>
-          <span class="intro__names ink-strong">{{ namesOf('A') }}</span>
-          <span class="intro__goal">{{ t('intro.negotiator_goal') }}</span>
-        </div>
-      </div>
-      <div class="intro__role">
-        <RoleIcon role="B" :size="52" class="intro__roleicon" />
-        <div class="intro__roletext">
-          <span class="intro__label">{{ t('role.B') }}</span>
-          <span class="intro__names ink-strong">{{ namesOf('B') }}</span>
-          <span class="intro__goal">{{ t('intro.reporter_goal') }}</span>
-        </div>
-      </div>
-      <button class="crt-button crt-button--strong intro__start" @click="store.startLive()">
-        {{ t('intro.start_round') }}
-      </button>
+      <p class="intro__vanta crt-caret">{{ t('intro.get_ready') }}</p>
     </div>
 
     <!-- === Spel === -->
@@ -170,11 +132,7 @@ watch(capital, (nv, ov) => {
       <HatchRow :cells="store.hatchCells" />
 
       <!-- Fokuserat steg -->
-      <RevealSequence
-        v-if="store.phase === 'bidding' && store.step === 'reveal'"
-        :team="team"
-      />
-      <BiddingZone v-else-if="store.phase === 'bidding'" :team="team" />
+      <BiddingZone v-if="store.phase === 'bidding'" :team="team" />
       <GuessView v-else-if="store.phase === 'guessing' && allowGuess" :team="team" />
     </template>
   </div>
@@ -196,39 +154,17 @@ watch(capital, (nv, ov) => {
   margin-top: 1.5rem;
   align-items: flex-start;
 }
-.intro__role {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  line-height: 1.05;
-}
-.intro__roleicon {
-  flex: none;
-}
-.intro__roletext {
-  display: flex;
-  flex-direction: column;
-}
-.intro__label {
-  font-size: 1.1rem;
-  letter-spacing: 0.12em;
-  color: var(--color-primary);
-}
-.intro__names {
-  font-size: 3.4rem;
-  text-shadow: var(--glow-strong);
-  margin-top: 0.1rem;
-}
-.intro__goal {
-  font-size: 1.05rem;
-  color: var(--color-ink-muted);
-  margin-top: 0.25rem;
-}
-.intro__start {
+.intro__vanta {
+  font-family: var(--font-retro);
   font-size: 1.6rem;
-  padding: 0.5em 1.6em;
-  margin-top: 0.6rem;
-  align-self: stretch;
+  color: var(--color-ink-muted);
+  margin: 0;
+}
+
+/* Luckraden som coach-mark-mål: tajt runt prickarna, inte hela bredden. */
+.console__luckor {
+  align-self: center;
+  padding: 0.3rem 0.8rem;
 }
 
 /* Demo-mitt: aktuell resurs på marknaden */

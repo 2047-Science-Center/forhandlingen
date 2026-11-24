@@ -19,6 +19,7 @@ export type Sfx =
   | 'win' // vinst-fanfar
   | 'boot' // boot-sekvens
   | 'lockin' // lås in bud/pris (tyngre än confirm)
+  | 'klubba' // klubbslaget när en lucka säljs (Förhandlingen)
   | 'nobuy' // ingen köper luckan
   | 'popup' // popup/ruta slår upp
   | 'tick' // nedräkningstick
@@ -43,6 +44,7 @@ export const SAMPLE_FILES: Partial<Record<Sfx, string>> = {
   hatch: 'sfx-hatch-open.mp3',
   confirm: 'sfx-confirm.mp3',
   lockin: 'sfx-lock-in.mp3',
+  klubba: 'sfx-klubbslag.mp3',
   deny: 'sfx-deny.mp3',
   win: 'sfx-win-fanfare.mp3',
   nobuy: 'sfx-nobuy.mp3',
@@ -233,6 +235,7 @@ class AudioEngine {
         break
       // --- Nya semantiska händelser: samma palett (fyrkant/triangel, kvint +
       // durtriad, korta bärnstensblippar), bara fler roller. ---
+      case 'klubba':
       case 'lockin': // två tunga fyrkantsslag, kvint upp: "klack-KLACK"
         this.tone(330, now, 0.07, 'square', 0.16)
         this.tone(495, now + 0.07, 0.14, 'square', 0.16)

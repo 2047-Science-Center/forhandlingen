@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * Gissningsfas (§4.5.4): varje rapportör pekar ut motståndarens kritiska
- * resurs. Rätt gissning dubblar lagets poäng.
+ * Gissningen efter sista luckan: varje sidas rapportör pekar ut motståndarens
+ * livsviktiga resurs. Rätt gissning dubblar sidans poäng. Tidsgräns (ROUND_TIMERS.live.guess):
+ * den som inte hunnit gissa har gissat fel, och stationen går vidare av sig själv.
  */
 import { ref, computed } from 'vue'
 import type { TeamId } from '../engine/types'
@@ -12,26 +13,13 @@ import RoleIcon from './RoleIcon.vue'
 import { useLjus } from '@/station-kit/ljus'
 import { SIDA_FOR_LAG } from '../ljus'
 
-// demoPick: tutorial-läge (coach-mark steg 6). Visar gissningsrutan som i det
-// riktiga UI:t men med EN resurs förvald (mockup-tryck) och ×2-badge — ej
-// interaktiv, skickar aldrig in något. Driver inget spel-state.
-const props = defineProps<{
-  team: TeamId
-  demoPick?: string
-  demoDouble?: boolean
-  /** Alternativ att visa i demo-läget (store.order är tomt innan spelet). */
-  demoOptions?: string[]
-}>()
+const props = defineProps<{ team: TeamId }>()
 const store = useGameStore()
 const { t } = useI18n()
 
-const demo = computed(() => props.demoPick != null)
-/** Rutnätets alternativ: riktiga auktionsordningen, eller demo-listan i demo-läget. */
-const options = computed(() =>
-  demo.value && props.demoOptions?.length ? props.demoOptions : store.state.order,
-)
 const pick = ref<string | null>(null)
 const locked = computed(() => store.state.guesses[props.team] != null)
+const sekunder = computed(() => store.secondsLeft)
 
 const ljus = useLjus()
 function submit() {
@@ -44,33 +32,17 @@ function submit() {
 
 <template>
   <div class="guess">
-    <h3 class="guess__title">{{ t('guess.title') }}</h3>
+    <div class="guess__head">
+      <h3 class="guess__title">{{ t('guess.title') }}</h3>
+      <span v-if="sekunder != null" class="guess__tid mono" :class="{ 'guess__tid--slut': sekunder <= 5 }">{{ sekunder }} s</span>
+    </div>
 
-    <!-- Tydlig markör: det här är RAPPORTÖRENS jobb (syns i både tutorial och
-         skarpt spel, så länge gissningen pågår). -->
-    <div v-if="demo || !locked" class="guess__role">
+    <div v-if="!locked" class="guess__role">
       <RoleIcon role="B" :size="34" />
       <span class="guess__rolelabel">{{ t('guess.role_turn') }}</span>
     </div>
 
-    <!-- DEMO (coach-mark): förvald rätt gissning + ×2-badge, ej interaktiv. -->
-    <template v-if="demo">
-      <p class="guess__prompt">{{ t('guess.prompt') }}</p>
-      <div class="guess__grid">
-        <div
-          v-for="res in options"
-          :key="res"
-          class="guess__opt amber-frame"
-          :class="{ 'guess__opt--sel': res === demoPick }"
-        >
-          <span class="guess__icon">{{ resourceIcon(res) }}</span>
-          <span>{{ t('resource.' + res) }}</span>
-          <span v-if="res === demoPick && demoDouble" class="guess__x2">×2</span>
-        </div>
-      </div>
-    </template>
-
-    <template v-else-if="!locked">
+    <template v-if="!locked">
       <p class="guess__prompt">{{ t('guess.prompt') }}</p>
       <div class="guess__grid">
         <button
@@ -101,6 +73,18 @@ function submit() {
 }
 /* Explicit färg (ej ärvd från body) så läges-temat följer med: blått i
    tutorial, bärnsten i skarpt — annars ärvs body:s skarpa färg även i övning. */
+.guess__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.guess__tid {
+  font-size: 1.8rem;
+  color: var(--color-ink-strong);
+}
+.guess__tid--slut {
+  color: var(--color-danger);
+}
 .guess__title {
   font-size: 1.6rem;
   margin: 0;
@@ -143,19 +127,6 @@ function submit() {
   color: var(--color-primary);
   font-family: var(--font-retro);
   font-size: 1.05rem;
-}
-.guess__x2 {
-  position: absolute;
-  top: -0.6rem;
-  right: -0.6rem;
-  font-family: var(--font-retro);
-  font-size: 1.1rem;
-  color: var(--color-ink-strong);
-  background: var(--color-background-2);
-  border: 1px solid var(--color-primary);
-  border-radius: 999px;
-  padding: 0.05em 0.5em;
-  box-shadow: 0 0 12px rgba(var(--mode-accent-rgb), 0.6);
 }
 .guess__opt--sel {
   border-color: var(--color-ink-strong);
