@@ -7,11 +7,60 @@
     "no"
   ],
   "_no_status": "UTKAST - ersätts av Josefs norska översättning",
-  "_undertext_status": "Extraherad ur bakat original, timing ögonmått. Verifiera sv-text/timing mot Premiere. Inga overlay-texter i originalet (ren bildvlogg).",
+  "_undertext_status": "Skriven 2026-11-24 efter bilden (originalet hade ingen text, ren bildvlogg). Stil som Jakob: tidsstämplad dag i livet. Josef granskar sv; no = utkast.",
   "titel": {
     "sv": "Sändebud",
     "no": "Sendebud"
   },
   "portratt": "Ida sändebud.portratt.jpg",
-  "undertext": []
+  "undertext": [
+    {
+      "t": 0.0,
+      "slut": 4.0,
+      "sv": "Följ med mig en dag som sändebud i Valv Nordväst",
+      "no": "Bli med meg en dag som sendebud i Valv Nordvest"
+    },
+    {
+      "t": 4.0,
+      "slut": 10.0,
+      "sv": "06:30 Kaffe innan valvet vaknar",
+      "no": "06:30 Kaffe før hvelvet våkner"
+    },
+    {
+      "t": 10.0,
+      "slut": 14.0,
+      "sv": "08:00 Headset på – dagens första förhandling",
+      "no": "08:00 Headset på – dagens første forhandling"
+    },
+    {
+      "t": 14.0,
+      "slut": 16.0,
+      "sv": "10:15 Ner till mötet med Valv Syd",
+      "no": "10:15 Ned til møtet med Valv Sør"
+    },
+    {
+      "t": 16.0,
+      "slut": 18.0,
+      "sv": "10:20 Handavtryck – bara sändebud kommer in",
+      "no": "10:20 Håndavtrykk – bare sendebud slipper inn"
+    },
+    {
+      "t": 18.0,
+      "slut": 20.0,
+      "sv": "10:22 Med budet under armen",
+      "no": "10:22 Med budet under armen"
+    },
+    {
+      "t": 20.0,
+      "slut": 22.0,
+      "sv": "11:40 Vi kom överens",
+      "no": "11:40 Vi ble enige"
+    },
+    {
+      "t": 22.0,
+      "slut": 25.2,
+      "sv": "13:00 Stormöte. Allt gick vägen",
+      "no": "13:00 Allmøte. Alt gikk bra"
+    }
+  ]
 }

@@ -7,11 +7,54 @@
     "no"
   ],
   "_no_status": "UTKAST - ersätts av Josefs norska översättning",
-  "_undertext_status": "Extraherad ur bakat original, timing ögonmått. Verifiera sv-text/timing mot Premiere. Inga overlay-texter i originalet. 'BEHOV: 78%' = diegetisk CRT-skärm, ej caption.",
+  "_undertext_status": "Skriven 2026-11-24 efter bilden (originalet hade ingen text, ren bildvlogg). Stil som Jakob: tidsstämplad dag i livet. Josef granskar sv; no = utkast.",
   "titel": {
     "sv": "Rapportör",
     "no": "Rapportør"
   },
   "portratt": "Ossian rapportör.portratt.jpg",
-  "undertext": []
+  "undertext": [
+    {
+      "t": 0.0,
+      "slut": 6.0,
+      "sv": "05:30 Pass innan skiftet",
+      "no": "05:30 Trening før skiftet"
+    },
+    {
+      "t": 6.0,
+      "slut": 12.0,
+      "sv": "07:00 Morgonmöte vid konsolen",
+      "no": "07:00 Morgenmøte ved konsollen"
+    },
+    {
+      "t": 12.0,
+      "slut": 18.0,
+      "sv": "07:10 Vad tror vi att Valv Syd behöver mest?",
+      "no": "07:10 Hva tror vi Valv Sør trenger mest?"
+    },
+    {
+      "t": 18.0,
+      "slut": 24.0,
+      "sv": "09:30 Lyssnar på buden och räknar på varje krona",
+      "no": "09:30 Lytter på budene og regner på hver krone"
+    },
+    {
+      "t": 24.0,
+      "slut": 28.0,
+      "sv": "10:02 Behov 78 %. Nu vet vi vad de vill ha",
+      "no": "10:02 Behov 78 %. Nå vet vi hva de vil ha"
+    },
+    {
+      "t": 28.0,
+      "slut": 30.0,
+      "sv": "10:03 …och vi budade på fel sak",
+      "no": "10:03 …og vi bød på feil ting"
+    },
+    {
+      "t": 30.0,
+      "slut": 32.62,
+      "sv": "10:05 Rapportör: den som ser helheten",
+      "no": "10:05 Rapportør: den som ser helheten"
+    }
+  ]
 }
