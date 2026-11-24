@@ -14,6 +14,7 @@ import type { TeamId } from '../engine/types'
 import { useGameStore } from '../store/gameStore'
 import VaraBild from './VaraBild.vue'
 import SidFigur from './SidFigur.vue'
+import { MIK_LAGE, startaMik, useMik } from '../mik'
 import { useI18n } from '@/station-kit/i18n'
 import { KLUBBA } from '@/config'
 
@@ -27,6 +28,12 @@ const resource = computed(() => store.currentResource)
 const countdown = computed(() => Math.max(0, store.secondsLeft ?? 0))
 /** Ordningen på skärmen: alltid A till vänster, B till höger (som rummet). */
 const sidor: TeamId[] = ['lag1', 'lag2']
+// Mikrofonsynken (mik.ts): på → figuren "pratar" bara när den sidans nivå är över tröskeln.
+// Av → båda figurerna visar ljudvågor under hela budgivningen (bara stämning).
+const mik = useMik()
+const mikPa = MIK_LAGE !== 'av'
+if (mikPa) void startaMik()
+const pratar = (sida: 'A' | 'B') => (mikPa && mik.aktiv ? mik[sida].pratar : true)
 const SIDA = { lag1: 'A', lag2: 'B' } as const
 /** Tidsringen: omkrets och andel tid kvar av förhandlingen. */
 const RING = 2 * Math.PI * 118
@@ -86,7 +93,7 @@ const saldText = computed(() =>
     <!-- STEG: budgivning — varan i en tidsring mellan sidornas sändebud (inga belopp: buden ges muntligt) -->
     <template v-else-if="step === 'negotiating'">
       <div class="bz__scen">
-        <SidFigur sida="A" :size="120" pratar />
+        <SidFigur sida="A" :size="120" :pratar="pratar('A')" />
         <div class="bz__mitt">
           <svg class="bz__ring" viewBox="0 0 260 260" aria-hidden="true">
             <circle cx="130" cy="130" r="118" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="12" />
@@ -100,7 +107,7 @@ const saldText = computed(() =>
           <VaraBild v-if="resource" :vara="resource" :size="112" class="bz__ringvara" />
           <span class="bz__timer mono" :class="{ 'bz__timer--slut': countdown <= 5 }">0:{{ countdown.toString().padStart(2, '0') }}</span>
         </div>
-        <SidFigur sida="B" :size="120" pratar />
+        <SidFigur sida="B" :size="120" :pratar="pratar('B')" />
       </div>
       <button class="bz__end" @click="store.finishNegotiation()">{{ t('bidding.done') }}</button>
     </template>

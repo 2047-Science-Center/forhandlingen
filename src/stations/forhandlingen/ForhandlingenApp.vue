@@ -27,6 +27,8 @@ import { initIncheckning, incheckningOptions } from '@/station-kit/incheckning/i
 import IncheckningScreen from '@/station-kit/incheckning/IncheckningScreen.vue'
 import { spela, arSkrivare, appLage } from './ljus'
 import SpellageSymbol from '@/station-kit/spellage/SpellageSymbol.vue'
+import MikTest from './components/MikTest.vue'
+import { MIK_LAGE } from './mik'
 
 import ReporterConsole from './components/ReporterConsole.vue'
 import PilotPanel from './components/PilotPanel.vue'
@@ -328,6 +330,8 @@ onUnmounted(() => {
         <VemDarLek :people="lekPeople" :my-side="lekSide" :leader="lekLeader" :transport="store.transport()" />
       </template>
     </RotationScreens>
+    <!-- Mikrofonsynkens testvy (bara med ?mik=visa) -->
+    <MikTest v-if="MIK_LAGE === 'visa'" />
     <!-- Ljusförhandsvisning (renderar bara med ?ljus=visa) -->
     <LjusRemsa />
     <!-- Regis filmer (trailern) över allt, bara i filmens fas -->

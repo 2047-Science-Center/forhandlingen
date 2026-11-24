@@ -43,6 +43,8 @@ const props = withDefaults(
   { allowGuess: true, demo: null, demoHatches: 5 },
 )
 const store = useGameStore()
+/** Miljöbilden (bergrummet med luckväggen, bildgen) svagt bakom konsolen, så skärmen känns som en plats. */
+const miljo = { '--miljo': `url("${import.meta.env.BASE_URL}marknad/miljo.jpg")` }
 const { t } = useI18n()
 
 const critical = computed(() => (props.demo ? (props.demoCritical ?? '') : store.state.critical[props.team]))
@@ -64,7 +66,7 @@ const demoCells = computed<HatchCell[]>(() =>
 </script>
 
 <template>
-  <div class="console">
+  <div class="console" :style="miljo">
     <!-- Huvudet: pengarna (mynt) · sidan · er livsviktiga vara -->
     <div v-if="demo || store.phase !== 'intro'" class="console__header">
       <div class="stat" data-tut="capital">
@@ -106,6 +108,10 @@ const demoCells = computed<HatchCell[]>(() =>
 
 <style scoped>
 .console {
+  background:
+    linear-gradient(180deg, rgba(5, 16, 11, 0.8), rgba(5, 16, 11, 0.94) 45%),
+    var(--miljo) center 30% / cover no-repeat;
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
   gap: 1rem;

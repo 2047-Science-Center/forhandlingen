@@ -17,7 +17,9 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { TeamId } from '../engine/types'
 import { useGameStore } from '../store/gameStore'
 import { scoreAll } from '../engine/scoring'
-import { resourceIcon } from '../resources'
+import VaraBild from './VaraBild.vue'
+import SidFigur from './SidFigur.vue'
+import MyntStapel from './MyntStapel.vue'
 import { useI18n } from '@/station-kit/i18n'
 import { audio } from '@/station-kit/audio/AudioEngine'
 import { useLjus } from '@/station-kit/ljus'
@@ -133,24 +135,24 @@ const poang = computed(() => `${scores.value.lag1.teamScore} – ${scores.value.
       <template #fore>
         <div class="fa__lag">
           <section v-for="id in teams" :key="id" class="fa__sida amber-frame">
-            <header class="fa__namn">{{ SIDA_NAMN[id] }}</header>
-            <p class="fa__crit">
-              <span>{{ resourceIcon(store.state.critical[id]) }}</span>
-              {{ t('resource.' + store.state.critical[id]) }}
-            </p>
-            <ul class="fa__rader">
-              <li v-if="steg >= 1" :class="scores[id].securedCritical ? 'ok' : 'bad'">
-                <b>{{ scores[id].securedCritical ? '✓' : '✗' }}</b>
-                {{ scores[id].securedCritical ? t('reveal.cond_secured') : t('reveal.cond_not_secured') }}
-              </li>
-              <li v-if="steg >= 2 && scores[id].securedCritical" class="ok">
-                <b>💰</b> {{ t('reveal.cond_capital', { n: scores[id].capitalLeft }) }}
-              </li>
-              <li v-if="steg >= 3 && scores[id].securedCritical" :class="scores[id].guessedRight ? 'ok' : 'bad'">
-                <b>{{ scores[id].guessedRight ? '×2' : '✗' }}</b>
-                {{ scores[id].guessedRight ? t('reveal.cond_guess_right') : t('reveal.cond_guess_wrong') }}
-              </li>
-            </ul>
+            <header class="fa__namn"><SidFigur :sida="SIDA_FOR_LAG[id]" :size="44" :headset="false" />{{ SIDA_NAMN[id] }}</header>
+            <div class="fa__bilder">
+              <!-- 1 · livsviktig säkrad? -->
+              <div class="fa__steg">
+                <span class="fa__kort" :class="{ 'fa__kort--bort': steg >= 1 && !scores[id].securedCritical }">
+                  <VaraBild :vara="store.state.critical[id]" :size="72" />
+                  <b v-if="steg >= 1" class="fa__stampel" :class="scores[id].securedCritical ? 'ok' : 'bad'">{{ scores[id].securedCritical ? '✓' : '0' }}</b>
+                </span>
+              </div>
+              <!-- 2 · mynt kvar = poäng -->
+              <div v-if="steg >= 2 && scores[id].securedCritical" class="fa__steg fa__in">
+                <MyntStapel :kr="scores[id].capitalLeft" liten />
+              </div>
+              <!-- 3 · rätt gissning ×2 -->
+              <div v-if="steg >= 3 && scores[id].securedCritical" class="fa__steg fa__in">
+                <span class="fa__x2" :class="{ 'fa__x2--miss': !scores[id].guessedRight }">×2</span>
+              </div>
+            </div>
           </section>
         </div>
       </template>
@@ -191,33 +193,64 @@ const poang = computed(() => `${scores.value.lag1.teamScore} – ${scores.value.
   font-size: clamp(26px, 2.8vw, 38px);
   color: var(--color-primary);
 }
-.fa__crit {
-  margin: 0;
-  font-family: var(--font-mono);
-  color: var(--color-ink-muted);
-}
-.fa__rader {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.fa__namn {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: clamp(15px, 1.5vw, 19px);
+  align-items: center;
+  gap: 10px;
 }
-.fa__rader li {
-  animation: fa-in 0.3s var(--ease-out) both;
+.fa__bilder {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  min-height: 110px;
 }
-.fa__rader b {
-  display: inline-block;
-  min-width: 2.2em;
+.fa__steg {
+  display: flex;
+  align-items: flex-end;
 }
-.fa__rader .ok {
-  color: var(--color-ink-strong);
+.fa__in {
+  animation: fa-in 0.35s var(--ease-out) both;
 }
-.fa__rader .bad {
-  color: var(--color-danger);
+.fa__kort {
+  position: relative;
+  display: inline-flex;
+  padding: 6px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: opacity 300ms, filter 300ms;
+}
+.fa__kort--bort {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+.fa__stampel {
+  position: absolute;
+  right: -10px;
+  bottom: -8px;
+  font-family: var(--font-rubrik);
+  font-size: 34px;
+  line-height: 1;
+  padding: 2px 10px 4px;
+  border-radius: 10px;
+  transform: rotate(-8deg);
+  animation: fa-stampel 220ms cubic-bezier(0.55, 0, 1, 0.45) both;
+}
+.fa__stampel.ok { background: #7ad14f; color: #0b1a07; }
+.fa__stampel.bad { background: var(--color-danger); color: #fff; }
+.fa__x2 {
+  font-family: var(--font-rubrik);
+  font-weight: 700;
+  font-size: 46px;
+  line-height: 1;
+  color: #ff3cc8;
+}
+.fa__x2--miss {
+  color: var(--color-ink-muted);
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+@keyframes fa-stampel {
+  from { opacity: 0; transform: rotate(-14deg) scale(2); }
 }
 .fa__rakna {
   display: flex;
