@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Förhandlingen — båda sidorna (pilot)</title>
+    <!-- Pilotverktyg: sida A och sida B bredvid varandra i ETT fönster, som två skärmar på samma NUC.
+         Samma origin → BroadcastChannel synkar sidorna precis som i riggen. ?hopp=intro|prov|live skickas vidare. -->
+    <style>
+      html, body { margin: 0; height: 100%; background: #000; }
+      body { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+      iframe { width: 100%; height: 100%; border: 0; background: #05100b; }
+    </style>
+  </head>
+  <body>
+    <iframe id="a" title="Sida A" allow="autoplay"></iframe>
+    <iframe id="b" title="Sida B" allow="autoplay"></iframe>
+    <script>
+      const qs = location.search
+      const bas = location.pathname.replace(/split\.html$/, '')
+      document.getElementById('a').src = `${bas}${qs}#lag1`
+      // Sida B startar strax efter så att den hälsar på en redan startad ledare.
+      setTimeout(() => (document.getElementById('b').src = `${bas}${qs}#lag2`), 600)
+    </script>
+  </body>
+</html>

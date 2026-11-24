@@ -14,10 +14,11 @@ import type { TeamId } from '../engine/types'
 import { useGameStore } from '../store/gameStore'
 import VaraBild from './VaraBild.vue'
 import SidFigur from './SidFigur.vue'
+import { MIK_LAGE, startaMik, useMik } from '../mik'
 import { useI18n } from '@/station-kit/i18n'
 import { KLUBBA } from '@/config'
 
-const props = defineProps<{ team: TeamId }>()
+const props = defineProps<{ team: TeamId; /** Er livsviktiga är ute nu → röd ring + LIVSVIKTIG-tagg. */ livsviktig?: boolean }>()
 const store = useGameStore()
 const { t } = useI18n()
 
@@ -27,6 +28,12 @@ const resource = computed(() => store.currentResource)
 const countdown = computed(() => Math.max(0, store.secondsLeft ?? 0))
 /** Ordningen på skärmen: alltid A till vänster, B till höger (som rummet). */
 const sidor: TeamId[] = ['lag1', 'lag2']
+// Mikrofonsynken (mik.ts): på → figuren "pratar" bara när den sidans nivå är över tröskeln.
+// Av → båda figurerna visar ljudvågor under hela budgivningen (bara stämning).
+const mik = useMik()
+const mikPa = MIK_LAGE !== 'av'
+if (mikPa) void startaMik()
+const pratar = (sida: 'A' | 'B') => (mikPa && mik.aktiv ? mik[sida].pratar : true)
 const SIDA = { lag1: 'A', lag2: 'B' } as const
 /** Tidsringen: omkrets och andel tid kvar av förhandlingen. */
 const RING = 2 * Math.PI * 118
@@ -74,7 +81,8 @@ const saldText = computed(() =>
     <template v-if="step === 'getready'">
       <div class="bz__scen">
         <SidFigur sida="A" :size="120" />
-        <div class="bz__mitt">
+        <div class="bz__mitt" :class="{ 'bz__mitt--livs': livsviktig }">
+          <span v-if="livsviktig" class="bz__livstagg">{{ t('critical.tagg') }}</span>
           <VaraBild v-if="resource" :vara="resource" :size="120" />
           <span class="bz__namn">{{ resource ? t('resource.' + resource) : '' }}</span>
         </div>
@@ -86,13 +94,14 @@ const saldText = computed(() =>
     <!-- STEG: budgivning — varan i en tidsring mellan sidornas sändebud (inga belopp: buden ges muntligt) -->
     <template v-else-if="step === 'negotiating'">
       <div class="bz__scen">
-        <SidFigur sida="A" :size="120" pratar />
-        <div class="bz__mitt">
+        <SidFigur sida="A" :size="120" :pratar="pratar('A')" />
+        <div class="bz__mitt" :class="{ 'bz__mitt--livs': livsviktig }">
+          <span v-if="livsviktig" class="bz__livstagg">{{ t('critical.tagg') }}</span>
           <svg class="bz__ring" viewBox="0 0 260 260" aria-hidden="true">
             <circle cx="130" cy="130" r="118" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="12" />
             <circle
               cx="130" cy="130" r="118" fill="none" stroke-width="12" stroke-linecap="round"
-              :stroke="countdown <= 5 ? 'var(--color-danger)' : 'var(--color-primary)'"
+              :stroke="countdown <= 5 || livsviktig ? 'var(--color-danger)' : 'var(--color-primary)'"
               :stroke-dasharray="RING" :stroke-dashoffset="RING * (1 - tidKvar)"
               transform="rotate(-90 130 130)" class="bz__ringfg"
             />
@@ -100,7 +109,7 @@ const saldText = computed(() =>
           <VaraBild v-if="resource" :vara="resource" :size="112" class="bz__ringvara" />
           <span class="bz__timer mono" :class="{ 'bz__timer--slut': countdown <= 5 }">0:{{ countdown.toString().padStart(2, '0') }}</span>
         </div>
-        <SidFigur sida="B" :size="120" pratar />
+        <SidFigur sida="B" :size="120" :pratar="pratar('B')" />
       </div>
       <button class="bz__end" @click="store.finishNegotiation()">{{ t('bidding.done') }}</button>
     </template>
@@ -184,6 +193,32 @@ const saldText = computed(() =>
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
+}
+.bz__mitt--livs::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 40px rgba(255, 90, 60, 0.5), inset 0 0 30px rgba(255, 90, 60, 0.25);
+  animation: bz-livs 1.4s ease-in-out infinite;
+}
+@keyframes bz-livs {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+.bz__livstagg {
+  position: absolute;
+  top: -6px;
+  z-index: 2;
+  font-family: var(--font-rubrik);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+  color: #fff;
+  background: var(--color-danger);
+  padding: 0.05em 0.6em;
+  border-radius: 6px;
+  transform: rotate(-4deg);
 }
 .bz__ring {
   position: absolute;
@@ -409,6 +444,7 @@ const saldText = computed(() =>
 }
 @media (prefers-reduced-motion: reduce) {
   .kl__stampel { animation: none; }
+  .bz__mitt--livs::before { animation: none; }
 }
 .kl__angra {
   margin-top: 1rem;

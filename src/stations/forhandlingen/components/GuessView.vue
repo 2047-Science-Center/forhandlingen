@@ -9,7 +9,6 @@ import type { TeamId } from '../engine/types'
 import { useGameStore } from '../store/gameStore'
 import VaraBild from './VaraBild.vue'
 import { useI18n } from '@/station-kit/i18n'
-import RoleIcon from './RoleIcon.vue'
 import { useLjus } from '@/station-kit/ljus'
 import { SIDA_FOR_LAG } from '../ljus'
 
@@ -35,11 +34,6 @@ function submit() {
     <div class="guess__head">
       <h3 class="guess__title">{{ t('guess.title') }}</h3>
       <span v-if="sekunder != null" class="guess__tid mono" :class="{ 'guess__tid--slut': sekunder <= 5 }">{{ sekunder }} s</span>
-    </div>
-
-    <div v-if="!locked" class="guess__role">
-      <RoleIcon role="B" :size="34" />
-      <span class="guess__rolelabel">{{ t('guess.role_turn') }}</span>
     </div>
 
     <template v-if="!locked">

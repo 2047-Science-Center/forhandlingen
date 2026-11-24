@@ -158,12 +158,13 @@ export const TRIAL_DATASET: Dataset = {
 export const ALL_DATASETS: Dataset[] = [TRIAL_DATASET, ...DATASETS]
 
 /**
- * Tider (sekunder). getReadyFirst = "gör er redo" före FÖRSTA luckan; getReady = mellan
+ * Tider (sekunder). getReadyFirst = "gör er redo" före FÖRSTA luckan. De sista 8 s pekar skärmen först på den
+ * livsviktiga, sedan på pengarna (Josef 2026-11-24); i skarpt läge 12 s så att NU GÄLLER DET (~4 s) hinner först; getReady = mellan
  * luckorna; negotiation = budgivningen per lucka; guess = gissningen efter sista luckan.
  */
 export const ROUND_TIMERS = {
-  prov: { getReadyFirst: 3, getReady: 3, negotiation: 20 },
-  live: { getReadyFirst: 5, getReady: 4, negotiation: 30, guess: 20 },
+  prov: { getReadyFirst: 8, getReady: 3, negotiation: 20 },
+  live: { getReadyFirst: 12, getReady: 4, negotiation: 30, guess: 20 },
 } as const
 
 /** Klubban: hur länge ÅNGRA gäller efter KLUBBA, och prisstegen på knapparna. */
@@ -172,6 +173,13 @@ export const KLUBBA = {
   steg: [1, 5] as const,
   startpris: 20,
 } as const
+
+/**
+ * Provluckan: en övningslucka (20 s, blått läge, inget räknas) mellan "Er tur" och skarpt läge.
+ * AV sedan exempelförhandlingen visar hela förloppet inklusive Klubban (Josef 2026-11-24).
+ * Slå på igen om testerna visar att grupperna behöver öva klubban.
+ */
+export const PROVLUCKA = false
 
 /**
  * Väntpunkter mellan skärmarna (spelläget, instruktionen klar): går vidare av sig

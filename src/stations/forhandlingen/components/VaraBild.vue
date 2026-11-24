@@ -75,6 +75,11 @@ const src = (id: string) => `${import.meta.env.BASE_URL}varor/${id}.png`
   justify-content: center;
   flex: none;
 }
+.vb__img {
+  /* Genererade bilder har mörk bakgrund: tona ut kanterna så varan flyter på skärmen. */
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 52%, transparent 71%);
+  mask-image: radial-gradient(circle at 50% 50%, #000 52%, transparent 71%);
+}
 .vb__img,
 .vb__svg {
   width: 100%;

@@ -24,6 +24,7 @@ const antal = computed(() => Math.max(0, Math.ceil(props.kr / 10)))
   gap: 0.8rem;
 }
 .ms__summa {
+  white-space: nowrap;
   font-size: 2.6rem;
   line-height: 1;
   color: var(--color-ink-strong);

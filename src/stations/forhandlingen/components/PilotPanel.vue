@@ -56,6 +56,7 @@ const views: ViewSide[] = ['lag1', 'lag2', 'shared']
 
 <style scoped>
 .pilot {
+  opacity: 0.35;
   position: fixed;
   right: 0.75rem;
   bottom: 0.75rem;

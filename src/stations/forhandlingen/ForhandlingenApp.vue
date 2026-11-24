@@ -12,7 +12,6 @@ import CrtScreen from '@/station-kit/components/CrtScreen.vue'
 import AttractScreen from '@/station-kit/components/AttractScreen.vue'
 import Entre from '@/station-kit/entre/Entre.vue'
 import { initEntre } from '@/station-kit/entre/entre'
-import MuteButton from '@/station-kit/components/MuteButton.vue'
 import ModeCountdown from '@/station-kit/components/ModeCountdown.vue'
 import { useI18n } from '@/station-kit/i18n'
 import { useStationMode } from '@/station-kit/mode/useStationMode'
@@ -27,6 +26,8 @@ import { initIncheckning, incheckningOptions } from '@/station-kit/incheckning/i
 import IncheckningScreen from '@/station-kit/incheckning/IncheckningScreen.vue'
 import { spela, arSkrivare, appLage } from './ljus'
 import SpellageSymbol from '@/station-kit/spellage/SpellageSymbol.vue'
+import MikTest from './components/MikTest.vue'
+import { MIK_LAGE } from './mik'
 
 import ReporterConsole from './components/ReporterConsole.vue'
 import PilotPanel from './components/PilotPanel.vue'
@@ -237,7 +238,7 @@ onMounted(() => {
   entre.attachTransport(store.transport())
   if (hopp) {
     entered.value = true
-    if (store.view !== 'lag2') store.onbGoto(hopp)
+    if (store.view !== 'lag2') store.onbGoto(hopp, Date.now() + 600)
   }
   window.addEventListener('contextmenu', onContextMenu)
   ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, onActivity, { passive: true }))
@@ -262,11 +263,6 @@ onUnmounted(() => {
     </div>
 
     <template v-else>
-      <div class="app__chrome">
-        <span class="app__title">{{ t('app.title') }}</span>
-        <MuteButton />
-      </div>
-
       <!-- Övningsmärkning: egen in-flow-rad högst upp (ALDRIG position:fixed över
            innehållet — det var därför lag-/valv-skyltar kunde täcka texten i test
            1). Syns HELA tutorialen och försvinner i samma stund spelet blir
@@ -328,6 +324,8 @@ onUnmounted(() => {
         <VemDarLek :people="lekPeople" :my-side="lekSide" :leader="lekLeader" :transport="store.transport()" />
       </template>
     </RotationScreens>
+    <!-- Mikrofonsynkens testvy (bara med ?mik=visa) -->
+    <MikTest v-if="MIK_LAGE === 'visa'" />
     <!-- Ljusförhandsvisning (renderar bara med ?ljus=visa) -->
     <LjusRemsa />
     <!-- Regis filmer (trailern) över allt, bara i filmens fas -->

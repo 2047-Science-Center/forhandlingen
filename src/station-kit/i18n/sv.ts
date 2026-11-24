@@ -32,6 +32,23 @@ export const sv: Record<string, string> = {
   'critical.copy.radiosandare': 'Er sändare slogs ut i stormen. Ni är avskurna — utan en ny når ni ingen.',
   'critical.copy.styrkort': 'Ett överslag stekte styrkortet. Tills det bytts styr ni luft och värme för hand — och det håller inte länge.',
 
+  // --- exempel ---
+  'exempel.inspelning': 'INSPELNING · TIDIGARE TEST',
+  'exempel.viskar': 'viskar, bara egna sidan hör',
+  'exempel.a_gissar': 'A gissar styrkortet',
+  'exempel.b_gissar': 'B gissar bränslecellen',
+  'exempel.ratt': 'RÄTT · ×2',
+  'exempel.lurade': 'LURADE',
+  'exempel.a_livs': 'A: LIVSVIKTIG',
+  'exempel.hoppa': 'hoppa över ▸',
+
+  // --- redo ---
+  'redo.rubrik': 'Er tur',
+  'redo.sandebud': 'Sändebud',
+  'redo.sandebud_text': 'Headset på. Ni budar – fråga rapportören.',
+  'redo.rapportor': 'Rapportör',
+  'redo.rapportor_text': 'Lyssna, tänk och sköt skärmen.',
+
   // --- facil ---
   'facil.cancel': 'Avbryt',
   'facil.exit': 'Avsluta',
@@ -119,6 +136,13 @@ export const sv: Record<string, string> = {
 
   // --- res ---
   'res.points': 'POÄNG',
+
+  // --- pek ---
+  'pek.livs': 'Det här är er livsviktiga. Ni måste få tag på den!',
+  'pek.livs_uppe': 'Nu! Den här måste ni ta.',
+  'pek.pengar': 'Era pengar. Slösa inte – det som är kvar blir poäng.',
+  'pek.pengar_sista': 'Sista luckan. Det ni har kvar blir poäng.',
+  'pek.pengar_etikett': 'PENGAR',
 
   // --- regel ---
   'regel.1': 'Måste ha',
