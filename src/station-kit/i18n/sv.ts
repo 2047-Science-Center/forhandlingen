@@ -120,6 +120,13 @@ export const sv: Record<string, string> = {
   // --- res ---
   'res.points': 'POÄNG',
 
+  // --- pek ---
+  'pek.livs': 'Det här är er livsviktiga. Ni måste få tag på den!',
+  'pek.livs_uppe': 'Nu! Den här måste ni ta.',
+  'pek.pengar': 'Era pengar. Slösa inte – det som är kvar blir poäng.',
+  'pek.pengar_sista': 'Sista luckan. Det ni har kvar blir poäng.',
+  'pek.pengar_etikett': 'PENGAR',
+
   // --- regel ---
   'regel.1': 'Måste ha',
   'regel.2': 'Kvar = poäng',

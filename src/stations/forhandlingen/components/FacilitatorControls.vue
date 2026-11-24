@@ -6,15 +6,19 @@
  *   - Paus: fryser nedräkningen och lägger paus-overlay på båda skärmarna.
  *   - Starta om: nollställer hela stationen (med bekräftelse mot råkade klick).
  * Ligger ovanför paus-overlayen så pausen alltid kan hävas.
+ * Renodlat (Josef 2026-11-24): allt ligger bakom en diskret ⋯-knapp i hörnet, även ljudknappen.
+ * Under paus visas knapparna alltid (annars går pausen inte att häva).
  */
 import { ref } from 'vue'
 import { useGameStore } from '../store/gameStore'
 import { useI18n } from '@/station-kit/i18n'
+import MuteButton from '@/station-kit/components/MuteButton.vue'
 
 const store = useGameStore()
 const { t } = useI18n()
 /** '' = inga knappar bekräftas, annars vilken åtgärd som väntar på bekräftelse. */
 const confirm = ref<'' | 'reset' | 'exit'>('')
+const oppen = ref(false)
 
 function doReset() {
   confirm.value = ''
@@ -42,7 +46,10 @@ function doExit() {
         <button class="crt-button facil__btn" @click="confirm = ''">{{ t('facil.cancel') }}</button>
       </div>
     </div>
+    <button v-else-if="!oppen && !store.paused" class="facil__dold" aria-label="Facilitator" @click="oppen = true">⋯</button>
     <div v-else class="facil__row">
+      <button v-if="!store.paused" class="crt-button facil__btn" @click="oppen = false">×</button>
+      <MuteButton />
       <button class="crt-button facil__btn" :class="{ 'crt-button--strong': store.paused }" @click="store.togglePause()">
         {{ store.paused ? '▶ ' + t('facil.resume') : '⏸ ' + t('facil.pause') }}
       </button>
@@ -53,6 +60,17 @@ function doExit() {
 </template>
 
 <style scoped>
+.facil__dold {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
 .facil {
   position: fixed;
   left: 0.75rem;

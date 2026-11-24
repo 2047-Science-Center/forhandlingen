@@ -12,7 +12,6 @@ import CrtScreen from '@/station-kit/components/CrtScreen.vue'
 import AttractScreen from '@/station-kit/components/AttractScreen.vue'
 import Entre from '@/station-kit/entre/Entre.vue'
 import { initEntre } from '@/station-kit/entre/entre'
-import MuteButton from '@/station-kit/components/MuteButton.vue'
 import ModeCountdown from '@/station-kit/components/ModeCountdown.vue'
 import { useI18n } from '@/station-kit/i18n'
 import { useStationMode } from '@/station-kit/mode/useStationMode'
@@ -264,11 +263,6 @@ onUnmounted(() => {
     </div>
 
     <template v-else>
-      <div class="app__chrome">
-        <span class="app__title">{{ t('app.title') }}</span>
-        <MuteButton />
-      </div>
-
       <!-- Övningsmärkning: egen in-flow-rad högst upp (ALDRIG position:fixed över
            innehållet — det var därför lag-/valv-skyltar kunde täcka texten i test
            1). Syns HELA tutorialen och försvinner i samma stund spelet blir
