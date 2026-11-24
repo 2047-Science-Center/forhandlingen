@@ -238,7 +238,7 @@ onMounted(() => {
   entre.attachTransport(store.transport())
   if (hopp) {
     entered.value = true
-    if (store.view !== 'lag2') store.onbGoto(hopp)
+    if (store.view !== 'lag2') store.onbGoto(hopp, Date.now() + 600)
   }
   window.addEventListener('contextmenu', onContextMenu)
   ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, onActivity, { passive: true }))

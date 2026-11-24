@@ -1,12 +1,12 @@
 # Rösterna till exempelförhandlingens animatic (manus.json → assets/vo/<id>.mp3 + langder.json).
 # Samma ElevenLabs-inställningar som Människa eller maskins exempelrunda. Viskningar läses lägre/lugnare.
 # Nyckeln (ELEVENLABS_API_KEY) läses ur projektets .env och skrivs aldrig ut.
-#   python3 -I gen_vo.py            generera det som saknas
+#   python3 -I gen_vo.py [utmapp]   generera det som saknas (standard assets/vo; appen: public/exempel/vo)
 import json, subprocess, sys, urllib.request
 from pathlib import Path
 
 HAR = Path(__file__).resolve().parent
-UT = HAR / "assets/vo"
+UT = Path(sys.argv[1]) if len(sys.argv) > 1 else HAR / "assets/vo"
 MJ = Path("/Users/josefsjonneby/Kontext/Mjukvara")
 
 
@@ -20,9 +20,9 @@ def nyckel() -> str:
 
 
 def main() -> None:
-    m = json.loads((HAR / "manus.json").read_text())
+    m = json.loads((HAR.parents[1] / "src/stations/forhandlingen/exempel/manus.json").read_text())
     roller = m["roller"]
-    rader = [r for r in m["ram"]] + [r for l in m["luckor"] for r in l["rader"]]
+    rader = m["ram"] + [r for l in m["luckor"] for r in l["rader"]] + m["gissning"]["rader"] + m["slut"]
     UT.mkdir(parents=True, exist_ok=True)
     key = nyckel()
     for r in rader:
@@ -48,7 +48,7 @@ def main() -> None:
         d = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(UT / f"{r['id']}.mp3")],
                            capture_output=True, text=True).stdout.strip()
         langder[r["id"]] = round(float(d), 2)
-    (HAR / "langder.json").write_text(json.dumps(langder, indent=1))
+    (UT / "langder.json").write_text(json.dumps(langder, indent=1))
     print("total tal:", round(sum(langder.values()), 1), "s")
 
 

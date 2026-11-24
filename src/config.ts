@@ -175,6 +175,13 @@ export const KLUBBA = {
 } as const
 
 /**
+ * Provluckan: en övningslucka (20 s, blått läge, inget räknas) mellan "Er tur" och skarpt läge.
+ * AV sedan exempelförhandlingen visar hela förloppet inklusive Klubban (Josef 2026-11-24).
+ * Slå på igen om testerna visar att grupperna behöver öva klubban.
+ */
+export const PROVLUCKA = false
+
+/**
  * Väntpunkter mellan skärmarna (spelläget, instruktionen klar): går vidare av sig
  * själv efter så här många sekunder med synlig nedräkning, så en tyst sida aldrig
  * låser stationen.

@@ -23,40 +23,16 @@ import VaraBild from './VaraBild.vue'
 import MyntStapel from './MyntStapel.vue'
 import BiddingZone from './BiddingZone.vue'
 import GuessView from './GuessView.vue'
-import type { HatchCell } from '../store/gameStore'
 
 // allowGuess=false i provluckan: ingen gissning där.
-// demo: lugnt demo-tillstånd bakom instruktionens coach-mark (luckväggen); driver inget spel-state.
-const props = withDefaults(
-  defineProps<{
-    team: TeamId
-    allowGuess?: boolean
-    demo?: 'resource' | null
-    demoCritical?: string
-    demoCapital?: number
-    demoResource?: string
-    demoHatches?: number
-  }>(),
-  { allowGuess: true, demo: null, demoHatches: 5 },
-)
+const props = withDefaults(defineProps<{ team: TeamId; allowGuess?: boolean }>(), { allowGuess: true })
 const store = useGameStore()
 const { t } = useI18n()
 /** Miljöbilden (bergrummet med luckväggen, bildgen) svagt bakom konsolen, så skärmen känns som en plats. */
 const miljo = { '--miljo': `url("${import.meta.env.BASE_URL}marknad/miljo.jpg")` }
 
-const critical = computed(() => (props.demo ? (props.demoCritical ?? '') : store.state.critical[props.team]))
-const capital = computed(() => (props.demo ? (props.demoCapital ?? 0) : store.state.capital[props.team]))
-
-const demoCells = computed<HatchCell[]>(() =>
-  Array.from({ length: props.demoHatches }, (_, i) => ({
-    index: i,
-    hatch: i + 1,
-    kind: i === 0 ? ('active' as const) : ('upcoming' as const),
-    winner: null,
-    resource: i === 0 ? (props.demoResource ?? null) : null,
-    price: null,
-  })),
-)
+const critical = computed(() => store.state.critical[props.team])
+const capital = computed(() => store.state.capital[props.team])
 
 // --- Påminnelserna ---
 const s = computed(() => store.state)
@@ -68,11 +44,11 @@ const sistaGetready = computed(
 /** Före första luckan, de sista 8 sekunderna: 8–5 den livsviktiga, 4–1 pengarna
  *  (i skarpt läge är nedräkningen längre så att NU GÄLLER DET hinner försvinna först). */
 const kvar = computed(() => store.secondsLeft ?? 99)
-const pekLivsForst = computed(() => !props.demo && forstaGetready.value && kvar.value > 4 && kvar.value <= 8)
-const pekPengar = computed(() => !props.demo && ((forstaGetready.value && kvar.value <= 4) || sistaGetready.value))
+const pekLivsForst = computed(() => forstaGetready.value && kvar.value > 4 && kvar.value <= 8)
+const pekPengar = computed(() => ((forstaGetready.value && kvar.value <= 4) || sistaGetready.value))
 /** Er livsviktiga är ute på marknaden just nu. */
 const livsUppe = computed(
-  () => !props.demo && iLucka.value && !!critical.value && store.currentResource === critical.value && store.step !== 'sald',
+  () => iLucka.value && !!critical.value && store.currentResource === critical.value && store.step !== 'sald',
 )
 const pengarText = computed(() => (sistaGetready.value ? t('pek.pengar_sista') : t('pek.pengar')))
 const livsText = computed(() => (livsUppe.value ? t('pek.livs_uppe') : t('pek.livs')))
@@ -80,7 +56,7 @@ const livsText = computed(() => (livsUppe.value ? t('pek.livs_uppe') : t('pek.li
 
 <template>
   <div class="console" :style="miljo">
-    <div v-if="!demo && store.phase === 'intro'" class="intro">
+    <div v-if="store.phase === 'intro'" class="intro">
       <p class="intro__vanta crt-caret">{{ t('intro.get_ready') }}</p>
     </div>
 
@@ -94,16 +70,10 @@ const livsText = computed(() => (livsUppe.value ? t('pek.livs_uppe') : t('pek.li
 
       <!-- MARKNADEN -->
       <main class="k__mitt">
-        <div class="k__vagg" :data-tut="demo ? 'luckor' : undefined">
-          <MarknadsVagg :cells="demo ? demoCells : store.hatchCells" liten />
+        <div class="k__vagg">
+          <MarknadsVagg :cells="store.hatchCells" liten />
         </div>
-        <template v-if="demo">
-          <div v-if="demo === 'resource'" class="k__demo" data-tut="resource">
-            <VaraBild :vara="demoResource ?? ''" :size="140" />
-            <span class="k__demonamn">{{ t('resource.' + demoResource) }}</span>
-          </div>
-        </template>
-        <BiddingZone v-else-if="store.phase === 'bidding'" :team="team" :livsviktig="livsUppe" />
+        <BiddingZone v-if="store.phase === 'bidding'" :team="team" :livsviktig="livsUppe" />
         <GuessView v-else-if="store.phase === 'guessing' && allowGuess" :team="team" />
       </main>
 
@@ -240,18 +210,6 @@ const livsText = computed(() => (livsUppe.value ? t('pek.livs_uppe') : t('pek.li
 }
 .k-pek-leave-to {
   opacity: 0;
-}
-.k__demo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 1rem;
-}
-.k__demonamn {
-  font-family: var(--font-retro);
-  font-size: 1.6rem;
-  color: var(--color-ink-strong);
 }
 @media (prefers-reduced-motion: reduce) {
   .k__sida { transition: none; }

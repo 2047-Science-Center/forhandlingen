@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exempel-3D · Förhandlingen</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #141518; overflow: hidden; }
+  canvas { display: block; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "./vendor/three.module.js",
+  "three/addons/": "./vendor/addons/"
+} }
+</script>
+</head>
+<body>
+<script type="module">
+// Exempelförhandlingens 3D-lager (Förhandlingen, onboarding/Exempel.vue). Stationsmodellen ur lib.js med TVÅ personer
+// per sida i SIDFÄRGERNA (A varmvitt, B magenta — samma som entrén/underglow). Ingen egen tidslinje: föräldern
+// skickar postMessage {type:'exempel', talar:{sida:'A'|'B', vem:'sandebud'|'rapportor'}|null, viskar?:bool, kamera?:'bred'|'A'|'B'}
+// och kameran glider till den som pratar. Viskning = sidans par närbild, talaren tänds, motsidan dämpas.
+import { THREE, makeStation, makeScreenTexture, makeCast, dim, createStage } from './lib.js';
+
+const FARG = { A: 0xfff1d6, B: 0xff3cc8 };
+const KAMERA = {
+  bred: { pos: [3.2, 2.9, 0.0], look: [0, 1.0, 0] },
+  A: { pos: [2.3, 2.05, 2.55], look: [0.1, 1.15, 0.75] },
+  B: { pos: [2.3, 2.05, -2.55], look: [0.1, 1.15, -0.75] },
+  viskaA: { pos: [1.55, 1.75, 2.05], look: [0.25, 1.3, 0.95] },
+  viskaB: { pos: [1.55, 1.75, -2.05], look: [0.25, 1.3, -0.95] },
+};
+let mal = KAMERA.bred;
+const pos = new THREE.Vector3(...mal.pos), look = new THREE.Vector3(...mal.look);
+const malPos = new THREE.Vector3(), malLook = new THREE.Vector3();
+
+const stage = createStage({ name: 'forhandlingen-exempel', loop: 3600, camera: () => ({ pos, look, fov: 40 }) });
+const { scene } = stage;
+const station = makeStation({ screenTex: { A: makeScreenTexture('SIDA A'), B: makeScreenTexture('SIDA B') } });
+scene.add(station.group);
+const cast = makeCast(scene);
+// Två per sida i exemplet: sändebudet (sandebud1, mik) och rapportören. Den tredje (sandebud2) göms.
+const folk = {};
+for (const sida of ['A', 'B']) {
+  cast[sida].sandebud2.group.visible = false;
+  cast[sida].sandebud1.setColor(FARG[sida]);
+  cast[sida].rapportor.setColor(FARG[sida]);
+  folk[sida] = { sandebud: cast[sida].sandebud1, rapportor: cast[sida].rapportor };
+}
+const alla = [folk.A.sandebud, folk.A.rapportor, folk.B.sandebud, folk.B.rapportor];
+let talare = null, viskar = false, fokusSida = null;
+
+function satt(m) {
+  talare = m.talar ? folk[m.talar.sida]?.[m.talar.vem] ?? null : null;
+  viskar = !!m.viskar;
+  fokusSida = m.talar?.sida ?? null;
+  const k = m.kamera ?? (fokusSida ? (viskar ? `viska${fokusSida}` : fokusSida) : 'bred');
+  mal = KAMERA[k] ?? KAMERA.bred;
+  alla.forEach((f) => f.setSpeaking(f === talare));
+}
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'exempel') satt(e.data);
+});
+window.parent?.postMessage({ type: 'exempel-3d-redo' }, '*');
+
+stage.start((t, dt) => {
+  const k = Math.min(1, dt * 2.2);
+  pos.lerp(malPos.set(...mal.pos), k);
+  look.lerp(malLook.set(...mal.look), k);
+  alla.forEach((f, i) => {
+    // Talaren lyser; vid viskning är den egna sidans par i fokus och motsidan dämpad.
+    const iFokus = !fokusSida || f.side === fokusSida;
+    dim(f.group, f === talare ? 0 : viskar && !iFokus ? 0.75 : iFokus ? 0.2 : 0.55);
+    f.update(t + i * 0.5, dt);
+  });
+});
+</script>
+</body>
+</html>

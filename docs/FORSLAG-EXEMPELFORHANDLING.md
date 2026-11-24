@@ -1,7 +1,7 @@
 # Förhandlingen: exempelförhandlingen (förslag 2026-11-24)
 
 > **FÖRSLAG, inget är byggt i appen.** Josef väljer först. Underlag:
-> - [`exempelforhandling-2026-11/manus.json`](exempelforhandling-2026-11/manus.json): manuset som data
+> - **Byggt 2026-11-24:** [`src/stations/forhandlingen/exempel/`](../src/stations/forhandlingen/exempel/) (manus.json = manuset som data, schema.ts = tidslinjen, Exempel.vue = vyn) + `public/entre/exempel-3d.html`, röster i `public/exempel/vo/`, scenbilder i `public/exempel/scen/`. Onboarding: lägeskort → exempel → "Er tur" → live (provluckan avstängd, `PROVLUCKA` i config).
 > - [`exempelforhandling-2026-11/bilder/`](exempelforhandling-2026-11/bilder/): storyboarden, sex rutor
 > - källan i [`exempelforhandling-2026-11/illustration/`](exempelforhandling-2026-11/illustration/) (HyperFrames)
 

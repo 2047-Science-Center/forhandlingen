@@ -1,35 +1,30 @@
 <script setup lang="ts">
 /**
  * Förhandlingens väg från entrén till skarpt läge (per skärm, synkat mellan sidorna).
- * ANALYS-FLODE-2026-11 förslag 1, 3, 4, 5 och 6:
  *
  *   'lage'     båda skärmarna samlas ("Väntar på sida B …", auto-vidare efter VANTA_MAX_SEKUNDER)
  *   'lagekort' spellägeskortet TÄVLING (HyperFrames-film med VALdi), samma epoch på båda skärmarna
- *   'intro'    instruktionen i fem steg, självtempo per skärm, NÄSTA och TILLBAKA:
- *                1–3 bildreglerna (Måste ha · Kvar = poäng · Rätt gissning ×2, BildRegler.vue)
- *                4 "Så går en lucka" i 3D · 5 luckväggen: ni budar på riktigt → VI ÄR REDO
- *              → väntar in andra sidan (auto-vidare)
- *   'prov'     EN provlucka på den riktiga konsolen. Handlingen är spärren: när luckan är
- *              klubbad visas kvittensen och KÖR SKARPT (auto-vidare).
+ *   'exempel'  EXEMPELFÖRHANDLINGEN (~1 min, exempel/Exempel.vue): en förinspelad runda som visar hur man
+ *              tänker — bluffen, samrådet och rapportörens gissning. Samma epoch på båda skärmarna.
+ *   'redo'     "Er tur": sändebud headset på, rapportören sköter skärmen → VI ÄR REDO (auto-vidare)
+ *   'prov'     (bara om PROVLUCKA) EN provlucka på den riktiga konsolen, kvittens + KÖR SKARPT
  *   'live'     → skarpt (appen kör nedräkningen).
+ * Ersätter bildreglerna, 3D-luckan och coach-marken (docs/FORSLAG-EXEMPELFORHANDLING.md §4).
  */
 import { ref, computed, watch } from 'vue'
 import type { TeamId } from '../engine/types'
 import { useGameStore } from '../store/gameStore'
-import { TRIAL_DATASET, TEAMS, VANTA_MAX_SEKUNDER, ROTATION } from '@/config'
+import { TRIAL_DATASET, TEAMS, VANTA_MAX_SEKUNDER, ROTATION, PROVLUCKA } from '@/config'
 import { useI18n } from '@/station-kit/i18n'
 import { audio } from '@/station-kit/audio/AudioEngine'
 import { useLjus } from '@/station-kit/ljus'
 import { useRotation, DEFAULT_ORDER } from '@/station-kit/rotation/rotation'
 import { kortFil } from '@/station-kit/spellage/spellage'
 
-import CoachMark from '@/station-kit/components/CoachMark.vue'
 import SpellageKort from '@/station-kit/spellage/SpellageKort.vue'
-import RoleIcon from '../components/RoleIcon.vue'
-import CoachAnim from '../components/CoachAnim.vue'
+import SidFigur from '../components/SidFigur.vue'
+import Exempel from '../exempel/Exempel.vue'
 import ReporterConsole from '../components/ReporterConsole.vue'
-import Lucka3D from './Lucka3D.vue'
-import BildRegler from './BildRegler.vue'
 import BarrierWait from './BarrierWait.vue'
 import { resourceIcon } from '../resources'
 import { egnaSidor } from '../ljus'
@@ -47,6 +42,7 @@ const leader = computed(() => shared.value || me.value === 'lag1')
 const stage = computed(() => store.onbStage)
 const other = computed<TeamId>(() => (me.value === 'lag1' ? 'lag2' : 'lag1'))
 const otherSida = computed(() => TEAMS[other.value].name)
+const minSida = computed<'A' | 'B'>(() => (me.value === 'lag2' ? 'B' : 'A'))
 const iAmReady = computed(() => store.onbReady[me.value])
 const bothReady = computed(() => iAmReady.value && (shared.value || store.onbReady[other.value]))
 
@@ -82,58 +78,22 @@ const kortSrc = computed(
   () => `${import.meta.env.BASE_URL}media/spellage/${kortFil(ROTATION.stationN, rotation.state.round, DEFAULT_ORDER)}`,
 )
 function kortKlart() {
-  if (stage.value === 'lagekort') store.onbGoto('intro', null)
+  kortKlartTill()
 }
 
-// ---------- 'intro': instruktionen i fyra steg ----------
-const introSteg = ref(0)
-const ANTAL_STEG = 5
-const DEMO_RESURS = 'styrkort'
-const demoCritical = computed(() => (me.value === 'lag1' ? TRIAL_DATASET.kritisk_lag1 : TRIAL_DATASET.kritisk_lag2))
-
-type AnimKind = 'market' | 'critical' | 'capital' | 'guess'
-interface CoachSpec {
-  target: string
-  title: string
-  body: string
-  reinforce?: string
-  role?: 'A' | 'B'
-  anim: AnimKind
-  animRes?: string
-  cta?: string
+// ---------- 'exempel' → 'redo' ----------
+function kortKlartTill() {
+  if (stage.value === 'lagekort') store.onbGoto('exempel', Date.now() + 600)
 }
-const demoMotCritical = computed(() => (me.value === 'lag1' ? TRIAL_DATASET.kritisk_lag2 : TRIAL_DATASET.kritisk_lag1))
-/** Steg 0–2 = bildreglerna, 3 = 3D-luckan, 4 = coach-mark på luckväggen + VI ÄR REDO. */
-const visa = computed<'regler' | 'lucka3d' | 'coach'>(() => (introSteg.value <= 2 ? 'regler' : introSteg.value === 3 ? 'lucka3d' : 'coach'))
-const coach = computed<CoachSpec>(() => ({
-  target: '[data-tut="luckor"]',
-  title: t('coach.market_title'),
-  body: t('coach.market_body'),
-  reinforce: t('coach.headset_line'),
-  role: 'A',
-  anim: 'market',
-  animRes: DEMO_RESURS,
-  cta: t('opening.ready'),
-}))
-function introNasta() {
-  audio.play('blip')
-  if (introSteg.value < ANTAL_STEG - 1) {
-    introSteg.value += 1
-    return
-  }
-  // Sista steget: headset på → klar → vänta in andra sidan.
+function exempelKlart() {
+  if (stage.value === 'exempel') store.onbGoto('redo', null)
+}
+function redo() {
   audio.play('headset')
   ljus.gest('kvitto', egnaSidor(store.view), { tyst: true })
   jagArRedo()
 }
-function introTillbaka() {
-  audio.play('blip')
-  if (introSteg.value > 0) introSteg.value -= 1
-}
-watch(stage, (s) => {
-  if (s === 'intro') introSteg.value = 0
-})
-vidareNar('intro', 'prov')
+vidareNar('redo', PROVLUCKA ? 'prov' : 'live')
 
 // ---------- 'prov': en provlucka, handlingen är spärren ----------
 watch(
@@ -196,47 +156,33 @@ watch(
       @skip="kortKlart"
     />
 
-    <!-- ============ INSTRUKTIONEN ============ -->
-    <template v-else-if="stage === 'intro'">
+    <!-- ============ EXEMPELFÖRHANDLINGEN ============ -->
+    <Exempel
+      v-else-if="stage === 'exempel'"
+      :start-at="store.onbEpoch ?? Date.now()"
+      :leader="leader"
+      @done="exempelKlart"
+      @skip="exempelKlart"
+    />
+
+    <!-- ============ ER TUR ============ -->
+    <template v-else-if="stage === 'redo'">
       <BarrierWait v-if="iAmReady" :sida="otherSida" :sekunder="vantaKvar" />
-      <BildRegler
-        v-else-if="visa === 'regler'"
-        :aktiv="introSteg"
-        :steg="introSteg"
-        :antal="ANTAL_STEG"
-        :vara="demoCritical"
-        :mot-vara="demoMotCritical"
-        @next="introNasta"
-        @back="introTillbaka"
-      />
-      <Lucka3D v-else-if="visa === 'lucka3d'" :step="introSteg" :steps="ANTAL_STEG" @next="introNasta" @back="introTillbaka" />
-      <div v-else class="ob__stage">
-        <ReporterConsole
-          :team="me"
-          demo="resource"
-          :demo-capital="100"
-          :demo-critical="demoCritical"
-          :demo-resource="DEMO_RESURS"
-        />
-        <CoachMark
-          :target="coach.target"
-          :title="coach.title"
-          :body="coach.body"
-          :reinforce="coach.reinforce"
-          :cta="coach.cta"
-          :step="introSteg"
-          :steps="ANTAL_STEG"
-          :show-back="introSteg > 0"
-          @next="introNasta"
-          @back="introTillbaka"
-        >
-          <template #visual>
-            <CoachAnim :key="coach.anim" :kind="coach.anim" :resource="coach.animRes" />
-          </template>
-          <template v-if="coach.role" #reinforce>
-            <RoleIcon :role="coach.role" :size="40" />
-          </template>
-        </CoachMark>
+      <div v-else class="ob__redo">
+        <p class="ob__redo-rubrik">{{ t('redo.rubrik') }}</p>
+        <div class="ob__roller">
+          <div class="ob__roll">
+            <SidFigur :sida="minSida" :size="130" pratar />
+            <b>{{ t('redo.sandebud') }}</b>
+            <span>{{ t('redo.sandebud_text') }}</span>
+          </div>
+          <div class="ob__roll">
+            <SidFigur :sida="minSida" :size="130" :headset="true" />
+            <b>{{ t('redo.rapportor') }}</b>
+            <span>{{ t('redo.rapportor_text') }}</span>
+          </div>
+        </div>
+        <button class="crt-button crt-button--strong ob__kor" @click="redo">{{ t('opening.ready') }} ▸</button>
       </div>
     </template>
 
@@ -281,6 +227,43 @@ watch(
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.6rem;
+}
+.ob__redo {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.6rem;
+}
+.ob__redo-rubrik {
+  margin: 0;
+  font-family: var(--font-rubrik);
+  font-weight: 700;
+  font-size: 3rem;
+  color: var(--color-primary);
+}
+.ob__roller {
+  display: flex;
+  gap: 4rem;
+}
+.ob__roll {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 18rem;
+  text-align: center;
+}
+.ob__roll b {
+  font-family: var(--font-rubrik);
+  font-size: 1.8rem;
+  color: var(--color-ink-strong);
+}
+.ob__roll span {
+  font-family: var(--font-retro);
+  font-size: 1.3rem;
+  color: var(--color-ink-muted);
 }
 .ob__kvitto {
   position: absolute;
