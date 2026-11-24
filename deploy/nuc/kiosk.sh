@@ -158,13 +158,15 @@ fi
 # --- Gemensamma flaggor ---
 # OZONE=x11 tvingar Chromium via XWayland → --window-position funkar även på en
 # Wayland-session (och är native på Xorg). Sätt OZONE=wayland för ren Wayland.
-# INTE --kiosk: vi vill att appens "Avsluta"-knapp (window.close) ska kunna
-# stänga fönstren tillbaka till skrivbordet. --start-fullscreen + --app ger ändå
-# ett rent helskärmsfönster utan flikar/adressfält.
+# KIOSK=1 (standard) = riktigt kioskläge: --kiosk + --app → ingen "lämna helskärm"-knapp
+# vid långtryck, inga fönsterkanter. Ut: håll övre vänstra hörnet 4 s (appens kioskExit)
+# eller Alt+F4. KIOSK=0 = som förut (--start-fullscreen), för justeringar.
+if [ "${KIOSK:-1}" = 1 ]; then FULLSCREEN_FLAG=--kiosk; else FULLSCREEN_FLAG=--start-fullscreen; fi
 OZONE="${OZONE:-x11}"
 common_flags=(
   "--ozone-platform=$OZONE"
-  --start-fullscreen
+  "$FULLSCREEN_FLAG"
+  --disable-pinch
   --no-first-run
   --no-default-browser-check
   --noerrdialogs
