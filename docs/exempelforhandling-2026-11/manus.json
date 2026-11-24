@@ -1,35 +1,37 @@
 {
-  "_om": "Exempelförhandlingen, manus v2 (2026-11-24): en förinspelad runda på tre luckor + gissningen som visar HUR man tänker. Josefs tillägg: sändebudet samråder med rapportören under budgivningen, och rapportören resonerar högt i gissningen — så skillnaden mellan rollerna syns. 'viskar' = sidans interna snack (bara den egna sidan hör, handen över mikrofonen). Illustration: 3D-scenen (vem pratar) + overlaybilder ur Förhandlingens bildbank public/assets/Bild 1–10 (känslan) + tunt HUD (pris, mynt, LIVSVIKTIG). Röster: MEM:s ElevenLabs-röster + VALdi.",
+  "_om": "Exempelförhandlingen, manus v2 (2026-11-24): en förinspelad runda på tre luckor + gissningen som visar HUR man tänker. Josefs tillägg: sändebudet samråder med rapportören under budgivningen, och rapportören resonerar högt i gissningen — så skillnaden mellan rollerna syns. 'viskar' = sidans interna snack (bara den egna sidan hör, handen över mikrofonen). Illustration: 3D-scenen (vem pratar) + overlaybilder genererade med Förhandlingens bildbank (public/assets/Bild 1–10) som stilreferens och ett karaktärsark för de fyra (känslan) + tunt HUD (pris, mynt, LIVSVIKTIG). Röster: MEM:s ElevenLabs-röster + VALdi.",
   "roller": {
     "valdi": {
       "namn": "VALdi",
       "rost": "BNgbHR0DNeZixGQVzloa"
     },
     "sandebudA": {
-      "namn": "Adam",
+      "namn": "Alva",
       "sida": "A",
       "roll": "sändebud",
       "rost": "tPrL2xYfkQnwJhHMMdRM",
-      "bild": "bildbanken: mannen med glasögon och SÄNDEBUD-märket (Bild 2, 4, 7, 8, 10)"
+      "bild": "karaktärsarket: flickan med ljusbrun hästsvans"
     },
     "rapportorA": {
-      "namn": "Noor",
+      "namn": "Noah",
       "sida": "A",
       "roll": "rapportör",
       "rost": "ISDDl0xPNLMD73L5PQj4",
-      "bild": "bildbanken: kvinnan med headset (Bild 2, 4, 7, 8, 10)"
+      "bild": "karaktärsarket: pojken med lockigt brunt hår"
     },
     "sandebudB": {
       "namn": "Ebba",
       "sida": "B",
       "roll": "sändebud",
-      "rost": "9ambBcBMpHAeeFp1uJUB"
+      "rost": "9ambBcBMpHAeeFp1uJUB",
+      "bild": "karaktärsarket: flickan med långt mörkt hår"
     },
     "rapportorB": {
       "namn": "Ville",
       "sida": "B",
       "roll": "rapportör",
-      "rost": "cLAH1kXlkAivJHxCW601"
+      "rost": "cLAH1kXlkAivJHxCW601",
+      "bild": "karaktärsarket: pojken med kort blont hår och runda glasögon"
     }
   },
   "livsviktig": {
@@ -42,14 +44,14 @@
       "vem": "valdi",
       "plats": "fore",
       "text": "Lyssna. En inspelning från ett tidigare test. Sida A behövde insulin.",
-      "bild": "Bild 1"
+      "bild": "s1-oppning"
     }
   ],
   "luckor": [
     {
       "vara": "styrkort",
       "syfte": "Så går en lucka — och sändebudet frågar rapportören innan det släpper.",
-      "bild": "Bild 2",
+      "bild": "s2-samrad",
       "rader": [
         {
           "id": "x1",
@@ -87,7 +89,7 @@
     {
       "vara": "branslecell",
       "syfte": "Bluffen: låtsas att fel vara är livsviktig, så budar motparten upp den.",
-      "bild": "Bild 3",
+      "bild": "s3-bluff",
       "rader": [
         {
           "id": "x6",
@@ -129,7 +131,7 @@
     {
       "vara": "insulin",
       "syfte": "Utdelningen: den riktiga livsviktiga går billigt, för ingen tror att den är viktig.",
-      "bild": "Bild 10",
+      "bild": "s5-nonchalant",
       "rader": [
         {
           "id": "x12",
@@ -156,7 +158,7 @@
   ],
   "gissning": {
     "syfte": "Rapportörens jobb: resonera fram motståndarens livsviktiga ur hur de budade. Rätt = dubbla poäng.",
-    "bild": "Bild 8",
+    "bild": "s6-gissa",
     "rader": [
       {
         "id": "x15",

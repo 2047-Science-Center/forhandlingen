@@ -27,7 +27,7 @@ Människa eller maskins exempelrunda är förebilden: samma rollfördelning (rö
 | Lager | Vad det visar | Varför det behövs |
 |---|---|---|
 | **3D-scenen** (befintlig `lucka-3d`, kameran lutar mot den som pratar) | *Vem* som pratar och var den står. A och B på var sin sida om väggen. | Skillnaden mellan sidorna, och mellan sändebud och rapportör, syns i rummet. |
-| **Overlaybilder ur bildbanken** (`public/assets/Bild 1–10`) | *Känslan*: viskningen bakom handen, eftertanken, lugnet, frustrationen. | 3D-gubbarna har inga ansikten. Människan bär bluffen. |
+| **Overlaybilder** (genererade med bildbanken `public/assets/Bild 1–10` som referens, fyra fasta personer) | *Känslan*: viskningen bakom handen, eftertanken, lugnet, frustrationen. | 3D-gubbarna har inga ansikten. Människan bär bluffen. |
 | **Tunt HUD** (luckorna, pris, A:s och B:s mynt, LIVSVIKTIG) | *Strategin i siffror*: B betalar 60 för fel vara, A tar insulinet för 10. | Utan siffror syns aldrig *att* bluffen lönade sig. Bara två saker är stora (pengarna och den livsviktiga), samma ordning som den renodlade skärmen. |
 
 **Andra sätt jag övervägde:**
@@ -42,23 +42,29 @@ Människa eller maskins exempelrunda är förebilden: samma rollfördelning (rö
 - **Tydlig talarmarkering.**
 - **Kameran följer manusets repliker.** Scenens tidslinje finns redan (`talk('A'|'B')`) och behöver bara matas från `manus.json`.
 
-### Bildbanken mot manuset
+### Overlaybilderna: nya bilder med banken som referens (Josef 2026-11-24)
 
-| Ögonblick | Bild | Passar |
+Bildbanken (`public/assets/Bild 1–10`) har rätt stämning och plats, men flera av personerna där är vuxna instruktörer.
+Därför **genereras nya bilder med banken bara som stilreferens**, så att alla bilder följer **samma fyra ungdomar**:
+
+1. **Karaktärsarket** ([`bilder/karaktarer.jpg`](exempelforhandling-2026-11/bilder/karaktarer.jpg)):
+   - **Sida A:** Alva (ljusbrun hästsvans, sändebud) och Noah (lockigt hår, rapportör). Det är paret från bankens viskbild.
+   - **Sida B:** Ebba (långt mörkt hår, sändebud) och Ville (blond, runda glasögon, rapportör).
+   - Samma dräkter med reflexrand och headset som i banken.
+2. **Varje scen** genereras med karaktärsarket plus en bankbild som referens för stämning och komposition:
+
+| Ruta | Scen | Bankbild som referens |
 |---|---|---|
-| Öppning: gruppen vid konsolen | **Bild 1** | ✓ |
-| Samrådet: sändebudet stämmer av med rapportören | **Bild 2** | ✓ samma par |
-| Bluffen: viskningen bakom handen | **Bild 3** | ✓ handlingen, ⚠️ men ett annat, yngre par |
-| B inser att de slösat | **Bild 9** (delad bild, en frustrerad person på ena sidan) | ✓ |
-| Insulinet billigt: lugnet | **Bild 10** (även Bild 7) | ✓ samma par |
-| Gissningen: rapportören resonerar | **Bild 8** (handen vid hakan, pekfingret upp) | ✓ samma par |
+| 1 Öppning | alla fyra vid konsolen, mellanväggen mellan sidorna | Bild 6 |
+| 2 Samrådet | Alva stämmer av med Noah | Bild 2 |
+| 3 Bluffen | Noah viskar bakom handen, Alva ler i smyg | Bild 3 |
+| 4 B inser | Ville med handen mot pannan, Ebba stirrar på skärmen | Bild 9 |
+| 5 Insulinet | Alva rycker på axlarna, Noah döljer ett leende | Bild 10 |
+| 6 Gissningen | Noah vid skärmen, finger vid hakan och "aha", Alva bakom | Bild 8 |
 
-Mannen med glasögon och SÄNDEBUD-märket och kvinnan med headset återkommer i Bild 2, 4, 7, 8 och 10. De blir **sida A** (Adam, sändebud, och Noor, rapportör).
+Modell: `gpt-image-2` via `xy-bildgen`. Bilderna ligger i `exempelforhandling-2026-11/illustration/assets/scen/`.
 
-**Den enda luckan är Bild 3.** Den visar rätt handling men ett annat par. Två lösningar:
-- **(a)** Låt bildparet vara sida B:s egna viskningar.
-- **(b)** Gör en variant av Bild 3 med A-paret. Bildredigeringen *utgår då från banken* (Bild 2 och 3 som referenser), och ingen generisk bild genereras. Rekommenderas.
-
+![Karaktärsarket](exempelforhandling-2026-11/bilder/karaktarer.jpg)
 ![Rutorna 1–6](exempelforhandling-2026-11/bilder/ruta-1.jpg)
 
 ## 3. Manuset (v2, ~57 s)
@@ -66,14 +72,14 @@ Mannen med glasögon och SÄNDEBUD-märket och kvinnan med headset återkommer i
 | | Vem | Replik | Syfte |
 |---|---|---|---|
 | ram | VALdi | Lyssna. En inspelning från ett tidigare test. Sida A behövde insulin. | ramen, som i Människa eller maskin |
-| **Lucka 1 · styrkort** | Ebba (B) / Adam (A) | Styrkortet? Vi ger tio. — Femton! Direkt. | så går en lucka |
-| | Adam → Noor *(viskar)* | Behöver vi den? — Nej. Släpp den. | **sändebudet frågar rapportören** |
-| | Adam | Ta det. → *klubba B 15* | |
-| **Lucka 2 · bränslecell** | Noor *(viskar)* | Låtsas att vi måste ha bränslecellen. Då tror de att det är den. | **bluffen, rapportörens idé** |
-| | Adam / Ebba | Bränslecellen behöver vi verkligen. Trettio! — Fyrtio. — Femtio! — Sextio. Den är vår. — Okej … ta den då. | B budar upp fel vara → *klubba B 60* |
-| **Lucka 3 · insulin** | Noor *(viskar)* | Nu. Låtsas att du inte bryr dig. | |
-| | Adam / Ebba | Insulin? Tja. Tio kronor. — Vi har nästan inga pengar kvar. Ta den. | **utdelningen** → *klubba A 10* |
-| **Gissningen** | Noor | Vilken var deras? De tog styrkortet direkt, utan att tveka. Den var deras. | **rapportörens resonemang** → rätt, ×2 |
+| **Lucka 1 · styrkort** | Ebba (B) / Alva (A) | Styrkortet? Vi ger tio. — Femton! Direkt. | så går en lucka |
+| | Alva → Noah *(viskar)* | Behöver vi den? — Nej. Släpp den. | **sändebudet frågar rapportören** |
+| | Alva | Ta det. → *klubba B 15* | |
+| **Lucka 2 · bränslecell** | Noah *(viskar)* | Låtsas att vi måste ha bränslecellen. Då tror de att det är den. | **bluffen, rapportörens idé** |
+| | Alva / Ebba | Bränslecellen behöver vi verkligen. Trettio! — Fyrtio. — Femtio! — Sextio. Den är vår. — Okej … ta den då. | B budar upp fel vara → *klubba B 60* |
+| **Lucka 3 · insulin** | Noah *(viskar)* | Nu. Låtsas att du inte bryr dig. | |
+| | Alva / Ebba | Insulin? Tja. Tio kronor. — Vi har nästan inga pengar kvar. Ta den. | **utdelningen** → *klubba A 10* |
+| **Gissningen** | Noah | Vilken var deras? De tog styrkortet direkt, utan att tveka. Den var deras. | **rapportörens resonemang** → rätt, ×2 |
 | | Ville (B) | Deras var bränslecellen. De ville ju ha den så mycket. | B blev lurad |
 | ram | VALdi | Sändebudet pratar. Rapportören lyssnar och tänker. Dölj vad ni behöver, och hör vad de behöver. | sensmoralen |
 
@@ -122,7 +128,6 @@ Mannen med glasögon och SÄNDEBUD-märket och kvinnan med headset återkommer i
 | # | Fråga | Mitt förslag |
 |---|---|---|
 | 1 | Tre lager (3D, bildbanken, tunt HUD)? | ja |
-| 2 | Bild 3: (a) B:s par eller (b) en variant med A-paret som utgår från banken? | (b) |
 | 3 | Provluckan bort? | ja, men behåll som flagga |
-| 4 | Namnen Adam och Noor (sida A, bildbankens par), Ebba och Ville (sida B)? | ok som utkast |
+| 4 | Namnen Alva och Noah (sida A), Ebba och Ville (sida B), enligt karaktärsarket? | ok som utkast |
 | 5 | Får rösterna genereras med ElevenLabs-nyckeln? | ja |
