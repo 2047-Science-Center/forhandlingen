@@ -5,9 +5,9 @@
  *
  *   'lage'     båda skärmarna samlas ("Väntar på sida B …", auto-vidare efter VANTA_MAX_SEKUNDER)
  *   'lagekort' spellägeskortet TÄVLING (HyperFrames-film med VALdi), samma epoch på båda skärmarna
- *   'intro'    instruktionen i fyra steg, självtempo per skärm, NÄSTA och TILLBAKA:
- *                1 livsviktig (+ berättelsen) · 2 pengar = poäng (+ gissning ×2)
- *                3 "Så går en lucka" i 3D · 4 ni budar på riktigt → VI ÄR REDO
+ *   'intro'    instruktionen i fem steg, självtempo per skärm, NÄSTA och TILLBAKA:
+ *                1–3 bildreglerna (Måste ha · Kvar = poäng · Rätt gissning ×2, BildRegler.vue)
+ *                4 "Så går en lucka" i 3D · 5 luckväggen: ni budar på riktigt → VI ÄR REDO
  *              → väntar in andra sidan (auto-vidare)
  *   'prov'     EN provlucka på den riktiga konsolen. Handlingen är spärren: när luckan är
  *              klubbad visas kvittensen och KÖR SKARPT (auto-vidare).
@@ -29,6 +29,7 @@ import RoleIcon from '../components/RoleIcon.vue'
 import CoachAnim from '../components/CoachAnim.vue'
 import ReporterConsole from '../components/ReporterConsole.vue'
 import Lucka3D from './Lucka3D.vue'
+import BildRegler from './BildRegler.vue'
 import BarrierWait from './BarrierWait.vue'
 import { resourceIcon } from '../resources'
 import { egnaSidor } from '../ljus'
@@ -86,7 +87,7 @@ function kortKlart() {
 
 // ---------- 'intro': instruktionen i fyra steg ----------
 const introSteg = ref(0)
-const ANTAL_STEG = 4
+const ANTAL_STEG = 5
 const DEMO_RESURS = 'styrkort'
 const demoCritical = computed(() => (me.value === 'lag1' ? TRIAL_DATASET.kritisk_lag1 : TRIAL_DATASET.kritisk_lag2))
 
@@ -101,41 +102,19 @@ interface CoachSpec {
   animRes?: string
   cta?: string
 }
-const coach = computed<CoachSpec | null>(() => {
-  switch (introSteg.value) {
-    case 0:
-      return {
-        target: '[data-tut="critical"]',
-        title: t('coach.critical_title'),
-        body: t('coach.critical_body'),
-        reinforce: t('critical.copy.' + demoCritical.value),
-        anim: 'critical',
-        animRes: demoCritical.value,
-      }
-    case 1:
-      return {
-        target: '[data-tut="capital"]',
-        title: t('coach.capital_title'),
-        body: t('coach.capital_body'),
-        reinforce: t('coach.guess_line'),
-        role: 'B',
-        anim: 'capital',
-      }
-    case 3:
-      return {
-        target: '[data-tut="luckor"]',
-        title: t('coach.market_title'),
-        body: t('coach.market_body'),
-        reinforce: t('coach.headset_line'),
-        role: 'A',
-        anim: 'market',
-        animRes: DEMO_RESURS,
-        cta: t('opening.ready'),
-      }
-    default:
-      return null // steg 2 = 3D-scenen
-  }
-})
+const demoMotCritical = computed(() => (me.value === 'lag1' ? TRIAL_DATASET.kritisk_lag2 : TRIAL_DATASET.kritisk_lag1))
+/** Steg 0–2 = bildreglerna, 3 = 3D-luckan, 4 = coach-mark på luckväggen + VI ÄR REDO. */
+const visa = computed<'regler' | 'lucka3d' | 'coach'>(() => (introSteg.value <= 2 ? 'regler' : introSteg.value === 3 ? 'lucka3d' : 'coach'))
+const coach = computed<CoachSpec>(() => ({
+  target: '[data-tut="luckor"]',
+  title: t('coach.market_title'),
+  body: t('coach.market_body'),
+  reinforce: t('coach.headset_line'),
+  role: 'A',
+  anim: 'market',
+  animRes: DEMO_RESURS,
+  cta: t('opening.ready'),
+}))
 function introNasta() {
   audio.play('blip')
   if (introSteg.value < ANTAL_STEG - 1) {
@@ -220,7 +199,17 @@ watch(
     <!-- ============ INSTRUKTIONEN ============ -->
     <template v-else-if="stage === 'intro'">
       <BarrierWait v-if="iAmReady" :sida="otherSida" :sekunder="vantaKvar" />
-      <Lucka3D v-else-if="!coach" :step="introSteg" :steps="ANTAL_STEG" @next="introNasta" @back="introTillbaka" />
+      <BildRegler
+        v-else-if="visa === 'regler'"
+        :aktiv="introSteg"
+        :steg="introSteg"
+        :antal="ANTAL_STEG"
+        :vara="demoCritical"
+        :mot-vara="demoMotCritical"
+        @next="introNasta"
+        @back="introTillbaka"
+      />
+      <Lucka3D v-else-if="visa === 'lucka3d'" :step="introSteg" :steps="ANTAL_STEG" @next="introNasta" @back="introTillbaka" />
       <div v-else class="ob__stage">
         <ReporterConsole
           :team="me"

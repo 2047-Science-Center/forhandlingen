@@ -58,8 +58,10 @@ export interface HatchCell {
   /** won = vunnen, nobuy = ingen köpte, active = pågår nu, upcoming = ej öppnad. */
   kind: 'won' | 'nobuy' | 'active' | 'upcoming'
   winner: TeamId | null
-  /** Resurs avslöjas bara för avgjorda luckor (won/nobuy). null = anonym. */
+  /** Resurs avslöjas bara för avgjorda luckor (won/nobuy) och den öppna luckan. null = anonym. */
   resource: string | null
+  /** Priset för en vunnen lucka (kr), annars null. */
+  price: number | null
 }
 
 export const useGameStore = defineStore('forhandlingen', () => {
@@ -151,11 +153,11 @@ export const useGameStore = defineStore('forhandlingen', () => {
   const hatchCells = computed<HatchCell[]>(() =>
     state.value.order.map((res, i) => {
       const r: HatchResult | undefined = state.value.results[i]
-      if (r?.winner) return { index: i, hatch: i + 1, kind: 'won', winner: r.winner, resource: res }
-      if (r) return { index: i, hatch: i + 1, kind: 'nobuy', winner: null, resource: res }
+      if (r?.winner) return { index: i, hatch: i + 1, kind: 'won', winner: r.winner, resource: res, price: r.price }
+      if (r) return { index: i, hatch: i + 1, kind: 'nobuy', winner: null, resource: res, price: null }
       if (state.value.phase === 'bidding' && i === state.value.currentHatch)
-        return { index: i, hatch: i + 1, kind: 'active', winner: null, resource: null }
-      return { index: i, hatch: i + 1, kind: 'upcoming', winner: null, resource: null }
+        return { index: i, hatch: i + 1, kind: 'active', winner: null, resource: res, price: null }
+      return { index: i, hatch: i + 1, kind: 'upcoming', winner: null, resource: null, price: null }
     }),
   )
 

@@ -61,7 +61,9 @@ const entre = initEntre({
   mqttUrl: rotationOptions(ROTATION).mqttUrl,
   bandlost: BANDLOST,
 })
-const entreDone = computed(() => entre.state.step === 'klar')
+/** Pilot: ?hopp=lage|intro|prov|live hoppar förbi entrén direkt till ett steg (demo/test, aldrig i drift). */
+const hopp = config.mode === 'pilot' && typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('hopp') : null
+const entreDone = computed(() => entre.state.step === 'klar' || !!hopp)
 watch(
   () => store.view,
   (v) => entre.setScreen({ side: v === 'lag1' ? 'A' : v === 'lag2' ? 'B' : null, leader: v === 'shared' || v === 'lag1' }),
@@ -233,6 +235,10 @@ const ACTIVITY_EVENTS = ['pointerdown', 'mousedown', 'click', 'keydown', 'touchs
 onMounted(() => {
   store.init()
   entre.attachTransport(store.transport())
+  if (hopp) {
+    entered.value = true
+    if (store.view !== 'lag2') store.onbGoto(hopp)
+  }
   window.addEventListener('contextmenu', onContextMenu)
   ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, onActivity, { passive: true }))
 })

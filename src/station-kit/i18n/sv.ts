@@ -11,35 +11,26 @@ export const sv: Record<string, string> = {
 
   // --- bidding ---
   'bidding.done': 'VI ÄR KLARA ▸',
-  'bidding.getready_title': 'Nästa lucka',
-  'bidding.in_progress': 'BUDGIVNING PÅGÅR',
   'bidding.price_dec': 'Minska priset',
   'bidding.price_inc': 'Öka priset',
-  'bidding.talk_now': 'Sändebuden budar i headseten nu',
 
   // --- coach ---
-  'coach.capital_body': 'Spendera så lite som möjligt. Det som är kvar i slutet blir er poäng.',
-  'coach.capital_title': 'Era pengar = era poäng',
-  'coach.critical_body': 'Få tag på den — annars får ni 0 poäng.',
-  'coach.critical_title': 'Er livsviktiga resurs',
-  'coach.guess_line': 'Rapportören gissar motståndarens livsviktiga i slutet. Rätt gissning = dubbla poäng.',
   'coach.headset_line': 'Sändebud: på med headsetet nu. Ni pratar — rapportörerna sköter skärmen.',
   'coach.market_body': 'En resurs i taget, 30 sekunder per lucka. När tiden är ute: välj vem som fick den, sätt priset och klubba.',
   'coach.market_title': 'Ni budar på riktigt',
 
   // --- common ---
-  'common.capital': 'KAPITAL',
   'common.mute': 'LJUD AV',
   'common.press_to_start': 'TRYCK FÖR ATT BÖRJA',
   'common.unmute': 'LJUD PÅ',
 
   // --- critical ---
+  'critical.tagg': 'LIVSVIKTIG',
   'critical.copy.branslecell': 'En cell har brunnit ut och reservkraften sjunker. Utan en ny slocknar livsuppehållningen sektion för sektion.',
   'critical.copy.insulin': 'Tre av er är beroende av insulin — och kylförrådet slutade fungera i natt. Ni måste få tag på nytt innan lagret sinar.',
   'critical.copy.membranfilter': 'Filtret är igensatt och proverna visar föroreningar. Utan ett nytt är dricksvattnet obrukbart inom dagar.',
   'critical.copy.radiosandare': 'Er sändare slogs ut i stormen. Ni är avskurna — utan en ny når ni ingen.',
   'critical.copy.styrkort': 'Ett överslag stekte styrkortet. Tills det bytts styr ni luft och värme för hand — och det håller inte länge.',
-  'critical.header': 'Resursen ni måste få tag på',
 
   // --- facil ---
   'facil.cancel': 'Avbryt',
@@ -56,7 +47,7 @@ export const sv: Record<string, string> = {
 
   // --- guess ---
   'guess.locked': 'Gissningen är låst. Väntar på den andra sidan …',
-  'guess.prompt': 'Vilken var motståndarens livsviktiga resurs?',
+  'guess.prompt': 'Vilken var motståndarens livsviktiga?',
   'guess.role_turn': 'RAPPORTÖRENS TUR',
   'guess.submit': 'LÅS GISSNING',
   'guess.title': 'GISSNINGEN',
@@ -73,14 +64,12 @@ export const sv: Record<string, string> = {
 
   // --- klubba ---
   'klubba.angra': 'ÅNGRA ({n})',
-  'klubba.hint': 'Välj sida — sedan priset.',
   'klubba.ingen': 'INGEN KÖPTE',
   'klubba.ingen_kopte': 'INGEN KÖPTE',
   'klubba.knapp': 'KLUBBA ▸',
   'klubba.ni': 'ni',
-  'klubba.over': 'TIDEN ÄR UTE · KLUBBA PÅ VILKEN SKÄRM SOM HELST',
   'klubba.sald': 'SÅLD · {sida} · {pris} KR',
-  'klubba.vem': 'Vem fick {resurs}?',
+  'klubba.vem': 'Vem fick den?',
 
   // --- lucka3d ---
   'lucka3d.t1': 'Sida B:s sändebud lägger ett bud — i headsetet.',
@@ -131,6 +120,11 @@ export const sv: Record<string, string> = {
   // --- res ---
   'res.points': 'POÄNG',
 
+  // --- regel ---
+  'regel.1': 'Måste ha',
+  'regel.2': 'Kvar = poäng',
+  'regel.3': 'Rätt gissning ×2',
+
   // --- resource ---
   'resource.branslecell': 'Bränslecell',
   'resource.insulin': 'Insulin',
@@ -151,6 +145,4 @@ export const sv: Record<string, string> = {
   'role.B': 'RAPPORTÖR',
 
   // --- vanta ---
-  'vanta.andra': 'Väntar på sida {sida} …',
-  'vanta.vidare_om': 'Vi går vidare om {n} s',
 }

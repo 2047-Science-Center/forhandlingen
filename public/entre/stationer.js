@@ -44,8 +44,8 @@ const forh = {
   model: 'finns (forhandlingen/intro-3d/lib.js)',
   build() { return makeStation().group; },
   zones: {
-    A: { label: 'LAG A', side: 'A', cx: 0.05, cz: 1.35, w: 1.9, d: 1.9 },
-    B: { label: 'LAG B', side: 'B', cx: 0.05, cz: -1.35, w: 1.9, d: 1.9 },
+    A: { label: 'SIDA A', side: 'A', cx: 0.05, cz: 1.35, w: 1.9, d: 1.9 },
+    B: { label: 'SIDA B', side: 'B', cx: 0.05, cz: -1.35, w: 1.9, d: 1.9 },
   },
   roles: {
     'A.sandebud': { zone: 'A', title: 'Sändebud', mic: true, headset: true, pattern: 'puls', slots: [[0, 0.78, 0, 0]] },

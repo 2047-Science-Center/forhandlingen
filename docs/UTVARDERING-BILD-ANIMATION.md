@@ -45,9 +45,10 @@ Själva marknaden syns inte alls:
 
 **3. Budgivningen i bild.**
 - En ring runt varan är tiden.
-- Buden syns som pratbubblor från A-sidans och B-sidans figur, över mellanväggen.
-- Rapportören kan trycka in budet som en bubbla, eller så visar bubblorna bara att det pratas.
+- A- och B-figuren med headset och en ljudvåg visar att det är sändebudens tur.
 - Texten "BUDGIVNING PÅGÅR" försvinner.
+- **Inga belopp under budgivningen** (Josef 2026-11-24). Appen vet inte vad som sägs: ingen lyssnar på headseten, och ingen ska klicka in bud under tiden. Buden ges muntligt och låses först i Klubban. Pratbubblorna med belopp i skissfilmen är alltså bara illustration, inget appen visar.
+- *Senare, om Erik bekräftar att headsetljudet går genom NUC:en:* mikrofonnivån kan visa vilken sida som pratar, fortfarande utan belopp.
 
 **4. Klubban i bild.**
 - Tre bildknappar: A-figur, B-figur och tom lucka.
@@ -85,6 +86,27 @@ NÄSTA och TILLBAKA finns kvar.
 - HyperFrames egen bildgenerering (HeyGen) kräver ett HyperFrames Pro-abonnemang.
 - Projektets egen väg (`xy-bildgen`, gpt-image med attract-bilden som stilreferens) stoppades av behörighetsspärren, eftersom den läser API-nyckeln i ett annat projekts `.env`.
 - Promptarna och stilreferensen ligger klara för fyra prov (miljö + insulin + bränslecell + styrkort).
+
+## Byggt (grenen `flode-2026-11`, 2026-11-24)
+
+Josef köpte hela uppdateringen. Allt nedan är ritat i appen och kräver ingen bildgenerering:
+
+| Del | Var |
+|---|---|
+| Luckväggen | `components/MarknadsVagg.vue` |
+| Varorna som bild | `components/VaraBild.vue`. Använder `public/varor/<id>.png` när genererade bilder finns, annars den ritade SVG:n. |
+| Sidfiguren | `components/SidFigur.vue` |
+| Myntstapeln | `components/MyntStapel.vue` |
+| Budgivningen | varan i tidsringen mellan A och B |
+| Klubban | bildknappar och mynt |
+| Livsviktig-kortet | bild + tagg |
+| Bildreglerna | `onboarding/BildRegler.vue` |
+| Väntan | figur + ring |
+| Gissningen | varukort |
+
+**Kvar:**
+- Avslutet räknar ännu poängen som tal, inte mynt som blir poäng.
+- Bildgenereringen.
 
 ## Rekommendation
 

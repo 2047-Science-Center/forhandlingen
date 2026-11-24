@@ -12,7 +12,8 @@
 import { ref, computed, watch } from 'vue'
 import type { TeamId } from '../engine/types'
 import { useGameStore } from '../store/gameStore'
-import { resourceIcon } from '../resources'
+import VaraBild from './VaraBild.vue'
+import SidFigur from './SidFigur.vue'
 import { useI18n } from '@/station-kit/i18n'
 import { KLUBBA } from '@/config'
 
@@ -24,9 +25,12 @@ const s = computed(() => store.state)
 const step = computed(() => store.step)
 const resource = computed(() => store.currentResource)
 const countdown = computed(() => Math.max(0, store.secondsLeft ?? 0))
-const opponent = computed<TeamId>(() => store.opponentOf(props.team))
 /** Ordningen på skärmen: alltid A till vänster, B till höger (som rummet). */
 const sidor: TeamId[] = ['lag1', 'lag2']
+const SIDA = { lag1: 'A', lag2: 'B' } as const
+/** Tidsringen: omkrets och andel tid kvar av förhandlingen. */
+const RING = 2 * Math.PI * 118
+const tidKvar = computed(() => (s.value.negotiationSeconds ? Math.min(1, countdown.value / s.value.negotiationSeconds) : 0))
 
 // --- Klubb-rutan (lokal per skärm tills KLUBBA trycks) ---
 type Val = TeamId | 'ingen' | null
@@ -66,67 +70,79 @@ const saldText = computed(() =>
 
 <template>
   <div class="bz">
-    <!-- STEG: gör er redo -->
+    <!-- STEG: gör er redo — nästa vara visas i luckan -->
     <template v-if="step === 'getready'">
-      <p class="bz__label">{{ t('bidding.getready_title') }}</p>
-      <div v-if="resource" class="bz__resource">
-        <span class="bz__res-icon">{{ resourceIcon(resource) }}</span>
-        <span class="bz__res-name">{{ t('resource.' + resource) }}</span>
+      <div class="bz__scen">
+        <SidFigur sida="A" :size="120" />
+        <div class="bz__mitt">
+          <VaraBild v-if="resource" :vara="resource" :size="120" />
+          <span class="bz__namn">{{ resource ? t('resource.' + resource) : '' }}</span>
+        </div>
+        <SidFigur sida="B" :size="120" />
       </div>
       <div class="bz__count mono">{{ store.secondsLeft == null ? '…' : countdown }}</div>
     </template>
 
-    <!-- STEG: budgivning pågår -->
+    <!-- STEG: budgivning — varan i en tidsring mellan sidornas sändebud (inga belopp: buden ges muntligt) -->
     <template v-else-if="step === 'negotiating'">
-      <div class="bz__live">
-        <span class="bz__dot" aria-hidden="true"></span>
-        <span class="bz__live-label">{{ t('bidding.in_progress') }}</span>
+      <div class="bz__scen">
+        <SidFigur sida="A" :size="120" pratar />
+        <div class="bz__mitt">
+          <svg class="bz__ring" viewBox="0 0 260 260" aria-hidden="true">
+            <circle cx="130" cy="130" r="118" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="12" />
+            <circle
+              cx="130" cy="130" r="118" fill="none" stroke-width="12" stroke-linecap="round"
+              :stroke="countdown <= 5 ? 'var(--color-danger)' : 'var(--color-primary)'"
+              :stroke-dasharray="RING" :stroke-dashoffset="RING * (1 - tidKvar)"
+              transform="rotate(-90 130 130)" class="bz__ringfg"
+            />
+          </svg>
+          <VaraBild v-if="resource" :vara="resource" :size="112" class="bz__ringvara" />
+          <span class="bz__timer mono" :class="{ 'bz__timer--slut': countdown <= 5 }">0:{{ countdown.toString().padStart(2, '0') }}</span>
+        </div>
+        <SidFigur sida="B" :size="120" pratar />
       </div>
-      <div class="bz__timer mono" :class="{ 'bz__timer--slut': countdown <= 5 }">
-        0:{{ countdown.toString().padStart(2, '0') }}
-      </div>
-      <div v-if="resource" class="bz__resource bz__resource--big">
-        <span class="bz__res-icon">{{ resourceIcon(resource) }}</span>
-        <span class="bz__res-name">{{ t('resource.' + resource) }}</span>
-      </div>
-      <p class="bz__sub">🎧 {{ t('bidding.talk_now') }}</p>
       <button class="bz__end" @click="store.finishNegotiation()">{{ t('bidding.done') }}</button>
     </template>
 
-    <!-- STEG: KLUBBAN (båda skärmarna) -->
+    <!-- STEG: KLUBBAN (båda skärmarna) — bildknappar: A, B, tom lucka -->
     <template v-else-if="step === 'klubba'">
-      <p class="bz__label">{{ t('klubba.over') }}</p>
       <h3 class="bz__q">
-        <span class="bz__q-icon">{{ resourceIcon(resource ?? '') }}</span>
-        {{ t('klubba.vem', { resurs: t('resource.' + resource) }) }}
+        <VaraBild :vara="resource ?? ''" :size="54" />
+        {{ t('klubba.vem') }}
       </h3>
       <div class="kl__val">
         <button
           v-for="sida in sidor"
           :key="sida"
           class="kl__sida"
-          :class="{ 'kl__sida--vald': val === sida, 'kl__sida--min': sida === team }"
+          :class="{ 'kl__sida--vald': val === sida }"
+          :aria-label="store.teamName(sida)"
           @click="valj(sida)"
         >
-          <span class="kl__bokstav">{{ store.teamConfig(sida).name }}</span>
-          <span class="kl__sidtext">{{ store.teamName(sida) }}</span>
-          <small v-if="sida === team" class="kl__ni">{{ t('klubba.ni') }}</small>
-          <small v-else class="kl__ni">{{ s.capital[sida] }} kr kvar</small>
+          <SidFigur :sida="SIDA[sida]" :size="66" :headset="false" />
+          <span class="kl__sidtext">{{ SIDA[sida] }}<small v-if="sida === team"> · {{ t('klubba.ni') }}</small></span>
         </button>
-        <button class="kl__sida kl__sida--ingen" :class="{ 'kl__sida--vald': val === 'ingen' }" @click="valj('ingen')">
-          <span class="kl__bokstav">–</span>
-          <span class="kl__sidtext">{{ t('klubba.ingen') }}</span>
+        <button class="kl__sida kl__sida--ingen" :class="{ 'kl__sida--vald': val === 'ingen' }" :aria-label="t('klubba.ingen')" @click="valj('ingen')">
+          <svg viewBox="0 0 120 120" width="56" height="56" aria-hidden="true">
+            <rect x="10" y="10" width="100" height="100" rx="10" fill="none" stroke="currentColor" stroke-width="8" />
+            <path d="M32 32 L88 88 M88 32 L32 88" stroke="currentColor" stroke-width="8" stroke-linecap="round" />
+          </svg>
+          <span class="kl__sidtext">–</span>
         </button>
       </div>
 
       <div v-if="val && val !== 'ingen'" class="kl__pris">
         <button class="kl__steg" :disabled="pris <= 0" :aria-label="t('bidding.price_dec')" @click="andraPris(-KLUBBA.steg[1])">−{{ KLUBBA.steg[1] }}</button>
         <button class="kl__steg kl__steg--liten" :disabled="pris <= 0" @click="andraPris(-KLUBBA.steg[0])">−{{ KLUBBA.steg[0] }}</button>
-        <div class="kl__belopp mono">{{ pris }}<small> kr</small></div>
+        <div class="kl__belopp">
+          <span class="kl__mynt" aria-hidden="true"><i v-for="n in Math.ceil(pris / 10)" :key="n" /></span>
+          <span class="mono">{{ pris }}<small> kr</small></span>
+        </div>
         <button class="kl__steg kl__steg--liten" :disabled="pris >= maxPris" @click="andraPris(KLUBBA.steg[0])">+{{ KLUBBA.steg[0] }}</button>
         <button class="kl__steg" :disabled="pris >= maxPris" :aria-label="t('bidding.price_inc')" @click="andraPris(KLUBBA.steg[1])">+{{ KLUBBA.steg[1] }}</button>
       </div>
-      <p v-else class="kl__hint">{{ t('klubba.hint') }}</p>
+      <div v-else class="kl__hint" aria-hidden="true"></div>
 
       <button class="crt-button crt-button--strong kl__klubba" :disabled="!kanKlubba" @click="klubba">
         {{ t('klubba.knapp') }}
@@ -136,10 +152,8 @@ const saldText = computed(() =>
     <!-- STEG: SÅLD (båda skärmarna) + ÅNGRA -->
     <template v-else-if="step === 'sald' && sald">
       <div class="kl__stampel-yta">
-        <span class="kl__res">{{ resourceIcon(sald.resource) }} {{ t('resource.' + sald.resource) }}</span>
-        <div class="kl__stampel" :class="{ 'kl__stampel--ingen': !sald.winner, 'kl__stampel--vi': sald.winner === team, 'kl__stampel--de': sald.winner === opponent }">
-          {{ saldText }}
-        </div>
+        <VaraBild :vara="sald.resource" :size="150" />
+        <div class="kl__stampel" :class="{ 'kl__stampel--ingen': !sald.winner }">{{ saldText }}</div>
       </div>
       <button class="kl__angra" @click="store.angra()">{{ t('klubba.angra', { n: countdown }) }}</button>
     </template>
@@ -155,73 +169,51 @@ const saldText = computed(() =>
   text-align: center;
   padding-top: 0.3rem;
 }
-.bz__label {
-  margin: 0;
-  font-size: 1.15rem;
-  letter-spacing: 0.08em;
-  color: var(--color-ink-muted);
+.bz__scen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.4rem;
+}
+.bz__mitt {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+.bz__ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.bz__ringfg {
+  transition: stroke-dashoffset 260ms linear, stroke 200ms;
+}
+.bz__namn {
+  font-family: var(--font-retro);
+  font-size: 1.6rem;
+  color: var(--color-ink-strong);
 }
 .bz__count {
-  font-size: 4.5rem;
+  font-size: 3.2rem;
   line-height: 1;
   color: var(--color-ink-strong);
   text-shadow: var(--glow-strong);
 }
-.bz__resource {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-}
-.bz__res-icon {
-  font-size: 2.8rem;
-  line-height: 1;
-}
-.bz__res-name {
-  font-size: 2.6rem;
-  color: var(--color-ink-strong);
-  text-shadow: var(--glow-soft);
-}
-.bz__resource--big .bz__res-icon {
-  font-size: 4.4rem;
-}
-.bz__resource--big .bz__res-name {
-  font-size: 3.8rem;
-}
-.bz__live {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-.bz__live-label {
-  font-size: 1.4rem;
-  letter-spacing: 0.12em;
-  color: var(--color-primary);
-}
-.bz__dot {
-  width: 0.9rem;
-  height: 0.9rem;
-  border-radius: 50%;
-  background: var(--color-danger);
-  box-shadow: 0 0 10px var(--color-danger);
-  animation: bz-throb 0.9s ease-in-out infinite;
-}
-@keyframes bz-throb {
-  0%, 100% { transform: scale(0.8); opacity: 0.7; }
-  50% { transform: scale(1.4); opacity: 1; }
-}
 .bz__timer {
-  font-size: 3.6rem;
+  position: relative;
+  font-size: 2.2rem;
   line-height: 1;
   color: var(--color-ink-strong);
 }
 .bz__timer--slut {
   color: var(--color-danger);
   text-shadow: 0 0 18px rgba(255, 90, 60, 0.6);
-}
-.bz__sub {
-  margin: 0.2rem 0 0;
-  color: var(--color-ink-muted);
-  font-size: 1.15rem;
 }
 .bz__end {
   margin-top: 0.6rem;
@@ -281,8 +273,16 @@ const saldText = computed(() =>
   line-height: 1;
 }
 .kl__sidtext {
-  font-size: 1.25rem;
-  letter-spacing: 0.08em;
+  font-family: var(--font-rubrik);
+  font-weight: 700;
+  font-size: 1.6rem;
+  letter-spacing: 0.04em;
+}
+.kl__sidtext small {
+  font-family: var(--font-retro);
+  font-weight: normal;
+  font-size: 1rem;
+  color: var(--color-ink-muted);
 }
 .kl__ni {
   font-size: 0.95rem;
@@ -331,7 +331,22 @@ const saldText = computed(() =>
   opacity: 0.3;
   cursor: default;
 }
+.kl__mynt {
+  display: inline-flex;
+  flex-direction: column-reverse;
+  margin-right: 0.5rem;
+}
+.kl__mynt i {
+  width: 34px;
+  height: 10px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 40% 35%, #ffe08a, #d79a1c 70%, #8a5b07);
+  border: 1px solid #6b4504;
+}
 .kl__belopp {
+  display: flex;
+  align-items: flex-end;
   min-width: 7ch;
   font-size: 2.6rem;
   line-height: 1;
@@ -394,7 +409,6 @@ const saldText = computed(() =>
 }
 @media (prefers-reduced-motion: reduce) {
   .kl__stampel { animation: none; }
-  .bz__dot { animation: none; }
 }
 .kl__angra {
   margin-top: 1rem;

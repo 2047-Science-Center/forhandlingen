@@ -7,7 +7,7 @@
 import { ref, computed } from 'vue'
 import type { TeamId } from '../engine/types'
 import { useGameStore } from '../store/gameStore'
-import { resourceIcon } from '../resources'
+import VaraBild from './VaraBild.vue'
 import { useI18n } from '@/station-kit/i18n'
 import RoleIcon from './RoleIcon.vue'
 import { useLjus } from '@/station-kit/ljus'
@@ -52,8 +52,9 @@ function submit() {
           :class="{ 'guess__opt--sel': pick === res }"
           @click="pick = res"
         >
-          <span class="guess__icon">{{ resourceIcon(res) }}</span>
+          <VaraBild :vara="res" :size="72" />
           <span>{{ t('resource.' + res) }}</span>
+          <span v-if="pick === res" class="guess__x2">×2?</span>
         </button>
       </div>
       <button class="crt-button crt-button--strong" :disabled="!pick" @click="submit">
@@ -61,7 +62,10 @@ function submit() {
       </button>
     </template>
 
-    <p v-else class="guess__locked crt-caret">{{ t('guess.locked') }}</p>
+    <div v-else class="guess__last">
+      <span class="guess__lastkort"><VaraBild :vara="store.state.guesses[team] ?? ''" :size="110" /></span>
+      <p class="guess__locked crt-caret">{{ t('guess.locked') }}</p>
+    </div>
   </div>
 </template>
 
@@ -133,8 +137,29 @@ function submit() {
   box-shadow: 0 0 14px rgba(245, 245, 240, 0.4);
   color: var(--color-ink-strong);
 }
-.guess__icon {
-  font-size: 1.8rem;
+.guess__x2 {
+  position: absolute;
+  top: -0.6rem;
+  right: -0.4rem;
+  font-family: var(--font-rubrik);
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: #fff;
+  background: #ff3cc8;
+  border-radius: 8px;
+  padding: 0 0.35em;
+}
+.guess__last {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+.guess__lastkort {
+  padding: 0.6rem;
+  border-radius: 14px;
+  border: 2px solid #ff3cc8;
+  box-shadow: 0 0 22px rgba(255, 60, 200, 0.35);
 }
 .guess__locked {
   font-size: 1.3rem;

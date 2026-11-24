@@ -1,7 +1,7 @@
 /**
  * Pilot-ljus: luckraden på skärmen. Lyser enligt exakt samma
  * { hatch, state, winner } som MqttLights skulle skicka — samma anrop, olika
- * output. Håller ett reaktivt tillstånd som HatchRow-komponenten läser.
+ * output. Håller ett reaktivt tillstånd (luckväggen på skärmen läser state direkt).
  */
 
 import { ref, type Ref } from 'vue'
