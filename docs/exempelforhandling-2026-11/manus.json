@@ -1,0 +1,190 @@
+{
+  "_om": "Exempelförhandlingen, manus v2 (2026-11-24): en förinspelad runda på tre luckor + gissningen som visar HUR man tänker. Josefs tillägg: sändebudet samråder med rapportören under budgivningen, och rapportören resonerar högt i gissningen — så skillnaden mellan rollerna syns. 'viskar' = sidans interna snack (bara den egna sidan hör, handen över mikrofonen). Illustration: 3D-scenen (vem pratar) + overlaybilder ur Förhandlingens bildbank public/assets/Bild 1–10 (känslan) + tunt HUD (pris, mynt, LIVSVIKTIG). Röster: MEM:s ElevenLabs-röster + VALdi.",
+  "roller": {
+    "valdi": {
+      "namn": "VALdi",
+      "rost": "BNgbHR0DNeZixGQVzloa"
+    },
+    "sandebudA": {
+      "namn": "Adam",
+      "sida": "A",
+      "roll": "sändebud",
+      "rost": "tPrL2xYfkQnwJhHMMdRM",
+      "bild": "bildbanken: mannen med glasögon och SÄNDEBUD-märket (Bild 2, 4, 7, 8, 10)"
+    },
+    "rapportorA": {
+      "namn": "Noor",
+      "sida": "A",
+      "roll": "rapportör",
+      "rost": "ISDDl0xPNLMD73L5PQj4",
+      "bild": "bildbanken: kvinnan med headset (Bild 2, 4, 7, 8, 10)"
+    },
+    "sandebudB": {
+      "namn": "Ebba",
+      "sida": "B",
+      "roll": "sändebud",
+      "rost": "9ambBcBMpHAeeFp1uJUB"
+    },
+    "rapportorB": {
+      "namn": "Ville",
+      "sida": "B",
+      "roll": "rapportör",
+      "rost": "cLAH1kXlkAivJHxCW601"
+    }
+  },
+  "livsviktig": {
+    "A": "insulin",
+    "B": "styrkort"
+  },
+  "ram": [
+    {
+      "id": "x0",
+      "vem": "valdi",
+      "plats": "fore",
+      "text": "Lyssna. En inspelning från ett tidigare test. Sida A behövde insulin.",
+      "bild": "Bild 1"
+    }
+  ],
+  "luckor": [
+    {
+      "vara": "styrkort",
+      "syfte": "Så går en lucka — och sändebudet frågar rapportören innan det släpper.",
+      "bild": "Bild 2",
+      "rader": [
+        {
+          "id": "x1",
+          "vem": "sandebudA",
+          "text": "Styrkortet? Vi ger tio."
+        },
+        {
+          "id": "x2",
+          "vem": "sandebudB",
+          "text": "Femton! Direkt."
+        },
+        {
+          "id": "x3",
+          "vem": "sandebudA",
+          "viskar": true,
+          "text": "Behöver vi den?"
+        },
+        {
+          "id": "x4",
+          "vem": "rapportorA",
+          "viskar": true,
+          "text": "Nej. Släpp den."
+        },
+        {
+          "id": "x5",
+          "vem": "sandebudA",
+          "text": "Ta det."
+        }
+      ],
+      "klubba": {
+        "vinnare": "B",
+        "pris": 15
+      }
+    },
+    {
+      "vara": "branslecell",
+      "syfte": "Bluffen: låtsas att fel vara är livsviktig, så budar motparten upp den.",
+      "bild": "Bild 3",
+      "rader": [
+        {
+          "id": "x6",
+          "vem": "rapportorA",
+          "viskar": true,
+          "text": "Låtsas att vi måste ha bränslecellen. Då tror de att det är den."
+        },
+        {
+          "id": "x7",
+          "vem": "sandebudA",
+          "text": "Bränslecellen behöver vi verkligen. Trettio!"
+        },
+        {
+          "id": "x8",
+          "vem": "sandebudB",
+          "text": "Fyrtio."
+        },
+        {
+          "id": "x9",
+          "vem": "sandebudA",
+          "text": "Femtio!"
+        },
+        {
+          "id": "x10",
+          "vem": "sandebudB",
+          "text": "Sextio. Den är vår."
+        },
+        {
+          "id": "x11",
+          "vem": "sandebudA",
+          "text": "Okej … ta den då."
+        }
+      ],
+      "klubba": {
+        "vinnare": "B",
+        "pris": 60
+      }
+    },
+    {
+      "vara": "insulin",
+      "syfte": "Utdelningen: den riktiga livsviktiga går billigt, för ingen tror att den är viktig.",
+      "bild": "Bild 10",
+      "rader": [
+        {
+          "id": "x12",
+          "vem": "rapportorA",
+          "viskar": true,
+          "text": "Nu. Låtsas att du inte bryr dig."
+        },
+        {
+          "id": "x13",
+          "vem": "sandebudA",
+          "text": "Insulin? Tja. Tio kronor."
+        },
+        {
+          "id": "x14",
+          "vem": "sandebudB",
+          "text": "Vi har nästan inga pengar kvar. Ta den."
+        }
+      ],
+      "klubba": {
+        "vinnare": "A",
+        "pris": 10
+      }
+    }
+  ],
+  "gissning": {
+    "syfte": "Rapportörens jobb: resonera fram motståndarens livsviktiga ur hur de budade. Rätt = dubbla poäng.",
+    "bild": "Bild 8",
+    "rader": [
+      {
+        "id": "x15",
+        "vem": "rapportorA",
+        "text": "Vilken var deras? De tog styrkortet direkt, utan att tveka. Den var deras."
+      },
+      {
+        "id": "x16",
+        "vem": "rapportorB",
+        "text": "Deras var bränslecellen. De ville ju ha den så mycket."
+      }
+    ],
+    "utfall": {
+      "A": {
+        "gissning": "styrkort",
+        "ratt": true
+      },
+      "B": {
+        "gissning": "branslecell",
+        "ratt": false
+      }
+    }
+  },
+  "slut": [
+    {
+      "id": "x17",
+      "vem": "valdi",
+      "text": "Sändebudet pratar. Rapportören lyssnar och tänker. Dölj vad ni behöver, och hör vad de behöver."
+    }
+  ]
+}
