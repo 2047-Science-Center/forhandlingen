@@ -35,17 +35,19 @@ export const sv: Record<string, string> = {
   // --- exempel ---
   'exempel.inspelning': 'INSPELNING · TIDIGARE TEST',
   'exempel.viskar': 'viskar, bara egna sidan hör',
-  'exempel.b_gissar': 'B gissar bränslecellen',
+  'exempel.mot_gissar': 'Sida {sida} gissade {vara}',
+  'exempel.ert_val': 'NI GISSADE',
+  'exempel.facit': 'DET VAR',
   'exempel.ratt': 'RÄTT · ×2',
   'exempel.lurade': 'LURADE',
   'exempel.roll_sandebud': 'sändebud',
   'exempel.roll_rapportor': 'rapportör',
-  'exempel.skarm': 'SÅ HÄR SÅG SIDA A:S SKÄRM UT',
+  'exempel.skarm': 'SÅ HÄR SÅG SIDA {sida}:S SKÄRM UT',
   'exempel.lucka': 'LUCKA {n} / {antal}',
   'exempel.snart': 'Snart öppnas första luckan …',
   'exempel.livs_er': 'ER LIVSVIKTIGA!',
   'exempel.gissning': 'GISSNING',
-  'exempel.gissa_fraga': 'Vilken var sida B:s livsviktiga?',
+  'exempel.gissa_fraga': 'Vilken var sida {sida}:s livsviktiga?',
   'exempel.hoppa': 'hoppa över ▸',
 
   // --- redo ---

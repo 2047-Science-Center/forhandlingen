@@ -200,6 +200,7 @@ watch(
       v-else-if="stage === 'exempel'"
       :start-at="store.onbEpoch ?? Date.now()"
       :leader="leader"
+      :min-sida="minSida"
       @done="exempelKlart"
       @skip="exempelKlart"
     />

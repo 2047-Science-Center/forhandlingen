@@ -12,6 +12,8 @@
  *   │ [ repliken som bubbla ]      │                                  │
  *   └──────────────────────────────┴──────────────────────────────────┘
  *
+ * Varje skärm ser SITT perspektiv (minSida): sin sida till vänster i 3D, sin egen skärm i rutan (pengar,
+ * livsviktig, gissning). Repliker, röster och luckor är desamma och går i takt.
  * Rutan till höger är den riktiga skärmens uppbyggnad (som ReporterConsole) så man ser VAD som förhandlas just nu
  * och när de går vidare till nästa sak. Båda skärmarna räknar samma läge ur samma starttid (schema.ts);
  * rösten spelas bara från ledaren.
@@ -26,7 +28,7 @@ import VaraBild from '../components/VaraBild.vue'
 import MyntStapel from '../components/MyntStapel.vue'
 import type { HatchCell } from '../store/gameStore'
 
-const props = defineProps<{ startAt: number; leader: boolean }>()
+const props = withDefaults(defineProps<{ startAt: number; leader: boolean; minSida?: 'A' | 'B' }>(), { minSida: 'A' })
 const emit = defineEmits<{ done: []; skip: [] }>()
 const { t } = useI18n()
 
@@ -34,8 +36,18 @@ const BAS = import.meta.env.BASE_URL
 const schema = byggSchema()
 type RollInfo = { namn: string; sida?: 'A' | 'B'; roll?: string }
 const roller = (manus as unknown as { roller: Record<string, RollInfo> }).roller
-const LIVS_A = manus.livsviktig.A
-const LIVS_B = manus.livsviktig.B
+const EGEN = props.minSida
+const MOT = EGEN === 'A' ? 'B' : 'A'
+const LIVS_EGEN = manus.livsviktig[EGEN]
+/** Gissningen i inspelningen: A gissade rätt (styrkortet), B lurades av bluffen (bränslecellen; facit insulin). */
+const GISSNING = {
+  A: { val: 'styrkort', facit: manus.livsviktig.B },
+  B: { val: 'branslecell', facit: manus.livsviktig.A },
+} as const
+const minGissning = GISSNING[EGEN]
+const motGissning = GISSNING[MOT]
+const minRatt = minGissning.val === minGissning.facit
+const motRatt = motGissning.val === motGissning.facit
 
 const nu = ref(Date.now())
 // Starttiden låses vid mount: en reserv-Date.now() i föräldern får inte nollställa tidslinjen vid omrendering.
@@ -109,8 +121,8 @@ const lucka = computed(() => (lage.value.lucka >= 0 && !lage.value.gissar ? lage
 const luckaVara = computed(() => (lucka.value != null ? schema.luckor[lucka.value].vara : null))
 const nyLucka = computed(() => lucka.value != null && tid.value - schema.luckor[lucka.value].oppnas < 1.6)
 const luckaSald = computed(() => (lucka.value != null ? (lage.value.klubbat.find((k) => k.lucka === lucka.value) ?? null) : null))
-const livsUppe = computed(() => lage.value.oppen && luckaVara.value === LIVS_A)
-/** Under VALdis inledning pekar skärmen på A:s livsviktiga ("Sida A behövde insulin"). */
+const livsUppe = computed(() => lage.value.oppen && luckaVara.value === LIVS_EGEN)
+/** Under VALdis inledning pekar skärmen på den egna livsviktiga. */
 const ram = computed(() => lage.value.lucka < 0)
 
 // --- Repliken ---
@@ -135,12 +147,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="ex">
+  <div class="ex" :style="{ '--egen-farg': EGEN === 'A' ? '#fff1d6' : '#ff3cc8' }">
     <!-- ===== Vänster: 3D-scenen + repliken ===== -->
     <section class="ex__scen">
-      <iframe ref="scen3d" class="ex__3d" :src="`${BAS}entre/exempel-3d.html`" title="Exempelförhandlingen i 3D" />
+      <iframe ref="scen3d" class="ex__3d" :src="`${BAS}entre/exempel-3d.html?sida=${EGEN}`" title="Exempelförhandlingen i 3D" />
       <div class="ex__rec"><i />{{ t('exempel.inspelning') }}</div>
-      <span class="ex__bpengar"><small>SIDA B</small> {{ lage.pengar.B }}<small> kr</small></span>
+      <span class="ex__motpengar" :class="`ex__motpengar--${MOT}`"><small>SIDA {{ MOT }}</small> {{ lage.pengar[MOT] }}<small> kr</small></span>
 
       <Transition name="ex-bubbla" mode="out-in">
         <div
@@ -162,18 +174,18 @@ onUnmounted(() => {
 
     <!-- ===== Höger: sida A:s skärm ===== -->
     <section class="ex__skarm">
-      <p class="ex__skarm-etikett">{{ t('exempel.skarm') }}</p>
+      <p class="ex__skarm-etikett" :class="`ex__skarm-etikett--${EGEN}`">{{ t('exempel.skarm', { sida: EGEN }) }}</p>
 
       <!-- Rubriken: vilken lucka, vilken vara — eller gissningen -->
       <Transition name="ex-rubrik" mode="out-in">
         <div v-if="lage.gissar" key="gissa" class="ex__rubrik ex__rubrik--gissa">
           <span class="ex__rubrik-nr">{{ t('exempel.gissning') }}</span>
-          <b>{{ t('exempel.gissa_fraga') }}</b>
+          <b>{{ t('exempel.gissa_fraga', { sida: MOT }) }}</b>
         </div>
         <div v-else-if="lucka != null" :key="`l${lucka}`" class="ex__rubrik" :class="{ 'ex__rubrik--ny': nyLucka, 'ex__rubrik--livs': livsUppe }">
           <span class="ex__rubrik-nr">{{ t('exempel.lucka', { n: lucka + 1, antal: schema.luckor.length }) }}</span>
           <b>{{ t('resource.' + luckaVara) }}</b>
-          <span v-if="luckaVara === LIVS_A" class="ex__rubrik-livs">{{ t('exempel.livs_er') }}</span>
+          <span v-if="luckaVara === LIVS_EGEN" class="ex__rubrik-livs">{{ t('exempel.livs_er') }}</span>
         </div>
         <div v-else key="snart" class="ex__rubrik ex__rubrik--snart">
           <span class="ex__rubrik-nr">{{ t('exempel.snart') }}</span>
@@ -184,7 +196,7 @@ onUnmounted(() => {
       <div class="ex__k">
         <aside class="ex__kol">
           <span class="ex__etikett">{{ t('pek.pengar_etikett') }}</span>
-          <MyntStapel :kr="lage.pengar.A" liten />
+          <MyntStapel :kr="lage.pengar[EGEN]" liten />
           <p class="ex__regel">{{ t('fast.pengar') }}</p>
         </aside>
 
@@ -198,27 +210,30 @@ onUnmounted(() => {
               </div>
             </div>
           </template>
-          <!-- Gissningen: B köpte styrkortet och bränslecellen — vilken var den livsviktiga? -->
+          <!-- Gissningen: egen gissning, och vid utfallet facit + motsidans gissning -->
           <div v-else class="ex__gissa">
-            <div class="ex__gkort" :class="{ 'ex__gkort--ratt': lage.utfall }">
-              <VaraBild :vara="LIVS_B" :size="80" />
-              <span>{{ t('resource.' + LIVS_B) }}</span>
-              <b v-if="lage.utfall" class="ok">{{ t('exempel.ratt') }}</b>
+            <div class="ex__gkort" :class="{ 'ex__gkort--ratt': lage.utfall && minRatt, 'ex__gkort--fel': lage.utfall && !minRatt }">
+              <span class="ex__gval">{{ t('exempel.ert_val') }}</span>
+              <VaraBild :vara="minGissning.val" :size="80" />
+              <span>{{ t('resource.' + minGissning.val) }}</span>
+              <b v-if="lage.utfall" :class="minRatt ? 'ok' : 'bad'">{{ minRatt ? t('exempel.ratt') : t('exempel.lurade') }}</b>
             </div>
-            <div class="ex__gkort ex__gkort--av">
-              <VaraBild vara="branslecell" :size="80" />
-              <span>{{ t('resource.branslecell') }}</span>
+            <div v-if="lage.utfall && !minRatt" class="ex__gkort ex__gkort--facit">
+              <span class="ex__gval">{{ t('exempel.facit') }}</span>
+              <VaraBild :vara="minGissning.facit" :size="80" />
+              <span>{{ t('resource.' + minGissning.facit) }}</span>
             </div>
-            <p v-if="lage.utfall" class="ex__bgissar">
-              {{ t('exempel.b_gissar') }} <b class="bad">{{ t('exempel.lurade') }}</b>
+            <p v-if="lage.utfall" class="ex__motgissar" :class="`ex__motgissar--${MOT}`">
+              {{ t('exempel.mot_gissar', { sida: MOT, vara: t('resource.' + motGissning.val).toLowerCase() }) }}
+              <b :class="motRatt ? 'ok' : 'bad'">{{ motRatt ? t('exempel.ratt') : t('exempel.lurade') }}</b>
             </p>
           </div>
         </main>
 
         <aside class="ex__kol ex__kol--livs" :class="{ 'ex__kol--fokus': livsUppe || ram }">
           <span class="ex__tagg">{{ t('critical.tagg') }}</span>
-          <VaraBild :vara="LIVS_A" :size="70" />
-          <span class="ex__namn">{{ t('resource.' + LIVS_A) }}</span>
+          <VaraBild :vara="LIVS_EGEN" :size="70" />
+          <span class="ex__namn">{{ t('resource.' + LIVS_EGEN) }}</span>
           <p class="ex__regel">{{ t('fast.livs') }}</p>
         </aside>
       </div>
@@ -276,21 +291,22 @@ onUnmounted(() => {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 1; }
 }
-/* B:s pengar som en liten skylt på B:s sida — så att det syns att bluffen kostade dem */
-.ex__bpengar {
+/* Motsidans pengar som en liten skylt på deras sida — så att det syns vad bluffen kostade */
+.ex__motpengar {
   position: absolute;
   right: 1rem;
   top: 0.8rem;
   padding: 0.1em 0.6em;
-  border: 2px solid #ff3cc8;
+  border: 2px solid currentColor;
   border-radius: 8px;
   background: rgba(5, 16, 11, 0.85);
   font-family: var(--font-rubrik);
   font-weight: 700;
   font-size: 1.6rem;
-  color: #ff3cc8;
 }
-.ex__bpengar small {
+.ex__motpengar--A { color: #fff1d6; }
+.ex__motpengar--B { color: #ff3cc8; }
+.ex__motpengar small {
   font-family: var(--font-mono);
   font-size: 0.8rem;
   letter-spacing: 0.1em;
@@ -379,7 +395,7 @@ onUnmounted(() => {
   gap: 0.9rem;
   padding: 0.9rem 1rem 1rem;
   background: var(--color-background);
-  border-left: 3px solid #fff1d6;
+  border-left: 3px solid var(--egen-farg);
   box-shadow: inset 12px 0 30px rgba(0, 0, 0, 0.5);
 }
 .ex__skarm-etikett {
@@ -388,8 +404,9 @@ onUnmounted(() => {
   font-weight: 600;
   font-size: 0.95rem;
   letter-spacing: 0.16em;
-  color: #fff1d6;
 }
+.ex__skarm-etikett--A { color: #fff1d6; }
+.ex__skarm-etikett--B { color: #ff3cc8; }
 
 .ex__rubrik {
   display: flex;
@@ -580,26 +597,37 @@ onUnmounted(() => {
   border-color: #7ad14f;
   box-shadow: 0 0 26px rgba(122, 209, 79, 0.5);
 }
-.ex__gkort--av {
-  opacity: 0.5;
+.ex__gkort--fel {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 26px rgba(255, 90, 60, 0.45);
+}
+.ex__gkort--facit {
+  border-style: dashed;
+  border-color: #7ad14f;
+  animation: ex-in 300ms 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.ex__gval {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  color: var(--color-ink-muted);
 }
 .ex__gkort b,
-.ex__bgissar b {
+.ex__motgissar b {
   padding: 0 0.4em;
   border-radius: 6px;
   font-family: var(--font-rubrik);
 }
 .ok { background: #7ad14f; color: #0b1a07; }
 .bad { background: var(--color-danger); color: #fff; }
-.ex__bgissar {
+.ex__motgissar {
   flex-basis: 100%;
   margin: 0;
   text-align: center;
   font-family: var(--font-rubrik);
   font-weight: 700;
   font-size: 1.2rem;
-  color: #ff3cc8;
-  animation: ex-in 300ms 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: ex-in 300ms 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .ex__hoppa {
@@ -616,6 +644,8 @@ onUnmounted(() => {
   cursor: pointer;
 }
 @media (prefers-reduced-motion: reduce) {
-  .ex__rec i, .ex__stampel, .ex__varabild, .ex__bgissar { animation: none; }
+  .ex__rec i, .ex__stampel, .ex__varabild, .ex__motgissar, .ex__gkort--facit { animation: none; }
 }
+.ex__motgissar--A { color: #fff1d6; }
+.ex__motgissar--B { color: #ff3cc8; }
 </style>
