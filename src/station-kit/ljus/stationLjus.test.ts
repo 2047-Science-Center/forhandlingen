@@ -71,6 +71,28 @@ describe('station-kit/ljus', () => {
     expect(a()).toMatchObject({ color: SIDFARG.A.led, effekt: 'static' })
   })
 
+  it('VALdi under sorteringen: hjärtslag = amber lub-dub över hela vagnen, dom = valvfärg tills nästa person', () => {
+    const f = fakeClient()
+    initLjus({ stationN: 3, enabled: true, mqttUrl: '', valv: 'forskning', segment: SEG }, f.c)
+    f.connect()
+    expect(f.subs).toContain('station3/valdi')
+    f.msg('station3/valdi', { lage: 'hjarta' })
+    expect(f.sent.filter((m) => m.topic === 'station3/feedback')).toHaveLength(0) // inte i sorteringen än
+    f.msg('regi/phase', { phase: 'sortering' })
+    f.msg('station3/valdi', { lage: 'hjarta' })
+    const fb = f.sent.filter((m) => m.topic === 'station3/feedback').at(-1)!
+    expect(fb.retain).toBe(false)
+    expect(fb.payload.segments.map((s: { id: string }) => s.id)).toEqual(['A', 'B'])
+    expect(fb.payload.segments[0]).toMatchObject({ color: FARG.amber, antal: 2 })
+    const bas = () => f.sent.filter((m) => m.topic === 'station3/underglow').at(-1)!.payload.segments
+    f.msg('station3/valdi', { lage: 'dom', color: '#ff5a3c' })
+    expect(bas().map((s: { color: string }) => s.color)).toEqual(['#ff5a3c', '#ff5a3c'])
+    f.msg('station3/valdi', { lage: 'blixt' })
+    expect(bas()[0].color).toBe('#ff5a3c')
+    f.msg('station3/valdi', { lage: 'vila' })
+    expect(bas()[0]).toMatchObject({ color: VALVFARG.forskning, effekt: 'puls' })
+  })
+
   it('gest = ej retained feedback på rätt segment + kanoniskt ljud', () => {
     const f = fakeClient()
     const spela = vi.fn()

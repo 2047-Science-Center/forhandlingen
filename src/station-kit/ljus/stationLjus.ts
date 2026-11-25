@@ -22,7 +22,7 @@
  */
 import { reactive, readonly } from 'vue'
 import mqtt from 'mqtt'
-import { GEST, lageLook, regiLook, REGI_FORE, type Gest, type Lage, type LjudNamn, type Look, type Valv } from './kanon'
+import { FARG, GEST, lageLook, regiLook, REGI_FORE, type Gest, type Lage, type LjudNamn, type Look, type Valv } from './kanon'
 
 export interface LjusClient {
   publish(topic: string, payload: string, opts?: { retain?: boolean }): unknown
@@ -94,6 +94,7 @@ let hittaTimer: ReturnType<typeof setTimeout> | null = null
 const underglowTopic = () => `station${opts!.stationN}/underglow`
 const feedbackTopic = () => `station${opts!.stationN}/feedback`
 const hittaTopic = () => `station${opts!.stationN}/hitta`
+const valdiTopic = () => `station${opts!.stationN}/valdi`
 
 function egna(): string[] {
   return opts!.egna.length ? opts!.egna : Object.keys(opts!.segment)
@@ -228,10 +229,47 @@ function onHitta(raw: string): void {
   publiceraBas()
 }
 
+/**
+ * station<N>/valdi (VALdi-ceremonin → hålets ring) speglas på underglow under `sortering` (SOM.md,
+ * Josef 2026-11-25): varje hjärtslag = amber lub-dub över hela vagnen; domen = hela vagnen i valvets
+ * färg tills nästa person (nästa läge som inte är dom/hjarta/blixt, max VALDI_DOM_S). Sidorna spelar ingen roll.
+ */
+const VALDI_DOM_S = 30
+function onValdi(raw: string): void {
+  if (state.regiFas !== 'sortering') return
+  let d: { lage?: string; color?: string }
+  try {
+    d = JSON.parse(raw)
+  } catch {
+    return
+  }
+  if (d?.lage === 'hjarta') {
+    if (!opts!.skrivare) return // ett fönster per station, annars dubbla slag
+    const segments = egna().map((id) => {
+      const [from, to] = opts!.segment[id]
+      return { id, from, to, color: FARG.amber, tempo: 250, antal: 2 }
+    })
+    publish(feedbackTopic(), { gest: 'hjarta', segments }, false)
+    return
+  }
+  if (d?.lage === 'dom') {
+    if (typeof d.color === 'string') onHitta(JSON.stringify({ valv: 'dom', color: d.color, sekunder: VALDI_DOM_S }))
+    return
+  }
+  if (d?.lage !== 'blixt' && state.hitta) {
+    clearHitta()
+    publiceraBas()
+  }
+}
+
 function onMessage(topic: string, raw: string): void {
   if (!opts) return
   if (topic === hittaTopic()) {
     onHitta(raw)
+    return
+  }
+  if (topic === valdiTopic()) {
+    onValdi(raw)
     return
   }
   if (topic !== 'regi/phase') return
@@ -296,6 +334,7 @@ export function initLjus(o: LjusOptions, injected?: LjusClient): StationLjus {
     client.on('message', (topic, payload) => onMessage(topic, payload.toString()))
     client.subscribe('regi/phase')
     client.subscribe(hittaTopic())
+    client.subscribe(valdiTopic())
   }
   if (opts.delad && opts.skrivare) republishTimer = setInterval(() => publiceraBas(true), opts.republishMs)
   return api
