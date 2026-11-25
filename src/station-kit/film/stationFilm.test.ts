@@ -111,7 +111,7 @@ describe('station-kit/film', () => {
       expect(film.src.value).toBe('http://h:5188/?group=3&session=12&follower')
       f.msg('regi/phase', { phase: 'sortering', session_id: 12 })
       expect(film.lage.value).toBe('sortering')
-      expect(film.src.value).toBe('http://h:8790/?valdi=1&station=4&session=12&broker=ws%3A%2F%2Fh%3A9001')
+      expect(film.src.value).toBe('http://h:8790/?valdi=1&station=4&session=12&broker=ws%3A%2F%2Fh%3A9001&sensor=ir')
     })
 
     it('sortering: VALdi på båda sidorna — sida A styr, sida B följer (folj=1)', () => {
@@ -119,7 +119,7 @@ describe('station-kit/film', () => {
       const film = initFilm({ ...OPTS, sida: 'B' }, f.c)
       f.msg('regi/phase', { phase: 'sortering', session_id: 12 })
       expect(film.lage.value).toBe('sortering')
-      expect(film.src.value).toBe('http://h:8790/?valdi=1&station=4&session=12&broker=ws%3A%2F%2Fh%3A9001&folj=1')
+      expect(film.src.value).toBe('http://h:8790/?valdi=1&station=4&session=12&broker=ws%3A%2F%2Fh%3A9001&sensor=ir&folj=1')
     })
 
     it('sortering: station 2 styrs från sida B (Lögndetektorn), sida A följer', () => {

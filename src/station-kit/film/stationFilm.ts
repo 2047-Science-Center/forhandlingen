@@ -237,7 +237,9 @@ export function sorteringSrc(
   sorteringUrl: string,
   o: { stationN: number; sessionId: string | number | null; mqttUrl: string; folj?: boolean },
 ): string {
-  const tail = q({ valdi: 1, station: o.stationN, session: o.sessionId, broker: o.mqttUrl, folj: o.folj ? 1 : null })
+  // Riggens hål har Eriks IR-sensor (station<N>/hal "1"/"0", xy-firmware hw_valdi.h). Utan sensor=ir tolkar
+  // VALdi-vyn "1" som 1 mm (< minMm 30) och ser aldrig handen.
+  const tail = q({ valdi: 1, station: o.stationN, session: o.sessionId, broker: o.mqttUrl, sensor: 'ir', folj: o.folj ? 1 : null })
   return `${bas(sorteringUrl)}/?${tail}`
 }
 
