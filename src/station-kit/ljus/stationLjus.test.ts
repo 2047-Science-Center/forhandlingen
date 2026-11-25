@@ -59,6 +59,18 @@ describe('station-kit/ljus', () => {
     expect(ug.filter((m) => m.payload.lage === 'tutorial')).toHaveLength(1)
   })
 
+  it('trailern går före stationens läge (dämpad amber fast), sedan tillbaka', () => {
+    const f = fakeClient()
+    const l = initLjus({ stationN: 3, enabled: true, mqttUrl: '', valv: 'forskning', segment: SEG }, f.c)
+    f.connect()
+    l.lage('startsida')
+    f.msg('regi/phase', { phase: 'trailer' })
+    const a = () => f.sent.filter((m) => m.topic === 'station3/underglow').at(-1)!.payload.segments[0]
+    expect(a()).toMatchObject({ color: FARG.amberDim, effekt: 'static' })
+    f.msg('regi/phase', { phase: 'rotation' })
+    expect(a()).toMatchObject({ color: SIDFARG.A.led, effekt: 'static' })
+  })
+
   it('gest = ej retained feedback på rätt segment + kanoniskt ljud', () => {
     const f = fakeClient()
     const spela = vi.fn()

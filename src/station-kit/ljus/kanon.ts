@@ -195,6 +195,13 @@ export const GEST: Record<Gest, GestDef> = {
  * regi/phase → stationens bas UTANFÖR rotationen (cue-sheetens underglow-rader,
  * XY-RIGG-ARKITEKTUR §1.2). null = stationens eget läge styr (rotationen).
  */
+/**
+ * Regi-faser som går FÖRE stationens eget läge (Josef 2026-11-25): under trailern dämpas
+ * underglow till amber fast så att filmen syns, även om gruppen redan står vid stationen
+ * (startsida från incheckningen). Efter fasen tar stationens läge över igen.
+ */
+export const REGI_FORE: readonly string[] = ['trailer']
+
 export function regiLook(fas: string | null, valv: Valv): Look | null {
   const v = VALVFARG[valv]
   switch (fas) {
@@ -203,8 +210,9 @@ export function regiLook(fas: string | null, valv: Valv): Look | null {
     case 'klart':
       return { color: v, effekt: 'puls' }
     case 'incheckning':
-    case 'trailer':
       return { color: FARG.amber, effekt: 'puls' }
+    case 'trailer':
+      return { color: FARG.amberDim, effekt: 'static' }
     case 'reveal':
       return { color: FARG.stal, effekt: 'static' }
     case 'sortering':
