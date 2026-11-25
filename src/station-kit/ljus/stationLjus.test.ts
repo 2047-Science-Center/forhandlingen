@@ -90,7 +90,7 @@ describe('station-kit/ljus', () => {
     f.msg('station3/valdi', { lage: 'blixt' })
     expect(bas()[0].color).toBe('#ff5a3c')
     f.msg('station3/valdi', { lage: 'vila' })
-    expect(bas()[0]).toMatchObject({ color: VALVFARG.forskning, effekt: 'puls' })
+    expect(bas()[0]).toMatchObject({ color: FARG.amberDim, effekt: 'static' })
   })
 
   it('gest = ej retained feedback på rätt segment + kanoniskt ljud', () => {

@@ -216,7 +216,8 @@ export function regiLook(fas: string | null, valv: Valv): Look | null {
     case 'reveal':
       return { color: FARG.stal, effekt: 'static' }
     case 'sortering':
-      return { color: v, effekt: 'puls' }
+      // Dämpad orange fast (Josef 2026-11-25): VALdis hjärtslag blinkar fullt amber ovanpå, domen ger valvfärgen.
+      return { color: FARG.amberDim, effekt: 'static' }
     case 'syv':
       return { color: v, effekt: 'static' }
     default:
