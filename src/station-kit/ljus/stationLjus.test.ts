@@ -73,12 +73,14 @@ describe('station-kit/ljus', () => {
 
   it('VALdi under sorteringen: hjärtslag = amber lub-dub över hela vagnen, dom = valvfärg tills nästa person', () => {
     const f = fakeClient()
-    initLjus({ stationN: 3, enabled: true, mqttUrl: '', valv: 'forskning', segment: SEG }, f.c)
+    const l = initLjus({ stationN: 3, enabled: true, mqttUrl: '', valv: 'forskning', segment: SEG }, f.c)
     f.connect()
     expect(f.subs).toContain('station3/valdi')
     f.msg('station3/valdi', { lage: 'hjarta' })
     expect(f.sent.filter((m) => m.topic === 'station3/feedback')).toHaveLength(0) // inte i sorteringen än
+    l.lage('lek')
     f.msg('regi/phase', { phase: 'sortering' })
+    expect(f.sent.filter((m) => m.topic === 'station3/underglow').at(-1)!.payload.segments[0]).toMatchObject({ color: FARG.amberDim }) // går före lek/startsida
     f.msg('station3/valdi', { lage: 'hjarta' })
     const fb = f.sent.filter((m) => m.topic === 'station3/feedback').at(-1)!
     expect(fb.retain).toBe(false)

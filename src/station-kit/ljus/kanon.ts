@@ -198,9 +198,10 @@ export const GEST: Record<Gest, GestDef> = {
 /**
  * Regi-faser som går FÖRE stationens eget läge (Josef 2026-11-25): under trailern dämpas
  * underglow till amber fast så att filmen syns, även om gruppen redan står vid stationen
- * (startsida från incheckningen). Efter fasen tar stationens läge över igen.
+ * (startsida från incheckningen). Samma under `sortering` (dämpad orange + VALdis hjärtslag/dom, 2026-11-25),
+ * annars syns rotationens sidfärger/lila. Efter fasen tar stationens läge över igen.
  */
-export const REGI_FORE: readonly string[] = ['trailer']
+export const REGI_FORE: readonly string[] = ['trailer', 'sortering']
 
 export function regiLook(fas: string | null, valv: Valv): Look | null {
   const v = VALVFARG[valv]
