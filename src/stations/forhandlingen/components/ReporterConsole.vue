@@ -7,7 +7,9 @@
  *   │ 100 kr │  │ aktuell lucka     │  │ namnet     │
  *   └────────┘  └───────────────────┘  └────────────┘
  *
- * Ingen topppanel, inga namn eller roller. Påminnelser pekar på det som gäller just då:
+ * Ingen topppanel, inga namn eller roller. Reglerna står kvar hela tiden som en rad i sin kolumn
+ * (pengar: kvar = poäng; livsviktig: måste köpas, och rätt gissning på motståndarens ×2).
+ * Påminnelser pekar dessutom på det som gäller just då:
  *   - före första luckan: först "det här är er livsviktiga — ni måste få tag på den",
  *     sedan "era pengar — slösa inte, det som är kvar blir poäng";
  *   - när er livsviktiga kommer upp: rött, "den här måste ni ta";
@@ -65,6 +67,7 @@ const livsText = computed(() => (livsUppe.value ? t('pek.livs_uppe') : t('pek.li
       <aside class="k__sida k__pengar" :class="{ 'k__sida--fokus': pekPengar, 'k__sida--dampad': livsUppe }" data-tut="capital">
         <span class="k__etikett">{{ t('pek.pengar_etikett') }}</span>
         <MyntStapel :kr="capital" />
+        <p class="k__regel">{{ t('fast.pengar') }}</p>
         <Transition name="k-pek"><p v-if="pekPengar" class="k__pek">{{ pengarText }}</p></Transition>
       </aside>
 
@@ -87,6 +90,8 @@ const livsText = computed(() => (livsUppe.value ? t('pek.livs_uppe') : t('pek.li
         <span class="k__tagg">{{ t('critical.tagg') }}</span>
         <VaraBild :vara="critical" :size="120" />
         <span class="k__namn">{{ t('resource.' + critical) }}</span>
+        <p class="k__regel">{{ t('fast.livs') }}</p>
+        <p class="k__regel k__regel--gissa"><b>×2</b>{{ t('fast.gissa') }}</p>
         <Transition name="k-pek"><p v-if="pekLivsForst || livsUppe" class="k__pek k__pek--livs">{{ livsText }}</p></Transition>
       </aside>
     </div>
@@ -180,6 +185,28 @@ const livsText = computed(() => (livsUppe.value ? t('pek.livs_uppe') : t('pek.li
   font-family: var(--font-retro);
   font-size: 1.6rem;
   color: var(--color-ink-strong);
+}
+/* Regeln som står kvar hela tiden */
+.k__regel {
+  margin: 0;
+  font-family: var(--font-retro);
+  font-size: 1.1rem;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--color-ink-strong);
+}
+.k__regel--gissa {
+  margin-top: 0.3rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed rgba(245, 245, 240, 0.3);
+  font-size: 1rem;
+  color: var(--color-ink-muted);
+}
+.k__regel--gissa b {
+  display: block;
+  font-family: var(--font-rubrik);
+  font-size: 1.6rem;
+  color: var(--color-primary);
 }
 /* Påminnelsen: en kort rad i kolumnen den gäller */
 .k__pek {

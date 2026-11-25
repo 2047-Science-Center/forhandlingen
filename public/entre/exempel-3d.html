@@ -17,46 +17,90 @@
 </head>
 <body>
 <script type="module">
-// Exempelförhandlingens 3D-lager (Förhandlingen, onboarding/Exempel.vue). Stationsmodellen ur lib.js med TVÅ personer
-// per sida i SIDFÄRGERNA (A varmvitt, B magenta — samma som entrén/underglow). Ingen egen tidslinje: föräldern
-// skickar postMessage {type:'exempel', talar:{sida:'A'|'B', vem:'sandebud'|'rapportor'}|null, viskar?:bool, kamera?:'bred'|'A'|'B'}
-// och kameran glider till den som pratar. Viskning = sidans par närbild, talaren tänds, motsidan dämpas.
-import { THREE, makeStation, makeScreenTexture, makeCast, dim, createStage } from './lib.js';
+// Exempelförhandlingens 3D-lager (Förhandlingen, exempel/Exempel.vue). Josef 2026-11-24:
+//  - FAST, utzoomad kamera: alla fyra syns hela tiden, ingen panorering mellan personerna.
+//  - Färgen visar ROLLEN, inte sidan: sändebud = bärnsten (#ff9500), rapportör = cyan (#35e0d0), på båda
+//    sidorna, med ROLL-etikett över huvudet. Sidan visas av golvringen i SIDFÄRGEN (A varmvit, B magenta —
+//    som stationens underglow) och en SIDA A/B-skylt.
+//  - Den som pratar lyser, övriga dämpas; vid viskning dämpas motsidan mer.
+// Föräldern skickar postMessage {type:'exempel', talar:{sida:'A'|'B', vem:'sandebud'|'rapportor'}|null, viskar?:bool}.
+import { THREE, makeStation, makeScreenTexture, makeGubbe, dim, createStage } from './lib.js';
 
-const FARG = { A: 0xfff1d6, B: 0xff3cc8 };
-const KAMERA = {
-  bred: { pos: [3.2, 2.9, 0.0], look: [0, 1.0, 0] },
-  A: { pos: [2.3, 2.05, 2.55], look: [0.1, 1.15, 0.75] },
-  B: { pos: [2.3, 2.05, -2.55], look: [0.1, 1.15, -0.75] },
-  viskaA: { pos: [1.55, 1.75, 2.05], look: [0.25, 1.3, 0.95] },
-  viskaB: { pos: [1.55, 1.75, -2.05], look: [0.25, 1.3, -0.95] },
-};
-let mal = KAMERA.bred;
-const pos = new THREE.Vector3(...mal.pos), look = new THREE.Vector3(...mal.look);
-const malPos = new THREE.Vector3(), malLook = new THREE.Vector3();
+const ROLL = { sandebud: 0xff9500, rapportor: 0x35e0d0 };
+const ROLL_CSS = { sandebud: '#ff9500', rapportor: '#35e0d0' };
+const SIDA = { A: 0xfff1d6, B: 0xff3cc8 };
+const SIDA_CSS = { A: '#fff1d6', B: '#ff3cc8' };
+const NAMN = { sandebud: 'SÄNDEBUD', rapportor: 'RAPPORTÖR' };
 
+// ?sida=B spegelvänder scenen (kameran från andra hållet) så att den EGNA sidan alltid står till vänster.
+const S = new URLSearchParams(location.search).get('sida') === 'B' ? -1 : 1;
+// Kameran står still: snett framifrån, båda sidorna i bild.
+const pos = new THREE.Vector3(5.6 * S, 2.7, 0), look = new THREE.Vector3(0, 0.62, 0);
 const stage = createStage({ name: 'forhandlingen-exempel', loop: 3600, camera: () => ({ pos, look, fov: 40 }) });
 const { scene } = stage;
 const station = makeStation({ screenTex: { A: makeScreenTexture('SIDA A'), B: makeScreenTexture('SIDA B') } });
 scene.add(station.group);
-const cast = makeCast(scene);
-// Två per sida i exemplet: sändebudet (sandebud1, mik) och rapportören. Den tredje (sandebud2) göms.
-const folk = {};
-for (const sida of ['A', 'B']) {
-  cast[sida].sandebud2.group.visible = false;
-  cast[sida].sandebud1.setColor(FARG[sida]);
-  cast[sida].rapportor.setColor(FARG[sida]);
-  folk[sida] = { sandebud: cast[sida].sandebud1, rapportor: cast[sida].rapportor };
-}
-const alla = [folk.A.sandebud, folk.A.rapportor, folk.B.sandebud, folk.B.rapportor];
-let talare = null, viskar = false, fokusSida = null;
 
+/** Textskylt som alltid vänder sig mot kameran. */
+function skylt(text, farg, { bakgrund = 'rgba(5,16,11,0.88)', hojd = 0.12 } = {}) {
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d');
+  const font = '700 64px Oswald, "Arial Narrow", sans-serif';
+  ctx.font = font;
+  const w = Math.ceil(ctx.measureText(text).width) + 56;
+  c.width = w; c.height = 96;
+  ctx.font = font;
+  ctx.fillStyle = bakgrund;
+  ctx.beginPath(); ctx.roundRect(0, 0, w, 96, 18); ctx.fill();
+  ctx.strokeStyle = farg; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.roundRect(3, 3, w - 6, 90, 16); ctx.stroke();
+  ctx.fillStyle = farg; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, w / 2, 52);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, toneMapped: false }));
+  sp.scale.set(hojd * (w / 96), hojd, 1);
+  sp.renderOrder = 10;
+  return sp;
+}
+
+// Två per sida på rad: sändebudet längst ut, rapportören vid skärmen.
+const PLATS = { rapportor: { x: 0.42, z: 0.6 }, sandebud: { x: 0.48, z: 1.28 } };
+const folk = { A: {}, B: {} };
+const alla = [];
+for (const [sida, sz] of [['A', 1], ['B', -1]]) {
+  for (const roll of ['rapportor', 'sandebud']) {
+    const f = makeGubbe(ROLL[roll], { mic: roll === 'sandebud' });
+    const p = PLATS[roll];
+    f.group.position.set(S * p.x, 0, sz * p.z);
+    f.group.lookAt(S * 2.2, 0, sz * 0.5);
+    f.side = sida;
+    scene.add(f.group);
+    const etikett = skylt(NAMN[roll], ROLL_CSS[roll]);
+    etikett.position.set(S * p.x, 1.95, sz * p.z);
+    scene.add(etikett);
+    f.etikett = etikett;
+    folk[sida][roll] = f;
+    alla.push(f);
+  }
+  // Sidans golvring i sidfärgen (som underglow) + SIDA-skylt.
+  const mitt = new THREE.Vector3(S * 0.45, 0.004, sz * 0.92);
+  const golv = new THREE.Mesh(new THREE.CircleGeometry(0.78, 64),
+    new THREE.MeshBasicMaterial({ color: SIDA[sida], transparent: true, opacity: 0.1, depthWrite: false, toneMapped: false }));
+  golv.rotation.x = -Math.PI / 2; golv.position.copy(mitt); scene.add(golv);
+  const kant = new THREE.Mesh(new THREE.RingGeometry(0.76, 0.8, 72),
+    new THREE.MeshBasicMaterial({ color: SIDA[sida], transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false }));
+  kant.rotation.x = -Math.PI / 2; kant.position.copy(mitt); kant.position.y = 0.006; scene.add(kant);
+  const sidSkylt = skylt(`SIDA ${sida}`, SIDA_CSS[sida], { hojd: 0.2 });
+  sidSkylt.position.set(S * 1.35, 0.12, sz * 0.92);
+  scene.add(sidSkylt);
+}
+
+let talare = null, viskar = false, fokusSida = null;
 function satt(m) {
   talare = m.talar ? folk[m.talar.sida]?.[m.talar.vem] ?? null : null;
   viskar = !!m.viskar;
   fokusSida = m.talar?.sida ?? null;
-  const k = m.kamera ?? (fokusSida ? (viskar ? `viska${fokusSida}` : fokusSida) : 'bred');
-  mal = KAMERA[k] ?? KAMERA.bred;
   alla.forEach((f) => f.setSpeaking(f === talare));
 }
 window.addEventListener('message', (e) => {
@@ -65,13 +109,11 @@ window.addEventListener('message', (e) => {
 window.parent?.postMessage({ type: 'exempel-3d-redo' }, '*');
 
 stage.start((t, dt) => {
-  const k = Math.min(1, dt * 2.2);
-  pos.lerp(malPos.set(...mal.pos), k);
-  look.lerp(malLook.set(...mal.look), k);
   alla.forEach((f, i) => {
-    // Talaren lyser; vid viskning är den egna sidans par i fokus och motsidan dämpad.
-    const iFokus = !fokusSida || f.side === fokusSida;
-    dim(f.group, f === talare ? 0 : viskar && !iFokus ? 0.75 : iFokus ? 0.2 : 0.55);
+    // Talaren lyser; ingen talare = alla tydliga. Vid viskning dämpas motsidan mer.
+    const v = !talare ? 0.1 : f === talare ? 0 : viskar && f.side !== fokusSida ? 0.7 : 0.4;
+    dim(f.group, v);
+    f.etikett.material.opacity = 1 - v * 0.8;
     f.update(t + i * 0.5, dt);
   });
 });

@@ -35,11 +35,19 @@ export const sv: Record<string, string> = {
   // --- exempel ---
   'exempel.inspelning': 'INSPELNING · TIDIGARE TEST',
   'exempel.viskar': 'viskar, bara egna sidan hör',
-  'exempel.a_gissar': 'A gissar styrkortet',
-  'exempel.b_gissar': 'B gissar bränslecellen',
+  'exempel.mot_gissar': 'Sida {sida} gissade {vara}',
+  'exempel.ert_val': 'NI GISSADE',
+  'exempel.facit': 'DET VAR',
   'exempel.ratt': 'RÄTT · ×2',
   'exempel.lurade': 'LURADE',
-  'exempel.a_livs': 'A: LIVSVIKTIG',
+  'exempel.roll_sandebud': 'sändebud',
+  'exempel.roll_rapportor': 'rapportör',
+  'exempel.skarm': 'SÅ HÄR SÅG SIDA {sida}:S SKÄRM UT',
+  'exempel.lucka': 'LUCKA {n} / {antal}',
+  'exempel.snart': 'Snart öppnas första luckan …',
+  'exempel.livs_er': 'ER LIVSVIKTIGA!',
+  'exempel.gissning': 'GISSNING',
+  'exempel.gissa_fraga': 'Vilken var sida {sida}:s livsviktiga?',
   'exempel.hoppa': 'hoppa över ▸',
 
   // --- redo ---
@@ -138,10 +146,14 @@ export const sv: Record<string, string> = {
   'res.points': 'POÄNG',
 
   // --- pek ---
-  'pek.livs': 'Det här är er livsviktiga. Ni måste få tag på den!',
+  'pek.livs': 'Det här är er livsviktiga!',
   'pek.livs_uppe': 'Nu! Den här måste ni ta.',
-  'pek.pengar': 'Era pengar. Slösa inte – det som är kvar blir poäng.',
-  'pek.pengar_sista': 'Sista luckan. Det ni har kvar blir poäng.',
+  'pek.pengar': 'Slösa inte!',
+  'pek.pengar_sista': 'Sista luckan!',
+  // Regeltexterna som står kvar hela tiden i konsolens sidokolumner (Josef 2026-11-24)
+  'fast.pengar': 'Det ni har kvar blir poäng.',
+  'fast.livs': 'Måste köpas – annars 0 poäng.',
+  'fast.gissa': 'Gissa motståndarens livsviktiga rätt – då dubblas poängen.',
   'pek.pengar_etikett': 'PENGAR',
 
   // --- regel ---

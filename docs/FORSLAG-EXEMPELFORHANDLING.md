@@ -1,7 +1,7 @@
 # Förhandlingen: exempelförhandlingen (förslag 2026-11-24)
 
 > **FÖRSLAG, inget är byggt i appen.** Josef väljer först. Underlag:
-> - **Byggt 2026-11-24:** [`src/stations/forhandlingen/exempel/`](../src/stations/forhandlingen/exempel/) (manus.json = manuset som data, schema.ts = tidslinjen, Exempel.vue = vyn) + `public/entre/exempel-3d.html`, röster i `public/exempel/vo/`, scenbilder i `public/exempel/scen/`. Onboarding: lägeskort → exempel → "Er tur" → live (provluckan avstängd, `PROVLUCKA` i config).
+> - **Byggt 2026-11-24 (rev. efter Josefs synpunkter):** [`src/stations/forhandlingen/exempel/`](../src/stations/forhandlingen/exempel/) (manus.json, schema.ts = tidslinjen, Exempel.vue = vyn) + `public/entre/exempel-3d.html`, röster i `public/exempel/vo/`. Kommer EFTER bildreglerna (lägeskort → regler → exempel → "Er tur" → live; provluckan av, `PROVLUCKA`). Vänster: 3D med fast vid kamera, rollfärger (sändebud bärnsten, rapportör cyan, etikett över huvudet) och golvring i sidfärgen. Höger: sida A:s skärm i miniatyr med LUCKA n / 3 · VARA, SÅLD-stämpel och gissningen. Scenbilderna med ungdomarna används inte längre i appen.
 > - [`exempelforhandling-2026-11/bilder/`](exempelforhandling-2026-11/bilder/): storyboarden, sex rutor
 > - källan i [`exempelforhandling-2026-11/illustration/`](exempelforhandling-2026-11/illustration/) (HyperFrames)
 
