@@ -57,9 +57,9 @@ const forh = {
   cam: { target: [0.1, 0.6, 0], r: 4.4, h: 5.6 },
 };
 
-/* ===================== MÄNNISKOTESTET / LÖGNDETEKTORN (delad) ===================== */
+/* ===================== MÄNNISKA ELLER MASKIN / LÖGNDETEKTORN (delad) ===================== */
 // Josef 2026-11-18: exakt samma station som Förhandlingen. Enda skillnaden: sida A har tre
-// telefonlurar liggande på bänkskivan (Människotestet), sida B en gooseneck-XLR-mikrofon som
+// telefonlurar liggande på bänkskivan (Människa eller maskin), sida B en gooseneck-XLR-mikrofon som
 // sticker upp ur bänken (Lögndetektorn, turordning → kö bakom).
 function buildMinne() {
   const g = makeStation().group;
@@ -97,15 +97,15 @@ function buildMinne() {
   return g;
 }
 const minne = {
-  name: 'Människotestet / Lögndetektorn',
+  name: 'Människa eller maskin / Lögndetektorn',
   model: 'finns — Förhandlingens station + 3 lurar (A) + gooseneck-mik (B), enligt Josef 2026-11-18',
   build: buildMinne,
   zones: {
-    A: { label: 'MÄNNISKOTESTET', side: 'A', cx: 0.05, cz: 1.1, w: 1.9, d: 1.3 },
+    A: { label: 'MÄNNISKA ELLER MASKIN', side: 'A', cx: 0.05, cz: 1.1, w: 1.9, d: 1.3 },
     B: { label: 'LÖGNDETEKTORN', side: 'B', cx: 0.05, cz: -1.55, w: 1.5, d: 2.5 },
   },
   roles: {
-    'A.lur': { zone: 'A', title: 'Människotestet', prop: 'lur', max: 3, slots: [[-0.42, 0.8, -0.15, 0.3], [0, 0.86, 0, 0.3], [0.42, 0.8, 0.15, 0.3]] },
+    'A.lur': { zone: 'A', title: 'Människa eller maskin', prop: 'lur', max: 3, slots: [[-0.42, 0.8, -0.15, 0.3], [0, 0.86, 0, 0.3], [0.42, 0.8, 0.15, 0.3]] },
     'B.mikrofon': { zone: 'B', title: 'Vid mikrofonen', pattern: 'puls', slots: [[0, -0.85, 0, -0.5]] },
     'B.ko': { zone: 'B', title: 'I kö', slots: [[0.05, -1.5, 0, 0], [0.05, -1.95, 0, 0], [0.05, -2.4, 0, 0], [0.05, -2.85, 0, 0], [0.5, -2.85, 0, 0]] },
   },

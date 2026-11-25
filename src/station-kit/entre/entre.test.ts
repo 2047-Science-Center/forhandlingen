@@ -16,11 +16,11 @@ const FORH: Pick<EntreConfig, 'roles' | 'placement'> = {
 }
 const MINNE: Pick<EntreConfig, 'roles' | 'placement'> = {
   roles: [
-    { letter: 'A', rollvalRoleId: 'akthet', name: 'Äkthetsgranskare', titel: 'Människotestet', max: 3, plats: 'A.lur' },
+    { letter: 'A', rollvalRoleId: 'akthet', name: 'Teleingenjör', titel: 'Människa eller maskin', max: 3, plats: 'A.lur' },
     {
       letter: 'B',
       rollvalRoleId: 'sanning',
-      name: 'Sanningsanalytiker',
+      name: 'Systemutvecklare',
       subRoles: [
         { id: 'mikrofon', name: 'Vid mikrofonen', count: 1, plats: 'B.mikrofon' },
         { id: 'ko', name: 'I kö', plats: 'B.ko' },
@@ -96,7 +96,7 @@ describe('startsidor (splitBySide)', () => {
   })
 })
 
-describe('placering — Människotestet (lurar max 3, överskott till lögndetektorn)', () => {
+describe('placering — Människa eller maskin (lurar max 3, överskott till lögndetektorn)', () => {
   it.each([
     [4, 'A', 3, 1],
     [4, 'B', 0, 4],
@@ -110,7 +110,7 @@ describe('placering — Människotestet (lurar max 3, överskott till lögndetek
     expect([count(p, 'A'), count(p, 'B')]).toEqual([a, b])
     expect(p.every((x) => x.chosen_role === wish)).toBe(true) // önskemålet oförändrat
     if (b > 0) expect(p.filter((x) => x.plats === 'B.mikrofon')).toHaveLength(1)
-    expect(p.filter((x) => x.assigned_role === 'A').every((x) => x.plats === 'A.lur' && x.titel === 'Människotestet')).toBe(true)
+    expect(p.filter((x) => x.assigned_role === 'A').every((x) => x.plats === 'A.lur' && x.titel === 'Människa eller maskin')).toBe(true)
   })
   it('5 personer: önskemålen följs inom max 3', () => {
     const g = group(5)

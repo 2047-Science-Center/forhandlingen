@@ -20,7 +20,7 @@ StationIntro (hype, public/media/stationsintro/<station>.mp4)
 | Station | A / B |
 |---|---|
 | Förhandlingen | Sändebud / Rapportör |
-| Människotestet | Äkthetsgranskare / Sanningsanalytiker |
+| Människa eller maskin | Teleingenjör / Systemutvecklare |
 | Undersökningen | Labbtekniker / Forensiker |
 | Reaktorkärnan | Expeditionsledare / Fälttekniker |
 
@@ -29,6 +29,6 @@ StationIntro (hype, public/media/stationsintro/<station>.mp4)
 | Station | Valvfärg |
 |---|---|
 | Förhandlingen | `#7ad14f` |
-| Människotestet | `#ff5a3c` |
+| Människa eller maskin | `#ff5a3c` |
 | Undersökningen | `#4aa3ff` |
 | Reaktorkärnan | `#e8c020` |

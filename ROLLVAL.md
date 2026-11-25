@@ -33,7 +33,7 @@ standardiserat sätt. Allt är gatat på `ROLLVAL_ENABLED`: stängs rollvalet av
 | Station | Ersätter | Hur |
 |---|---|---|
 | **Förhandlingen** | Bipp-start (`BippStart`, onboarding-stage `identify`) + rollpresentationen (`RolesSplit`, "vem gör vad") | Onboardingen startar direkt vid `headset`; deltagarskärmen går rakt in i coach-stegen. Styrs av `ONB_START` i `store/gameStore.ts`. |
-| **Minnestestet** | Spelväljaren (`GameSelect`, "Välj test") | Roll-valet driver spelet: Äkthetsgranskare → människotestet, Sanningsanalytiker → lögndetektorn (`chooseGame`). Hoppar man över rollvalet → `GameSelect` visas som fallback. |
+| **Minnestestet** | Spelväljaren (`GameSelect`, "Välj test") | Roll-valet driver spelet: Teleingenjör → människotestet, Systemutvecklare → lögndetektorn (`chooseGame`). Hoppar man över rollvalet → `GameSelect` visas som fallback. |
 | **Undersökningen** | — | Ingen befintlig bippa-band/roll-ruta (rollerna är valv-bundna: LABB/FÄLT). Rollvalet läggs bara till som för-steg; inget tas bort. |
 
 ## Inramning (framtidsyrken – IMPLICIT)
@@ -49,13 +49,13 @@ rollen som något eftersträvansvärt och mänskligt.
 |---|---|---|
 | **Förhandlingen** | Sändebud | Rapportör |
 | **Undersökningen** | Doktorand | Metodspecialist |
-| **Minnestestet** | Äkthetsgranskare | Sanningsanalytiker |
+| **Minnestestet** | Teleingenjör | Systemutvecklare |
 
 - **Förhandlingen**: Sändebud = den som möter motparten; Rapportör = den som
   håller överblick och fattar besluten. (Speglar stationens två roller.)
 - **Undersökningen**: Doktorand ↔ FÄLT; Metodspecialist ↔ LABB.
-- **Minnestestet**: Äkthetsgranskare = människotest-sidan ("är det en äkta
-  människa?"); Sanningsanalytiker = lögndetektor-sidan ("är det sant?").
+- **Minnestestet**: Teleingenjör = människotest-sidan ("är det en äkta
+  människa?"); Systemutvecklare = lögndetektor-sidan ("är det sant?").
 
 ## Klippset
 
@@ -101,7 +101,7 @@ pekas dit via Vite-glob i `src/config.ts`. Matcha filnamnen **exakt**
 Inga riktiga klipp ännu → tydligt märkta placeholder-mp4:er (prefix `roll_`).
 Byt mot riktiga klipp (behåll filnamnen, eller byt namn och uppdatera
 `src/config.ts`).
-| Set | Äkthetsgranskare | Sanningsanalytiker |
+| Set | Teleingenjör | Systemutvecklare |
 |---|---|---|
 | 1 | `roll_akthetsgranskare_set1.mp4` | `roll_sanningsanalytiker_set1.mp4` |
 | 2 | `roll_akthetsgranskare_set2.mp4` | `roll_sanningsanalytiker_set2.mp4` |

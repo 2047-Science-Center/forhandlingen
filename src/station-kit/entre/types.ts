@@ -19,7 +19,7 @@
  *  - STARTSIDA A/B = gruppens fasta halvor (3+3), samma vid alla stationer (seed session:grupp,
  *    eller medlemmens `startsida` från klasslista-importen). Där man står vid ankomsten och ser klippen.
  *  - ROLLPLATS = var man står efter valet. Två modeller (`placement`):
- *      'roll-ar-sida'   rollen ÄR sidan (Människotestet A=lurar max 3 / B=lögndetektorn;
+ *      'roll-ar-sida'   rollen ÄR sidan (Människa eller maskin A=lurar max 3 / B=lögndetektorn;
  *                       Undersökningen A=labb / B=fält med underroller skannare, lyspenna, logggranskare)
  *      'roll-inom-sida' sidan = startsidan (lag A / lag B), rollerna fördelas inom varje sida
  *                       (Förhandlingen: minst 1 sändebud + 1 rapportör per sida)
@@ -81,7 +81,7 @@ export interface EntreRole {
   titel?: string
   /** Minsta antal ('roll-ar-sida': totalt; 'roll-inom-sida': per sida, om sidan har plats). */
   min?: number
-  /** Högsta antal (t.ex. Människotestets 3 telefonlurar). */
+  /** Högsta antal (t.ex. Människa eller maskins 3 telefonlurar). */
   max?: number
   /** 3D-plats-id. 'roll-ar-sida': fullt id ('A.lur'); 'roll-inom-sida': utan sida ('sandebud' → 'A.sandebud'). */
   plats?: string
@@ -148,7 +148,7 @@ export interface EntreConfig {
    */
   /**
    * Attract-bild bakom "Ställ er på rätt sida" (xy-produktion/attract, 1920×1080, mörka sidor + tomt band upptill).
-   * Per NUC/sida väljs i stationens config (st2: Människotestet = valvdörren, Lögndetektorn = konsolen).
+   * Per NUC/sida väljs i stationens config (st2: Människa eller maskin = valvdörren, Lögndetektorn = konsolen).
    * Saknas → ingen bild (som förut).
    */
   attractBild?: string | null
