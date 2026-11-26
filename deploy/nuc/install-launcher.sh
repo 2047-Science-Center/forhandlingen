@@ -59,13 +59,23 @@ echo "Installerar ikoner ..."
 install_one forhandlingen.desktop          start.sh   forhandlingen.desktop
 install_one forhandlingen-restart.desktop  restart.sh forhandlingen-restart.desktop
 install_one forhandlingen-update.desktop   update.sh  forhandlingen-update.desktop
+install_one forhandlingen-reset-touch.desktop reset-touch.sh forhandlingen-reset-touch.desktop
+
+# Touch vid inloggning (bara touchen, INTE spelet): självläkande mappning via reset-touch.sh --watch,
+# så pekpanelerna hamnar på rätt skärm direkt efter omstart.
+# Ångra: rm ~/.config/autostart/forhandlingen-touch.desktop
+mkdir -p "$HOME/.config/autostart"
+printf '%s\n' '[Desktop Entry]' 'Type=Application' 'Name=Förhandlingen: touch till rätt skärm' \
+  "Exec=bash \"$HERE/reset-touch.sh\" --watch" 'X-GNOME-Autostart-enabled=true' 'NoDisplay=true' \
+  > "$HOME/.config/autostart/forhandlingen-touch.desktop"
+echo "  ok  autostart: touch-mappning vid inloggning (~/.config/autostart/forhandlingen-touch.desktop)"
 
 # Uppdatera menydatabasen (om verktyget finns).
 update-desktop-database "$apps" 2>/dev/null || true
 
 # Verifiera: ikonen är körbar och betrodd (om gio finns).
 if [ -d "$desktop_dir" ] && command -v gio >/dev/null 2>&1; then
-  for n in forhandlingen forhandlingen-restart forhandlingen-update; do
+  for n in forhandlingen forhandlingen-restart forhandlingen-update forhandlingen-reset-touch; do
     f="$desktop_dir/$n.desktop"
     t="$(gio info -a metadata::trusted "$f" 2>/dev/null | sed -n 's/^ *metadata::trusted: *//p')"
     if [ -x "$f" ] && [ "$t" = "true" ]; then

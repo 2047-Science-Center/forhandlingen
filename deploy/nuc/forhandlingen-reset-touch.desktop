@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Återställ touch
+Comment=Mappa om touchpanelerna till rätt skärm (Förhandlingen)
+# @EXEC@ ersätts av install-launcher.sh med rätt sökväg till reset-touch.sh.
+Exec=@EXEC@
+Icon=input-tablet
+Terminal=false
+Categories=Utility;
+StartupNotify=false
