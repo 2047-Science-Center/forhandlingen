@@ -92,20 +92,27 @@ export function egnaSidor(vy: Vy): Sida[] {
   return vy === 'lag1' ? ['A'] : vy === 'lag2' ? ['B'] : ['A', 'B']
 }
 
+/** Entréns steg då gruppen ska STÄLLA SIG PÅ RÄTT SIDA → slingan i sidfärgerna (A vit, B lila), inte mint
+ *  (Josef 2026-11-26): när de kommer fram (attract/redo) och när rollvalet är klart (utfall). */
+const STALL_ER: readonly string[] = ['attract', 'redo', 'utfall']
+
 /**
  * Stationens läge (bas). Rotationen på → dess fas/läge (lageFranRotation, skickas in).
  * Rotationen av (pilot) → appens egna faser: attract/reset = null (vila/regi),
  * entré + onboarding = tutorial, skarpt spel = skarp.
+ * Under entrén: "ställ er på rätt sida" = startsida (sidfärgerna), rollklippen och valet = tutorial (mint).
  */
 export function appLage(o: {
   rotationPa: boolean
   franRotation: Lage | null
   entered: boolean
   onboarded: boolean
+  /** Entréns steg (station-kit/entre), 'klar' eller utelämnat när entrén är förbi. */
+  entreSteg?: string | null
 }): Lage | null {
-  if (o.rotationPa) return o.franRotation
-  if (!o.entered) return null
-  return o.onboarded ? 'skarp' : 'tutorial'
+  const bas = o.rotationPa ? o.franRotation : !o.entered ? null : o.onboarded ? 'skarp' : 'tutorial'
+  if (bas === 'tutorial' && o.entreSteg && STALL_ER.includes(o.entreSteg)) return 'startsida'
+  return bas
 }
 
 /** Förhandlingstimern: sista 5 s → varning 2 (blink), annars 0. */

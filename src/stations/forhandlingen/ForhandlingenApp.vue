@@ -146,6 +146,7 @@ const ljusLage = computed(() =>
     franRotation: lageFranRotation(rotation.state.phase, rotation.state.mode),
     entered: entered.value,
     onboarded: onboarded.value,
+    entreSteg: entre.state.step,
   }),
 )
 watch(
@@ -196,9 +197,8 @@ function onLiveFinish(): void {
 //     under hela onboardingen, skarpt tema annars. data-mode på app-roten sätter
 //     tokens; komponenterna ärver färg. Attract visas i skarp identitetsfärg. ---
 const { setMode } = useStationMode()
-const stationMode = computed<'tutorial' | 'live'>(() =>
-  entered.value && !onboarded.value && entreDone.value ? 'tutorial' : 'live',
-)
+// Mint (tutorial) under HELA vägen in, även rollklippen och valet (Josef 2026-11-26) — inte orange.
+const stationMode = computed<'tutorial' | 'live'>(() => (entered.value && !onboarded.value ? 'tutorial' : 'live'))
 watch(stationMode, (m) => setMode(m), { immediate: true })
 
 // Tutorial-loop (beat 2.2): låg bakgrundsbädd under instruktionen och provluckan (inte under
