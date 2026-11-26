@@ -115,10 +115,18 @@ const inRotation = computed(() => rotation.state.phase === 'running')
 const knapp = computed(() => (inRotation.value ? 'Vi är klara ▸' : t('reveal.play_again')))
 const typ = computed(() => utfallTypFor(scores.value, egnaLag.value))
 const poang = computed(() => `${scores.value.lag1.teamScore} – ${scores.value.lag2.teamScore}`)
+/** Josef 2026-11-26: när vinnaren visas blir HELA vinnarens skärm grön och förlorarens röd (bara enkel vy,
+ *  och bara när någon faktiskt vann). Samma ögonblick som slingan blir halv grön, halv röd. */
+const egetUtfall = computed<'vann' | 'forlorade' | null>(() => {
+  if (egnaLag.value.length !== 1 || ingenVann(scores.value) || v.value === 'draw') return null
+  return v.value === egnaLag.value[0] ? 'vann' : 'forlorade'
+})
+const visaTon = computed(() => !!egetUtfall.value && ['avslojande', 'utfall'].includes(avslut.takt.value))
 </script>
 
 <template>
   <div class="fa">
+    <div v-if="visaTon" class="fa__ton" :class="`fa__ton--${egetUtfall}`" aria-hidden="true" />
     <AvslutRuta
       :takt="avslut.takt.value"
       :typ="typ"
@@ -170,9 +178,32 @@ const poang = computed(() => `${scores.value.lag1.teamScore} – ${scores.value.
 
 <style scoped>
 .fa {
+  position: relative;
   height: 100%;
   display: flex;
   overflow-y: auto;
+}
+/* Hela skärmen i utfallets färg: grön för vinnaren, röd för förloraren */
+.fa__ton {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  border-radius: inherit;
+  animation: fa-ton-in 500ms ease-out both;
+}
+.fa__ton--vann {
+  border: 12px solid #7ad14f;
+  background: radial-gradient(ellipse at center, rgba(122, 209, 79, 0.22) 30%, rgba(122, 209, 79, 0.5));
+  box-shadow: inset 0 0 120px rgba(122, 209, 79, 0.7);
+}
+.fa__ton--forlorade {
+  border: 12px solid #ff3c28;
+  background: radial-gradient(ellipse at center, rgba(255, 60, 40, 0.26) 30%, rgba(255, 60, 40, 0.55));
+  box-shadow: inset 0 0 120px rgba(255, 60, 40, 0.75);
+}
+@keyframes fa-ton-in {
+  from { opacity: 0; }
 }
 .fa__lag {
   display: grid;

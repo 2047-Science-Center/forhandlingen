@@ -23,10 +23,10 @@ describe('Förhandlingen: ljus-mappning (§5.1)', () => {
     expect(egnaSidor('shared')).toEqual(['A', 'B'])
   })
 
-  it('resultat: vinnarsidan vinst, den andra förlorarsida (aldrig rött); oavgjort båda', () => {
+  it('resultat: vinnarsidan vinst (grön), den andra forlust (röd); oavgjort båda', () => {
     expect(utfallForResultat('lag2')).toEqual([
       { utfall: 'vinst', ids: ['B'] },
-      { utfall: 'forlorarsida', ids: ['A'] },
+      { utfall: 'forlust', ids: ['A'] },
     ])
     expect(utfallForResultat('draw')).toEqual([{ utfall: 'oavgjort', ids: ['A', 'B'] }])
     expect(resultatLjud('lag1', 'lag1')).toBe('vinst')
@@ -82,14 +82,15 @@ describe('Förhandlingen: utfall på underglow', () => {
     for (const u of utfallForResultat('lag2')) l.utfall(u.utfall, u.ids, { tyst: true })
 
     const fb = sent.filter((m) => m.topic === 'station1/feedback')
-    expect(fb).toHaveLength(1)
-    expect(fb[0].payload.gest).toBe('vinst')
-    expect(fb[0].payload.segments.map((s: any) => s.id)).toEqual(['B'])
+    expect(fb.map((m) => [m.payload.gest, m.payload.segments.map((s: any) => s.id)])).toEqual([
+      ['vinst', ['B']],
+      ['forlust', ['A']],
+    ])
 
     const bas = sent.filter((m) => m.topic === 'station1/underglow').at(-1)!
     expect(bas.retain).toBe(true)
     const byId = Object.fromEntries(bas.payload.segments.map((s: any) => [s.id, s]))
-    expect(byId.B).toMatchObject({ from: 30, to: 59, color: FARG.gron, effekt: 'static' })
-    expect(byId.A).toMatchObject({ from: 0, to: 29, color: FARG.amberDim, effekt: 'static' })
+    expect(byId.B).toMatchObject({ from: 70, to: 140, color: FARG.gron, effekt: 'static' })
+    expect(byId.A).toMatchObject({ from: 0, to: 69, color: FARG.rodDjup, effekt: 'static' })
   })
 })

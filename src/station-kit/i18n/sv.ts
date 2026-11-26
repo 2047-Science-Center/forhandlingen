@@ -148,6 +148,7 @@ export const sv: Record<string, string> = {
   // --- pek ---
   'pek.livs': 'Det här är er livsviktiga!',
   'pek.livs_uppe': 'Nu! Den här måste ni ta.',
+  'pek.livs_larm': 'ER LIVSVIKTIGA – NU GÄLLER DET!',
   'pek.pengar': 'Slösa inte!',
   'pek.pengar_sista': 'Sista luckan!',
   // Regeltexterna som står kvar hela tiden i konsolens sidokolumner (Josef 2026-11-24)
@@ -160,6 +161,30 @@ export const sv: Record<string, string> = {
   'regel.1': 'Måste ha',
   'regel.2': 'Kvar = poäng',
   'regel.3': 'Rätt gissning ×2',
+  // --- testrundans genomgång (ProvGenomgang.vue) ---
+  'genomgang.rubrik': 'TESTRUNDAN – SÅ HÄR GICK DET',
+  'genomgang.lucka': 'LUCKA {n} / {antal}',
+  'genomgang.ni_klubbade': 'Ni klubbade den för {pris} kr.',
+  'genomgang.de_klubbade': '{sida} köpte den för {pris} kr.',
+  'genomgang.ingen': 'Ingen köpte den.',
+  'genomgang.kvar': 'Ni har {kr} kr kvar.',
+  'genomgang.livs_fick': 'Det var er livsviktiga – och ni fick den!',
+  'genomgang.livs_miss': 'Det var er livsviktiga – och ni fick den INTE. På riktigt blir det 0 poäng!',
+  'genomgang.gissning': 'GISSNINGEN',
+  'genomgang.ni_gissade': 'NI GISSADE',
+  'genomgang.ingen_gissning': 'Ingen gissning',
+  'genomgang.facit': '{sida}:S LIVSVIKTIGA VAR',
+  'genomgang.gissa_ratt': 'Rätt! Era poäng dubblas.',
+  'genomgang.gissa_fel': 'Fel – ingen dubbling den här gången.',
+  'genomgang.poang': 'ERA POÄNG I TESTRUNDAN',
+  'genomgang.p': 'poäng',
+  'genomgang.formel': '{kr} kr kvar = {kr} poäng',
+  'genomgang.formel_x2': '{kr} kr kvar × 2 för rätt gissning',
+  'genomgang.formel_noll': 'Ni fick inte er livsviktiga → 0 poäng',
+  'genomgang.raknas_inte': 'Testrundan räknas inte. Nu kör vi på riktigt – fem luckor!',
+  'regel.1_mening': 'Ni har en livsviktig resurs. Den måste ni köpa – annars blir det noll poäng.',
+  'regel.2_mening': 'Pengarna ni har kvar i slutet blir era poäng. Spendera så lite som möjligt.',
+  'regel.3_mening': 'Gissa vilken resurs som var livsviktig för den andra sidan. Gissar ni rätt dubblas era poäng.',
 
   // --- resource ---
   'resource.branslecell': 'Bränslecell',

@@ -187,7 +187,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
 
     if (s.phase !== prevPhase) {
       // Reveal: kanon `resultat`.
-      if (s.phase === 'reveal') ljus.ljud('resultat')
+      if (s.phase === 'reveal' && s.datasetId !== TRIAL_DATASET.id) ljus.ljud('resultat')
       if (s.phase === 'guessing') audio.play('popup')
       prevPhase = s.phase
     }
@@ -214,7 +214,8 @@ export const useGameStore = defineStore('forhandlingen', () => {
       prevResultCount = rc
     }
 
-    if (s.phase === 'reveal' && !resultSent) {
+    // Testrundan räknas inte: inget resultat till regin.
+    if (s.phase === 'reveal' && !resultSent && s.datasetId !== TRIAL_DATASET.id) {
       sendResult()
       resultSent = true
     }
@@ -369,10 +370,10 @@ export const useGameStore = defineStore('forhandlingen', () => {
       now: Date.now(),
     })
   }
-  /** Provluckan (tutorial): EN lucka, kortare budgivning, ingen gissning. */
+  /** Testrundan (tutorial): två luckor + gissning, inget räknas. */
   function startProv() {
     const tm = ROUND_TIMERS.prov
-    start(TRIAL_DATASET.id, { getReadyFirst: tm.getReadyFirst, getReady: tm.getReady, negotiation: tm.negotiation, guess: null })
+    start(TRIAL_DATASET.id, { getReadyFirst: tm.getReadyFirst, getReady: tm.getReady, negotiation: tm.negotiation, guess: tm.guess })
   }
   /** Skarp körning: 5 resurser, 100 kr, gissning med tidsgräns. */
   function startLive() {
