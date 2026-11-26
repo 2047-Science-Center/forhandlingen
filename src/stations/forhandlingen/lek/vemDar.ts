@@ -1,7 +1,7 @@
 /**
  * "Vem där?" — Förhandlingens lek-läge (lila). Ren logik (ingen Vue/DOM), testad i vemDar.test.ts.
  *
- * En runda: talarsidan väljer vem som tar headsetet (trycker på sitt namn) → talaren
+ * En runda: talarsidan väljer vem av dem som ska prata (alla har headset på sig) → talaren
  * säger en rad / svarar på en fråga genom den maskerade rösten → motsidan trycker på
  * vem av talarsidans personer de tror pratar → facit → sidan byts.
  * Lurar talaren motsidan får talarens sida poäng; gissar de rätt får gissarna poäng.

@@ -76,7 +76,7 @@ watch(
 /** EN rad per skärm och fas (Josef 2026-11-26: en sak i taget, ingen spridd info). */
 function hint(side: Side): string {
   const speaking = side === s.speakerSide
-  if (s.phase === 'pick') return speaking ? 'Vem tar headsetet? Tryck på ditt namn.' : ''
+  if (s.phase === 'pick') return speaking ? 'Välj vem av er som ska prata.' : ''
   if (s.phase === 'speak') return speaking ? '' : `Vem på ${SIDE_NAME[s.speakerSide]} pratar?`
   return ''
 }
