@@ -142,15 +142,15 @@ export const DATASETS: Dataset[] = [
 export const LIVE_DATASET_ID = 'set-1'
 
 /**
- * Provluckan (tutorial, ljusblå): EN lucka med en resurs som ingen sida behöver.
- * Gruppen övar det som är svårt — prata i headsetet och klubba — en gång, sedan skarpt.
- * Kritiska sätts som i skarpt (samma konsol), men ingen gissning och inga poäng.
+ * TESTRUNDAN (tutorial, ljusblå — Josef 2026-11-26): TVÅ luckor + gissning, på den riktiga konsolen.
+ * Varje sida har sin livsviktiga bland de två, så båda får se larmet "er livsviktiga" och sedan gissa.
+ * Inget räknas; efteråt går ProvGenomgang.vue igenom vad som hände, steg för steg.
  */
 export const TRIAL_DATASET: Dataset = {
   id: 'prov',
   kritisk_lag1: 'insulin',
-  kritisk_lag2: 'membranfilter',
-  ordning: ['styrkort'],
+  kritisk_lag2: 'branslecell',
+  ordning: ['branslecell', 'insulin'],
   kapital: 100,
 }
 
@@ -163,7 +163,7 @@ export const ALL_DATASETS: Dataset[] = [TRIAL_DATASET, ...DATASETS]
  * luckorna; negotiation = budgivningen per lucka; guess = gissningen efter sista luckan.
  */
 export const ROUND_TIMERS = {
-  prov: { getReadyFirst: 8, getReady: 3, negotiation: 20 },
+  prov: { getReadyFirst: 8, getReady: 3, negotiation: 25, guess: 20 },
   live: { getReadyFirst: 12, getReady: 4, negotiation: 30, guess: 20 },
 } as const
 
@@ -175,11 +175,10 @@ export const KLUBBA = {
 } as const
 
 /**
- * Provluckan: en övningslucka (20 s, blått läge, inget räknas) mellan "Er tur" och skarpt läge.
- * AV sedan exempelförhandlingen visar hela förloppet inklusive Klubban (Josef 2026-11-24).
- * Slå på igen om testerna visar att grupperna behöver öva klubban.
+ * Testrundan (TRIAL_DATASET) mellan "Er tur" och skarpt läge: PÅ igen (Josef 2026-11-26) — två resurser,
+ * gissning och en genomgång efteråt. false = direkt till skarpt efter "Er tur".
  */
-export const PROVLUCKA = false
+export const PROVLUCKA = true
 
 /**
  * Väntpunkter mellan skärmarna (spelläget, instruktionen klar): går vidare av sig

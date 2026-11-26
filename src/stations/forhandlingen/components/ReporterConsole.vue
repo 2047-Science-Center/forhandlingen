@@ -15,7 +15,8 @@
  *   - när er livsviktiga kommer upp: rött, "den här måste ni ta";
  *   - inför sista luckan: pengarna igen.
  */
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
+import { audio } from '@/station-kit/audio/AudioEngine'
 import type { TeamId } from '../engine/types'
 import { useGameStore } from '../store/gameStore'
 import { useI18n } from '@/station-kit/i18n'
@@ -52,12 +53,19 @@ const pekPengar = computed(() => ((forstaGetready.value && kvar.value <= 4) || s
 const livsUppe = computed(
   () => iLucka.value && !!critical.value && store.currentResource === critical.value && store.step !== 'sald',
 )
+// Larmet (Josef 2026-11-26): när er livsviktiga kommer upp ska det POCKA på uppmärksamheten — röd pulserande
+// ram runt hela skärmen, blinkande banner och en varningssignal (en gång, bara på den sida det gäller).
+watch(livsUppe, (v) => {
+  if (v) audio.play('idlewarn')
+})
 const pengarText = computed(() => (sistaGetready.value ? t('pek.pengar_sista') : t('pek.pengar')))
 const livsText = computed(() => (livsUppe.value ? t('pek.livs_uppe') : t('pek.livs')))
 </script>
 
 <template>
-  <div class="console" :style="miljo">
+  <div class="console" :class="{ 'console--larm': livsUppe }" :style="miljo">
+    <div v-if="livsUppe" class="larm" aria-hidden="true" />
+    <div v-if="livsUppe" class="larm__banner" role="alert">⚠ {{ t('pek.livs_larm') }}</div>
     <div v-if="store.phase === 'intro'" class="intro">
       <p class="intro__vanta crt-caret">{{ t('intro.get_ready') }}</p>
     </div>
@@ -105,6 +113,45 @@ const livsText = computed(() => (livsUppe.value ? t('pek.livs_uppe') : t('pek.li
   background:
     linear-gradient(180deg, rgba(5, 16, 11, 0.82), rgba(5, 16, 11, 0.94) 45%),
     var(--miljo) center 30% / cover no-repeat;
+}
+.console {
+  position: relative;
+}
+/* Larmet när er livsviktiga är ute */
+.larm {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  border-radius: 10px;
+  border: 6px solid var(--color-danger);
+  animation: larm-puls 0.9s ease-in-out infinite;
+}
+@keyframes larm-puls {
+  0%, 100% { box-shadow: inset 0 0 30px rgba(255, 90, 60, 0.35), 0 0 20px rgba(255, 90, 60, 0.4); border-color: rgba(255, 90, 60, 0.55); }
+  50% { box-shadow: inset 0 0 120px rgba(255, 90, 60, 0.6), 0 0 50px rgba(255, 90, 60, 0.8); border-color: rgba(255, 90, 60, 1); }
+}
+.larm__banner {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  top: 0.6rem;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 0.2em 1em;
+  border-radius: 10px;
+  background: var(--color-danger);
+  color: #fff;
+  font-family: var(--font-rubrik);
+  font-weight: 700;
+  font-size: 2rem;
+  letter-spacing: 0.06em;
+  box-shadow: 0 0 30px rgba(255, 90, 60, 0.8);
+  animation: larm-blink 0.9s steps(2, jump-none) infinite;
+}
+@keyframes larm-blink {
+  0% { opacity: 1; }
+  100% { opacity: 0.35; }
 }
 .intro {
   height: 100%;
@@ -239,6 +286,7 @@ const livsText = computed(() => (livsUppe.value ? t('pek.livs_uppe') : t('pek.li
   opacity: 0;
 }
 @media (prefers-reduced-motion: reduce) {
+  .larm, .larm__banner { animation: none; }
   .k__sida { transition: none; }
   .k__sida--fokus { transform: none; }
 }

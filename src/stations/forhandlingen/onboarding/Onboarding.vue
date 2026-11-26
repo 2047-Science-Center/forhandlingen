@@ -9,7 +9,8 @@
  *   'exempel'  EXEMPELFÖRHANDLINGEN (~1 min, exempel/Exempel.vue): en förinspelad runda som visar hur man
  *              tänker — bluffen, samrådet och rapportörens gissning. Samma epoch på båda skärmarna.
  *   'redo'     "Er tur": sändebud headset på, rapportören sköter skärmen → VI ÄR REDO (auto-vidare)
- *   'prov'     (bara om PROVLUCKA) EN provlucka på den riktiga konsolen, kvittens + KÖR SKARPT
+ *   'prov'     (PROVLUCKA) TESTRUNDAN: två luckor + gissning på den riktiga konsolen, sedan genomgången
+ *              (ProvGenomgang.vue, klicksteg per lucka) → KÖR SKARPT → väntar in andra sidan (auto-vidare)
  *   'live'     → skarpt (appen kör nedräkningen).
  * Exemplet kommer EFTER reglerna, som "så här ser det ut" (Josef 2026-11-24); det ersätter 3D-luckan och coach-marken.
  */
@@ -30,7 +31,7 @@ import BildRegler from './BildRegler.vue'
 import manus from '../exempel/manus.json'
 import ReporterConsole from '../components/ReporterConsole.vue'
 import BarrierWait from './BarrierWait.vue'
-import { resourceIcon } from '../resources'
+import ProvGenomgang from './ProvGenomgang.vue'
 import { egnaSidor } from '../ljus'
 
 const props = defineProps<{ team: TeamId }>()
@@ -119,7 +120,7 @@ function redo() {
 }
 vidareNar('redo', PROVLUCKA ? 'prov' : 'live')
 
-// ---------- 'prov': en provlucka, handlingen är spärren ----------
+// ---------- 'prov': testrundan → genomgången → skarpt ----------
 watch(
   stage,
   (s) => {
@@ -127,35 +128,14 @@ watch(
   },
   { immediate: true },
 )
-const provResultat = computed(() =>
-  stage.value === 'prov' && store.state.datasetId === TRIAL_DATASET.id ? (store.state.results[0] ?? null) : null,
-)
-const provKlarSedan = ref<number | null>(null)
-watch(provResultat, (r) => {
-  if (r && provKlarSedan.value == null) {
-    provKlarSedan.value = Date.now()
-    audio.play('positive')
-  }
-  if (!r) provKlarSedan.value = null
-})
-const PROV_AUTO_S = 10
-const provKvar = computed(() =>
-  provKlarSedan.value == null ? null : Math.max(0, PROV_AUTO_S - Math.floor((store.now - provKlarSedan.value) / 1000)),
-)
-watch(provKvar, (n) => {
-  if (n === 0) korSkarpt()
-})
-function korSkarpt() {
-  if (stage.value === 'prov') store.onbGoto('live', null)
+/** Testrundan är slut (avslöjandet) → genomgången i stället för konsolen. */
+const provKlar = computed(() => stage.value === 'prov' && store.state.datasetId === TRIAL_DATASET.id && store.state.phase === 'reveal')
+function genomgangKlar() {
+  audio.play('headset')
+  ljus.gest('kvitto', egnaSidor(store.view), { tyst: true })
+  jagArRedo()
 }
-const provText = computed(() => {
-  const r = provResultat.value
-  if (!r) return ''
-  const resurs = t('resource.' + r.resource)
-  return r.winner
-    ? t('prov.kopte', { sida: store.teamName(r.winner), resurs, pris: r.price })
-    : t('prov.ingen', { resurs })
-})
+vidareNar('prov', 'live')
 
 // ---------- 'live' ----------
 watch(
@@ -226,29 +206,19 @@ watch(
       </div>
     </template>
 
-    <!-- ============ PROVLUCKAN ============ -->
+    <!-- ============ TESTRUNDAN + GENOMGÅNGEN ============ -->
     <div v-else-if="stage === 'prov'" class="ob__stage">
-      <div v-if="shared" class="ob__split">
-        <ReporterConsole team="lag1" :allow-guess="false" />
-        <ReporterConsole team="lag2" :allow-guess="false" />
+      <BarrierWait v-if="iAmReady" :sida="otherSida" :sekunder="vantaKvar" />
+      <div v-else-if="provKlar && shared" class="ob__split">
+        <ProvGenomgang team="lag1" @klar="genomgangKlar" />
+        <ProvGenomgang team="lag2" @klar="genomgangKlar" />
       </div>
-      <ReporterConsole v-else :team="me" :allow-guess="false" />
-
-      <Transition name="ob-kv">
-        <div v-if="provResultat" class="ob__kvitto" role="status">
-          <p class="ob__kvitto-ovan">{{ t('prov.klar') }}</p>
-          <p class="ob__kvitto-rad">
-            <span class="ob__kvitto-ikon">{{ resourceIcon(provResultat.resource) }}</span>{{ provText }}
-          </p>
-          <ul class="ob__kvitto-lista">
-            <li>{{ t('prov.skarpt1') }}</li>
-            <li>{{ t('prov.skarpt2') }}</li>
-          </ul>
-          <button class="crt-button crt-button--strong ob__kor" @click="korSkarpt">
-            {{ t('prov.kor') }} ▸ <small v-if="provKvar != null">{{ provKvar }}</small>
-          </button>
-        </div>
-      </Transition>
+      <ProvGenomgang v-else-if="provKlar" :team="me" @klar="genomgangKlar" />
+      <div v-else-if="shared" class="ob__split">
+        <ReporterConsole team="lag1" />
+        <ReporterConsole team="lag2" />
+      </div>
+      <ReporterConsole v-else :team="me" />
     </div>
   </div>
 </template>
@@ -305,50 +275,6 @@ watch(
   font-size: 1.3rem;
   color: var(--color-ink-muted);
 }
-.ob__kvitto {
-  position: absolute;
-  inset: 8% 10%;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  text-align: center;
-  background: rgba(4, 16, 14, 0.96);
-  border: 2px solid var(--color-primary);
-  border-radius: 16px;
-  box-shadow: 0 0 40px rgba(var(--mode-accent-rgb), 0.35);
-}
-.ob__kvitto-ovan {
-  margin: 0;
-  font-family: var(--font-rubrik);
-  font-weight: 700;
-  font-size: 2.6rem;
-  letter-spacing: 0.06em;
-  color: var(--color-primary);
-}
-.ob__kvitto-rad {
-  margin: 0;
-  font-family: var(--font-retro);
-  font-size: 2rem;
-  color: var(--color-ink-strong);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.ob__kvitto-ikon {
-  font-size: 2.4rem;
-}
-.ob__kvitto-lista {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-family: var(--font-retro);
-  font-size: 1.4rem;
-  line-height: 1.5;
-  color: var(--color-ink-muted);
-}
 .ob__kor {
   font-size: 1.7rem;
   padding: 0.45em 2em;
@@ -357,15 +283,5 @@ watch(
 .ob__kor small {
   opacity: 0.6;
   margin-left: 0.4em;
-}
-.ob-kv-enter-active {
-  transition: opacity 220ms ease-out, transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-.ob-kv-enter-from {
-  opacity: 0;
-  transform: scale(1.04);
-}
-@media (prefers-reduced-motion: reduce) {
-  .ob-kv-enter-active { transition: none; }
 }
 </style>

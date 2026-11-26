@@ -202,7 +202,9 @@ watch(stationMode, (m) => setMode(m), { immediate: true })
 
 // Tutorial-loop (beat 2.2): låg bakgrundsbädd under instruktionen och provluckan (inte under
 // spellägeskortet, där VALdi talar), tonas ut när skarpa rundan börjar. Eget HTMLAudio.
-const ovar = computed(() => ['intro', 'prov'].includes(store.onbStage))
+const ovar = computed(() => ['regler', 'prov'].includes(store.onbStage))
+/** Sidbannern (Josef 2026-11-26): vilken sida den här skärmen är, hela tiden. Delad vy → båda. */
+const minaSidor = computed<('A' | 'B')[]>(() => (store.view === 'shared' ? ['A', 'B'] : store.view === 'lag2' ? ['B'] : ['A']))
 watch([stationMode, entered, ovar], ([m, isIn, o]) => {
   if (isIn && m === 'tutorial' && o) audio.bed('tutorial-loop.mp3', 0.18)
   else audio.bedStop()
@@ -263,14 +265,18 @@ onUnmounted(() => {
     </div>
 
     <template v-else>
-      <!-- Övningsmärkning: egen in-flow-rad högst upp (ALDRIG position:fixed över
-           innehållet — det var därför lag-/valv-skyltar kunde täcka texten i test
-           1). Syns HELA tutorialen och försvinner i samma stund spelet blir
-           skarpt. Blå --mode-tutorial oavsett tema. -->
-      <div v-if="!onboarded && ovar" class="app__practice" role="status">
-        <span class="app__practice-dot" aria-hidden="true"></span>
-        <span class="app__practice-main">{{ t('mode.testomgang') }}</span>
-        <span class="app__practice-sub">{{ t('mode.practice_sub') }}</span>
+      <!-- SIDBANNERN (Josef 2026-11-26): vilken sida skärmen är, hela tiden och i sidfärgen (A varmvit,
+           B lila/magenta som underglow) — så att ingen förväxlar sidorna. In-flow-rad högst upp (aldrig
+           position:fixed över innehållet). Under övningen står TESTOMGÅNG i samma rad. -->
+      <div class="app__topp" :class="{ 'app__topp--delad': minaSidor.length > 1 }">
+        <div v-for="sida in minaSidor" :key="sida" class="app__sida" :class="`app__sida--${sida}`">
+          <span class="app__sida-namn">SIDA {{ sida }}</span>
+          <span v-if="!onboarded && ovar" class="app__practice" role="status">
+            <span class="app__practice-dot" aria-hidden="true"></span>
+            <span class="app__practice-main">{{ t('mode.testomgang') }}</span>
+            <span class="app__practice-sub">{{ t('mode.practice_sub') }}</span>
+          </span>
+        </div>
       </div>
 
       <!-- Spelläget → instruktionen → provluckan före skarp körning -->
@@ -361,13 +367,44 @@ onUnmounted(() => {
 }
 /* In-flow banner (ingen position:fixed) → kan per konstruktion aldrig täckas
    av eller täcka skyltar/overlays. Full bredd högst upp, under app-chrome. */
+.app__topp {
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+}
+.app__topp--delad {
+  grid-template-columns: 1fr 1fr;
+}
+.app__sida {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.2em 1em;
+  border-radius: 10px;
+  border: 3px solid var(--sida);
+  background: rgba(var(--sida-rgb), 0.16);
+  box-shadow: 0 0 22px rgba(var(--sida-rgb), 0.3);
+}
+.app__sida--A { --sida: #fff1d6; --sida-rgb: 255, 241, 214; }
+.app__sida--B { --sida: #ff3cc8; --sida-rgb: 255, 60, 200; }
+.app__sida-namn {
+  font-family: var(--font-rubrik);
+  font-weight: 700;
+  font-size: 1.9rem;
+  letter-spacing: 0.12em;
+  line-height: 1.1;
+  color: var(--sida);
+  text-shadow: 0 0 10px rgba(var(--sida-rgb), 0.5);
+}
 .app__practice {
   flex: none;
   display: flex;
   align-items: baseline;
   justify-content: center;
   gap: 0.7rem;
-  padding: 0.35em 1.2em;
+  padding: 0.2em 1em;
   font-family: var(--font-retro);
   color: var(--mode-tutorial);
   background: var(--color-background-2);

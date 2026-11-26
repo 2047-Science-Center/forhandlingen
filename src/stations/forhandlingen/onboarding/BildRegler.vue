@@ -5,13 +5,28 @@
  *   2 Kvar = poäng   — mynt försvinner vid köp, resten blir poäng.
  *   3 Rätt gissning  — ett av motståndarens kort vänds: ×2.
  * Alla tre syns hela tiden; den aktiva lyser och spelar sin lilla animation. NÄSTA och TILLBAKA.
+ * VALdi läser en mening per regel (Josef 2026-11-26): public/regler/vo/r1–r3.mp3 (docs/regler-vo), samma mening
+ * står som text under panelerna. Varje skärm spelar sin egen (självtempo; ljud per valv).
  */
+import { onUnmounted, watch } from 'vue'
 import { useI18n } from '@/station-kit/i18n'
+import { audio } from '@/station-kit/audio/AudioEngine'
 import VaraBild from '../components/VaraBild.vue'
 
-defineProps<{ aktiv: number; steg: number; antal: number; vara: string; motVara: string }>()
+const props = defineProps<{ aktiv: number; steg: number; antal: number; vara: string; motVara: string }>()
 const emit = defineEmits<{ next: []; back: [] }>()
 const { t } = useI18n()
+
+let rost: HTMLAudioElement | null = null
+function las(n: number) {
+  rost?.pause()
+  rost = null
+  if (audio.muted || n < 0 || n > 2) return
+  rost = new Audio(`${import.meta.env.BASE_URL}regler/vo/r${n + 1}.mp3`)
+  void rost.play().catch(() => {})
+}
+watch(() => props.aktiv, las, { immediate: true })
+onUnmounted(() => rost?.pause())
 </script>
 
 <template>
@@ -53,6 +68,10 @@ const { t } = useI18n()
         <p class="br__ord">{{ t('regel.3') }}</p>
       </section>
     </div>
+
+    <Transition name="br-mening" mode="out-in">
+      <p :key="aktiv" class="br__mening">{{ t(`regel.${aktiv + 1}_mening`) }}</p>
+    </Transition>
 
     <div class="br__nav">
       <button class="crt-button br__btn br__btn--back" :disabled="steg === 0" @click="emit('back')">◂ {{ t('onboarding.back') }}</button>
@@ -244,6 +263,28 @@ const { t } = useI18n()
 @keyframes br-fram { 0% { opacity: 0; } 32% { opacity: 1; } 96% { opacity: 0; } }
 @keyframes br-x2 { 0%, 48% { opacity: 0; transform: scale(2); } 54%, 92% { opacity: 1; transform: scale(1); } 100% { opacity: 0; } }
 
+.br__mening {
+  margin: 0;
+  min-height: 2.6em;
+  text-align: center;
+  font-family: var(--font-retro);
+  font-size: 1.6rem;
+  line-height: 1.3;
+  color: var(--color-ink-strong);
+}
+.br-mening-enter-active {
+  transition: opacity 220ms ease-out, transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.br-mening-leave-active {
+  transition: opacity 120ms ease-in;
+}
+.br-mening-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.br-mening-leave-to {
+  opacity: 0;
+}
 .br__nav {
   display: flex;
   align-items: center;
