@@ -114,17 +114,18 @@ export function timerVarning(step: string, sekunderKvar: number | null): 0 | 2 {
 }
 
 export interface UtfallSteg {
-  utfall: 'vinst' | 'forlorarsida' | 'oavgjort'
+  utfall: 'vinst' | 'forlust' | 'oavgjort'
   ids: Sida[]
 }
 
-/** Resultatets utfall per segment: vinnarsidan antänds, den andra dimmas (aldrig rött). */
+/** Resultatets utfall per segment (Josef 2026-11-26): slingan halv grön, halv röd — vinnarsidan `vinst`
+ *  (grön), förlorarsidan `forlust` (djupröd). Avsteg från station-kitets "lag mot lag aldrig rött". */
 export function utfallForResultat(vinnare: TeamId | 'draw'): UtfallSteg[] {
   if (vinnare === 'draw') return [{ utfall: 'oavgjort', ids: ['A', 'B'] }]
   const v = SIDA_FOR_LAG[vinnare]
   return [
     { utfall: 'vinst', ids: [v] },
-    { utfall: 'forlorarsida', ids: [v === 'A' ? 'B' : 'A'] },
+    { utfall: 'forlust', ids: [v === 'A' ? 'B' : 'A'] },
   ]
 }
 
