@@ -121,6 +121,32 @@ map_touch_by_path() {
   done
   echo "kiosk.sh: touch-panel $want hittades inte (rätt USB-port ikopplad?)" >&2
 }
+# --- Valfritt: HÖGRA touchpanelen som EGEN pekare (MPX), TOUCH_EGEN_PEKARE=1 (Josef 2026-11-26) ---
+# Båda panelerna delar annars EN pekare ("Virtual core pointer"): snabba samtidiga tryck på båda
+# skärmarna slåss om den, och Chromium kan bli kvar med en touch som aldrig släpptes → skärmarna
+# svarar inte (inte ens avsluta-hörnet) tills fönstren startas om. Med en egen pekare per panel är
+# skärmarna oberoende. Panelen hittas på USB-port (TOUCH_PATH_RIGHT), inte namn (identiska paneler).
+touch_id_by_path() {
+  local want="$1" id node path
+  for id in $(xinput list --id-only 2>/dev/null); do
+    node=$(xinput list-props "$id" 2>/dev/null | sed -n 's/.*Device Node[^"]*"\([^"]*\)".*/\1/p')
+    [ -n "$node" ] || continue
+    path=$(udevadm info -q property "$node" 2>/dev/null | sed -n 's/^ID_PATH=//p')
+    if [ "$path" = "$want" ]; then echo "$id"; return 0; fi
+  done
+  return 1
+}
+if [ "${TOUCH_EGEN_PEKARE:-0}" = 1 ] && [ -n "$TOUCH_PATH_RIGHT" ] && command -v xinput >/dev/null 2>&1 && command -v udevadm >/dev/null 2>&1; then
+  if ! xinput list --name-only 2>/dev/null | grep -q '^Nord pointer$'; then
+    xinput create-master Nord || true
+  fi
+  if tid=$(touch_id_by_path "$TOUCH_PATH_RIGHT"); then
+    xinput reattach "$tid" "Nord pointer" && echo "kiosk.sh: höger touch (id $tid) → egen pekare 'Nord pointer'"
+  else
+    echo "kiosk.sh: TOUCH_EGEN_PEKARE: hittade ingen panel på $TOUCH_PATH_RIGHT" >&2
+  fi
+fi
+
 if command -v xinput >/dev/null 2>&1; then
   if [ -n "$TOUCH_PATH_LEFT" ] || [ -n "$TOUCH_PATH_RIGHT" ]; then
     # Port-baserat (identiska paneler)

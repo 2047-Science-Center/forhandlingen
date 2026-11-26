@@ -32,6 +32,9 @@ kiosk_init() {
   VALV="${VALV:-both}"           # both | syd | nord  (syd/nord = bara ett fönster, för test med en skärm)
   LOG_FILE="$PROFILE_DIR/kiosk.log"
   mkdir -p "$PROFILE_DIR"
+  # Över SSH finns ingen skärm i miljön → öppna fönstren på NUC:ens egen skärm (:0). (Som Undersökningen 6185778.)
+  export DISPLAY="${DISPLAY:-:0}"
+  export XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}"
 }
 
 # Skrivbordsnotis om möjligt (annars tyst).
