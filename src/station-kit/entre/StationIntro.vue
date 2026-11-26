@@ -12,6 +12,7 @@
  */
 import { onMounted, onUnmounted, ref } from 'vue'
 import { audio } from '../audio/AudioEngine'
+import { useHoppa } from '../kiosk/kioskSkip'
 
 const props = defineProps<{ src: string }>()
 const emit = defineEmits<{ done: [] }>()
@@ -32,6 +33,7 @@ function done(): void {
   }
   emit('done')
 }
+useHoppa(() => done()) // hörngesten (kioskSkip) i stället för tryck-för-att-hoppa
 
 onMounted(async () => {
   guard = setTimeout(done, MAX_MS)
@@ -56,9 +58,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="si" role="button" tabindex="0" aria-label="Stationsintro — tryck för att hoppa över" @click="done" @keydown.enter="done">
+  <div class="si">
     <video ref="video" class="si__video" :src="props.src" playsinline preload="auto" @ended="done" @error="done" />
-    <span class="si__skip">Tryck för att hoppa över ▸</span>
   </div>
 </template>
 

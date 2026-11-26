@@ -164,7 +164,7 @@ export type LjudNamn =
   | 'oppnar'
   | 'stanger'
 
-export type Gest = 'kvitto' | 'ratt' | 'inom' | 'fel' | 'over' | 'oppnar' | 'stanger' | 'vinst' | 'forlust' | 'klar'
+export type Gest = 'kvitto' | 'ratt' | 'kopt' | 'inom' | 'fel' | 'over' | 'oppnar' | 'stanger' | 'vinst' | 'forlust' | 'klar'
 
 export interface GestDef {
   color: string
@@ -181,6 +181,8 @@ export interface GestDef {
 export const GEST: Record<Gest, GestDef> = {
   kvitto: { color: FARG.vit, tempo: 300, antal: 1, prio: 0, ljud: 'kvitto' },
   ratt: { color: FARG.gron, tempo: 300, antal: 2, prio: 1, ljud: 'ratt' },
+  /** Sidan vann resursen i luckan (Förhandlingen, Josef 2026-11-26): tydligare och längre än `ratt` — 3 långa gröna blink. */
+  kopt: { color: FARG.gron, tempo: 600, antal: 3, prio: 1, ljud: 'ratt' },
   inom: { color: FARG.gron, tempo: 300, antal: 2, prio: 1, ljud: 'inom' },
   oppnar: { color: FARG.vit, tempo: 300, antal: 2, prio: 1, ljud: 'oppnar' },
   fel: { color: FARG.rod, tempo: 450, antal: 2, prio: 2, ljud: 'fel' },

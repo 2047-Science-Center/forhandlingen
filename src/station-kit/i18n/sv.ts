@@ -48,7 +48,6 @@ export const sv: Record<string, string> = {
   'exempel.livs_er': 'ER LIVSVIKTIGA!',
   'exempel.gissning': 'GISSNING',
   'exempel.gissa_fraga': 'Vilken var sida {sida}:s livsviktiga?',
-  'exempel.hoppa': 'hoppa över ▸',
 
   // --- redo ---
   'redo.rubrik': 'Er tur',

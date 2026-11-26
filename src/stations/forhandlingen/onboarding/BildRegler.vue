@@ -4,29 +4,65 @@
  *   1 Måste ha       — er vara med LIVSVIKTIG-tagg och puls; utan den blir det 0.
  *   2 Kvar = poäng   — mynt försvinner vid köp, resten blir poäng.
  *   3 Rätt gissning  — ett av motståndarens kort vänds: ×2.
- * Alla tre syns hela tiden; den aktiva lyser och spelar sin lilla animation. NÄSTA och TILLBAKA.
- * VALdi läser en mening per regel (Josef 2026-11-26): public/regler/vo/r1–r3.mp3 (docs/regler-vo), samma mening
- * står som text under panelerna. Varje skärm spelar sin egen (självtempo; ljud per valv).
+ * Alla tre syns hela tiden; den aktiva lyser och spelar sin lilla animation.
+ * SPELAS UPP som en kort film (Josef 2026-11-26): båda skärmarna räknar samma regel ur samma starttid,
+ * VALdis röst (public/regler/vo/r1–r3.mp3, docs/regler-vo) spelas BARA från ledaren → inget dubbelljud,
+ * ingen klickar i olika takt. Meningen står även som text. Klar → emit('done').
  */
-import { onUnmounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from '@/station-kit/i18n'
 import { audio } from '@/station-kit/audio/AudioEngine'
 import VaraBild from '../components/VaraBild.vue'
 
-const props = defineProps<{ aktiv: number; steg: number; antal: number; vara: string; motVara: string }>()
-const emit = defineEmits<{ next: []; back: [] }>()
+const props = defineProps<{ startAt: number; leader: boolean; vara: string; motVara: string }>()
+const emit = defineEmits<{ done: [] }>()
 const { t } = useI18n()
 
+/** Röstlängder (s, ffprobe av r1–r3.mp3) + luft. Byts rösterna: mät om och uppdatera här. */
+const LANGD = [5.94, 6.18, 7.43]
+const FORE = 0.6
+const PAUS = 0.9
+const EFTER = 1.6
+/** Starttid för varje regel och när hela sekvensen är klar. */
+const START = LANGD.reduce<number[]>((acc, _d, i) => [...acc, i === 0 ? FORE : acc[i - 1] + LANGD[i - 1] + PAUS], [])
+const SLUT = START[2] + LANGD[2] + EFTER
+
+const start = props.startAt
+const nu = ref(Date.now())
+const tid = computed(() => Math.max(0, (nu.value - start) / 1000))
+const aktiv = computed(() => (tid.value < START[1] ? 0 : tid.value < START[2] ? 1 : 2))
+
 let rost: HTMLAudioElement | null = null
-function las(n: number) {
+watch(
+  aktiv,
+  (n) => {
+    rost?.pause()
+    rost = null
+    if (!props.leader || audio.muted) return
+    rost = new Audio(`${import.meta.env.BASE_URL}regler/vo/r${n + 1}.mp3`)
+    // Kommer vi in sent (omladdning) → hoppa till rätt ställe i meningen.
+    const pos = tid.value - START[n]
+    if (pos > 0) rost.currentTime = pos
+    if (pos < 0) setTimeout(() => void rost?.play().catch(() => {}), -pos * 1000)
+    else void rost.play().catch(() => {})
+  },
+  { immediate: true },
+)
+let klar = false
+let klocka: ReturnType<typeof setInterval> | undefined
+onMounted(() => {
+  klocka = setInterval(() => {
+    nu.value = Date.now()
+    if (!klar && tid.value >= SLUT) {
+      klar = true
+      emit('done')
+    }
+  }, 100)
+})
+onUnmounted(() => {
+  clearInterval(klocka)
   rost?.pause()
-  rost = null
-  if (audio.muted || n < 0 || n > 2) return
-  rost = new Audio(`${import.meta.env.BASE_URL}regler/vo/r${n + 1}.mp3`)
-  void rost.play().catch(() => {})
-}
-watch(() => props.aktiv, las, { immediate: true })
-onUnmounted(() => rost?.pause())
+})
 </script>
 
 <template>
@@ -74,9 +110,7 @@ onUnmounted(() => rost?.pause())
     </Transition>
 
     <div class="br__nav">
-      <button class="crt-button br__btn br__btn--back" :disabled="steg === 0" @click="emit('back')">◂ {{ t('onboarding.back') }}</button>
-      <div class="br__dots"><span v-for="n in antal" :key="n" class="br__dot" :class="{ 'br__dot--now': n - 1 === steg }" /></div>
-      <button class="crt-button crt-button--strong br__btn" @click="emit('next')">{{ t('onboarding.next') }} ▸</button>
+      <div class="br__dots"><span v-for="n in 3" :key="n" class="br__dot" :class="{ 'br__dot--now': n - 1 === aktiv }" /></div>
     </div>
   </div>
 </template>
@@ -289,13 +323,6 @@ onUnmounted(() => rost?.pause())
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-.br__btn {
-  font-size: 1.3rem;
-  padding: 0.4em 1.4em;
-}
-.br__btn:disabled {
-  visibility: hidden;
 }
 .br__dots { display: flex; gap: 0.6rem; }
 .br__dot { width: 0.8rem; height: 0.8rem; border-radius: 50%; border: 2px solid var(--color-primary); }

@@ -15,6 +15,7 @@ import { initEntre } from '@/station-kit/entre/entre'
 import ModeCountdown from '@/station-kit/components/ModeCountdown.vue'
 import { useI18n } from '@/station-kit/i18n'
 import { useStationMode } from '@/station-kit/mode/useStationMode'
+import { useHoppa, pilotUi } from '@/station-kit/kiosk/kioskSkip'
 import { audio } from '@/station-kit/audio/AudioEngine'
 import RotationScreens from '@/station-kit/rotation/RotationScreens.vue'
 import { initRotation, rotationOptions } from '@/station-kit/rotation/rotation'
@@ -165,7 +166,15 @@ watch(
   { immediate: true },
 )
 
-const isPilot = computed(() => config.mode === 'pilot')
+// Pilotpanelen och facilitatorns ⋯ syns bara med ?pilot=1 (Josef 2026-11-26: inga sådana knappar på skärmen).
+const visaPilot = pilotUi()
+const isPilot = computed(() => config.mode === 'pilot' && visaPilot)
+// Hörngesten i det skarpa spelet: ett steg framåt (onboardingen, avslutet och leken har egna hopp).
+useHoppa(() => {
+  if (!onboarded.value || store.phase === 'reveal') return false
+  store.hoppaFram(store.view === 'lag2' ? 'lag2' : 'lag1')
+  return true
+})
 const showReveal = computed(() => store.phase === 'reveal')
 /** Vilket valv tutorialen gäller (delad vy → lag1 för soloprov). */
 const onboardTeam = computed<TeamId>(() => (store.view === 'lag2' ? 'lag2' : 'lag1'))
@@ -308,7 +317,7 @@ onUnmounted(() => {
     </template>
 
     <!-- Facilitator-kontroller (paus/starta om) — i både pilot och drift -->
-    <FacilitatorControls v-if="entered" />
+    <FacilitatorControls v-if="entered && visaPilot" />
     <PauseOverlay v-if="entered && store.paused" />
     <IdleWarning v-if="store.idleWarn" :seconds="store.idleSecondsLeft" />
 

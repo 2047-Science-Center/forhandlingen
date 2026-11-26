@@ -13,6 +13,7 @@ import SynkSekvens from './SynkSekvens.vue'
 import type { RollvalConfig } from '../rollval/types'
 import type { OverlayData } from '../undertext/undertext'
 import { useEntre } from './entre'
+import { useHoppa, pilotUi } from '../kiosk/kioskSkip'
 import type { EntrePerson, EntreRole, SideId } from './types'
 
 const props = withDefaults(
@@ -127,6 +128,19 @@ const placesSrc = computed(() =>
 
 /* ---------- facilitator ---------- */
 const menu = ref(false)
+/** Röstläge/lotta nu syns bara med ?pilot=1 (Josef 2026-11-26). */
+const visaFac = pilotUi()
+// Hörngesten (kioskSkip): entréns nästa steg. Klippen (SynkSekvens/RollSekvens/StationIntro) registrerar
+// egna hopp ovanpå detta medan de visas.
+useHoppa(() => {
+  const st = s.step
+  if (st === 'attract') entre.start()
+  else if (st === 'utfall') entre.finish()
+  else if (st === 'rollval') entre.clipsDone()
+  else if (['redo', 'sekvens', 'intro', 'valet', 'vantar'].includes(st)) entre.skipVote()
+  else return false
+  return true
+})
 function toggleMode(): void {
   entre.setVoteMode(s.voteMode === 'skarm' ? 'rfid' : 'skarm')
 }
@@ -296,10 +310,10 @@ function toggleMode(): void {
     </div>
 
     <!-- Facilitator: röstläge + lotta nu (diskret) -->
-    <button class="en__fac-btn" @click.stop="menu = !menu">
+    <button v-if="visaFac" class="en__fac-btn" @click.stop="menu = !menu">
       Röst: {{ s.voteMode === 'rfid' ? 'RFID' : 'skärm' }}{{ s.bandlost ? ' · bandlöst' : '' }} ▾
     </button>
-    <div v-if="menu" class="en__fac" @click.stop>
+    <div v-if="visaFac && menu" class="en__fac" @click.stop>
       <button class="en__fac-item" @click="toggleMode">Byt till {{ s.voteMode === 'rfid' ? 'skärm' : 'RFID' }}</button>
       <button
         v-if="['redo', 'sekvens', 'rollval', 'valet', 'vantar'].includes(s.step)"

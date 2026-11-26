@@ -17,6 +17,7 @@
  */
 import { ref, computed } from 'vue'
 import type { RollvalConfig } from './types'
+import { useHoppa } from '../kiosk/kioskSkip'
 
 const props = withDefaults(
   defineProps<{
@@ -32,6 +33,7 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{ pick: [roleId: string]; skip: []; clipsDone: [] }>()
+useHoppa(() => emit('skip')) // hörngesten (kioskSkip)
 
 type Stage = 'intro' | 'clipA' | 'clipB' | 'decide'
 const stage = ref<Stage>('intro')
@@ -86,7 +88,6 @@ function pick(roleId: string): void {
         </button>
       </div>
       <span v-else />
-      <button class="rv__skip" @click="emit('skip')">Hoppa över ▸</button>
     </div>
 
     <!-- 1. INTRO — stationen + de två rollerna -->

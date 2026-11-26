@@ -26,9 +26,11 @@ import { useLjus } from '@/station-kit/ljus'
 import { AvslutRuta, useAvslut } from '@/station-kit/resultat'
 import { useRotation } from '@/station-kit/rotation/rotation'
 import { arSkrivare, resultatLjud, utfallForResultat, SIDA_FOR_LAG } from '../ljus'
+import { useHoppa } from '@/station-kit/kiosk/kioskSkip'
 import { SIDA_NAMN, rubrik, varfor, vinnare, ingenVann, utfallTypFor } from '../avslutText'
 
 const emit = defineEmits<{ finish: [] }>()
+useHoppa(() => emit('finish')) // hörngesten: avslutet klart
 const store = useGameStore()
 const { t } = useI18n()
 const ljus = useLjus()

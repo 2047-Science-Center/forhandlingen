@@ -17,6 +17,7 @@ import BryggKort from '../stationsintro/BryggKort.vue'
 import Undertext from '../undertext/Undertext.vue'
 import type { OverlayData } from '../undertext/undertext'
 import { audio } from '../audio/AudioEngine'
+import { useHoppa } from '../kiosk/kioskSkip'
 
 type Steg = 'brygga1' | 'kortA' | 'klippA' | 'brygga2' | 'kortB' | 'klippB'
 const ORDNING: Steg[] = ['brygga1', 'kortA', 'klippA', 'brygga2', 'kortB', 'klippB']
@@ -56,6 +57,7 @@ function nasta(): void {
   if (i.value >= ORDNING.length - 1) emit('done')
   else i.value++
 }
+useHoppa(() => nasta()) // hörngesten (kioskSkip)
 
 async function spela(): Promise<void> {
   const v = video.value
@@ -133,7 +135,6 @@ onUnmounted(clearGuard)
       />
       <Undertext v-if="aktivOverlay" :rader="aktivOverlay.undertext" :tid="tid" :sprak="props.sprak ?? 'sv'" />
       <span class="rs__roll">{{ props.rollnamn[klippIdx] }}</span>
-      <button type="button" class="rs__skip" @click="nasta">Hoppa över ▸</button>
     </div>
   </div>
 </template>

@@ -4,7 +4,8 @@
  *
  *   'lage'     båda skärmarna samlas ("Väntar på sida B …", auto-vidare efter VANTA_MAX_SEKUNDER)
  *   'lagekort' spellägeskortet TÄVLING (HyperFrames-film med VALdi), samma epoch på båda skärmarna
- *   'regler'   de tre bildreglerna (Måste ha · Kvar = poäng · Rätt gissning ×2, BildRegler.vue), självtempo
+ *   'regler'   de tre bildreglerna (Måste ha · Kvar = poäng · Rätt gissning ×2, BildRegler.vue), SPELAS UPP
+ *              synkat på båda skärmarna (samma starttid, rösten bara från ledaren) → exemplet
  *              per skärm med NÄSTA/TILLBAKA → väntar in andra sidan (auto-vidare)
  *   'exempel'  EXEMPELFÖRHANDLINGEN (~1 min, exempel/Exempel.vue): en förinspelad runda som visar hur man
  *              tänker — bluffen, samrådet och rapportörens gissning. Samma epoch på båda skärmarna.
@@ -32,6 +33,7 @@ import manus from '../exempel/manus.json'
 import ReporterConsole from '../components/ReporterConsole.vue'
 import BarrierWait from './BarrierWait.vue'
 import ProvGenomgang from './ProvGenomgang.vue'
+import { useHoppa } from '@/station-kit/kiosk/kioskSkip'
 import { egnaSidor } from '../ljus'
 
 const props = defineProps<{ team: TeamId }>()
@@ -88,26 +90,15 @@ function kortKlart() {
 
 // ---------- 'regler': tre bildregler, självtempo → exemplet ----------
 function kortKlartTill() {
-  if (stage.value === 'lagekort') store.onbGoto('regler', null)
+  if (stage.value === 'lagekort') store.onbGoto('regler', Date.now() + 600)
 }
-const REGEL_ANTAL = 3
-const regelSteg = ref(0)
 /** Samma varor som i exemplet: A:s livsviktiga (insulin) och den B gissas ha (styrkortet). */
 const regelVara = manus.livsviktig.A
 const regelMotVara = manus.livsviktig.B
-function regelNasta() {
-  audio.play('blip')
-  if (regelSteg.value < REGEL_ANTAL - 1) regelSteg.value += 1
-  else jagArRedo()
+/** Sekvensen klar (vilken skärm som helst; onbGoto är idempotent) → exemplet med gemensam starttid. */
+function reglerKlara() {
+  if (stage.value === 'regler') store.onbGoto('exempel', Date.now() + 600)
 }
-function regelTillbaka() {
-  audio.play('blip')
-  if (regelSteg.value > 0) regelSteg.value -= 1
-}
-watch(stage, (s) => {
-  if (s === 'regler') regelSteg.value = 0
-})
-vidareNar('regler', 'exempel', () => Date.now() + 600)
 
 // ---------- 'exempel' → 'redo' ----------
 function exempelKlart() {
@@ -137,6 +128,21 @@ function genomgangKlar() {
 }
 vidareNar('prov', 'live')
 
+// ---------- Hörngesten (kioskSkip): nästa steg i onboardingen ----------
+// (lägeskortet och exemplet har egna hopp ovanpå detta medan de visas)
+useHoppa(() => {
+  const st = stage.value
+  if (st === 'lage') store.onbGoto('lagekort', Date.now() + 600)
+  else if (st === 'regler') store.onbGoto('exempel', Date.now() + 600)
+  else if (st === 'redo') store.onbGoto(PROVLUCKA ? 'prov' : 'live', null)
+  else if (st === 'prov') {
+    if (provKlar.value) store.onbGoto('live', null)
+    else if (store.state.phase === 'bidding' || store.state.phase === 'guessing') store.hoppaFram(me.value)
+    else return false
+  } else return false
+  return true
+})
+
 // ---------- 'live' ----------
 watch(
   stage,
@@ -161,19 +167,14 @@ watch(
     />
 
     <!-- ============ BILDREGLERNA ============ -->
-    <template v-else-if="stage === 'regler'">
-      <BarrierWait v-if="iAmReady" :sida="otherSida" :sekunder="vantaKvar" />
-      <BildRegler
-        v-else
-        :aktiv="regelSteg"
-        :steg="regelSteg"
-        :antal="REGEL_ANTAL"
-        :vara="regelVara"
-        :mot-vara="regelMotVara"
-        @next="regelNasta"
-        @back="regelTillbaka"
-      />
-    </template>
+    <BildRegler
+      v-else-if="stage === 'regler'"
+      :start-at="store.onbEpoch ?? Date.now()"
+      :leader="leader"
+      :vara="regelVara"
+      :mot-vara="regelMotVara"
+      @done="reglerKlara"
+    />
 
     <!-- ============ EXEMPELFÖRHANDLINGEN ============ -->
     <Exempel
