@@ -49,6 +49,11 @@ if [ "$BUILT" = "$AFTER" ] && [ "$FORCE" = 0 ] && [ -f "$REPO_DIR/dist/index.htm
   echo
   echo "Redan senaste versionen ($(git log -1 --format='%h %s' | cut -c1-70))."
   echo "Hoppar över bygget. (Tvinga omstart + bygge med:  bash deploy/nuc/update.sh --force)"
+  # Uteblev en server-omstart förra gången (sudo-frågan)? Då kör servern gammal kod — starta om den nu.
+  if server_stale; then
+    echo; echo "== Servern kör äldre kod än repot — startar om server-tjänsten =="
+    restart_server || echo "Varning: kunde inte starta om servern." >&2
+  fi
   notify "Redan senaste versionen."
   pause
   exit 0
@@ -85,10 +90,11 @@ rm -rf "$REPO_DIR/dist.old"
 echo "Ny build på plats."
 
 # Servern behöver bara startas om om dess egen kod / beroenden ändrats.
-if [ "$FORCE" = 1 ] || changed '^server/' || changed '^package(-lock)?\.json$'; then
+# server_stale: också om en tidigare omstart uteblev (servern startad före senaste server-ändringen).
+if [ "$FORCE" = 1 ] || changed '^server/' || changed '^package(-lock)?\.json$' || server_stale; then
   if systemctl cat forhandlingen-server.service >/dev/null 2>&1; then
-    echo; echo "== Startar om server-tjänsten (sudo — skriv lösenordet om det frågas) =="
-    sudo systemctl restart forhandlingen-server.service || echo "Varning: kunde inte starta om servern." >&2
+    echo; echo "== Startar om server-tjänsten =="
+    restart_server || echo "Varning: kunde inte starta om servern (kör en gång: bash deploy/nuc/allow-server-restart.sh)." >&2
   fi
 fi
 

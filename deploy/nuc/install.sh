@@ -51,6 +51,8 @@ sudo install -m 0644 "$tmp" /etc/systemd/system/forhandlingen-server.service
 rm -f "$tmp"
 sudo systemctl daemon-reload
 sudo systemctl enable --now forhandlingen-server.service
+# Uppdateringen får starta om servern utan lösenord (bara den tjänsten).
+USER_NAME="$USER_NAME" bash "$HERE/allow-server-restart.sh" || echo "Varning: sudo-regeln för server-omstart installerades inte." >&2
 sleep 2
 if curl -fsS "http://localhost:$PORT/healthz" >/dev/null 2>&1; then
   say "Servern svarar på http://localhost:$PORT ✓"

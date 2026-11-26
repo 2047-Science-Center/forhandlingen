@@ -29,7 +29,7 @@ stop_kiosk
 
 if [ "$RESTART_SERVER" = 1 ]; then
   echo "Startar om servern (sudo) ..."
-  sudo systemctl restart forhandlingen-server.service || echo "Kunde inte starta om servern." >&2
+  restart_server || echo "Kunde inte starta om servern." >&2
 fi
 
 if ! wait_for_server 40; then

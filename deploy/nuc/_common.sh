@@ -138,3 +138,29 @@ wait_for_server() {
   done
   return 1
 }
+
+# --- Server-tjänsten (systemd system-tjänst, forhandlingen-server.service) ---
+SERVER_SVC="forhandlingen-server.service"
+
+# Starta om servern. Först UTAN lösenord (sudo-regeln från allow-server-restart.sh / install.sh),
+# annars frågar sudo som förut. Utan regel och utan terminal (ikonen) misslyckas den tyst → server_stale
+# fångar det vid nästa uppdatering.
+restart_server() {
+  systemctl cat "$SERVER_SVC" >/dev/null 2>&1 || return 0
+  sudo -n systemctl restart "$SERVER_SVC" 2>/dev/null && return 0
+  echo "(sudo — skriv NUC:ens lösenord om det frågas)"
+  sudo systemctl restart "$SERVER_SVC"
+}
+
+# Kör servern äldre kod än den som ligger på disk? (startades före senaste ändringen i server/ eller
+# package-lock.json). Fångar en omstart som uteblev, t.ex. när sudo-frågan aldrig besvarades.
+server_stale() {
+  systemctl cat "$SERVER_SVC" >/dev/null 2>&1 || return 1
+  local started newest
+  started="$(systemctl show "$SERVER_SVC" -p ActiveEnterTimestamp --value 2>/dev/null)"
+  [ -n "$started" ] || return 0
+  started="$(date -d "$started" +%s 2>/dev/null)" || return 1
+  newest="$(find "$REPO_DIR/server" "$REPO_DIR/package-lock.json" -type f -printf '%T@\n' 2>/dev/null | sort -n | tail -1 | cut -d. -f1)"
+  [ -n "$newest" ] || return 1
+  [ "$started" -lt "$newest" ]
+}
