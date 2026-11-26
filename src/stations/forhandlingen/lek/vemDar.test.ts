@@ -32,8 +32,10 @@ describe('Vem där?', () => {
     const s = reduceVem(initialVem(0), { type: 'guess', band_id: 'a1' }, 1)
     expect(s.phase).toBe('pick')
   })
-  it('okänd sida → personen finns på båda sidor; tom sida → alla', () => {
-    expect(peopleOn([...people, { band_id: 'x', name: 'X', side: null }], 'B').map((p) => p.band_id)).toEqual(['b1', 'x'])
-    expect(peopleOn(people.filter((p) => p.side === 'A'), 'B')).toHaveLength(2)
+  it('bara talarsidans personer går att gissa på; ingen känd sida alls → alla', () => {
+    expect(peopleOn([...people, { band_id: 'x', name: 'X', side: null }], 'B').map((p) => p.band_id)).toEqual(['b1'])
+    expect(peopleOn(people, 'A').map((p) => p.band_id)).toEqual(['a1', 'a2'])
+    const okanda = people.map((p) => ({ ...p, side: null }))
+    expect(peopleOn(okanda, 'B')).toHaveLength(3)
   })
 })

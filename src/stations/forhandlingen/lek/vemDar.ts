@@ -3,7 +3,7 @@
  *
  * En runda: talarsidan väljer vem som tar headsetet (trycker på sitt namn) → talaren
  * säger en rad / svarar på en fråga genom den maskerade rösten → motsidan trycker på
- * vem de tror pratar (de får ställa EN egen fråga) → facit → sidan byts.
+ * vem av talarsidans personer de tror pratar → facit → sidan byts.
  * Lurar talaren motsidan får talarens sida poäng; gissar de rätt får gissarna poäng.
  * Poängen finns bara i RAM och räknas aldrig (XY-VANTUPPGIFTER.md §0).
  */
@@ -159,8 +159,9 @@ function next(s: VemState, now: number): VemState {
   }
 }
 
-/** Personerna på en sida (okänd sida → med på båda). Tom sida → alla (fallback). */
+/** Personerna på en sida — BARA den sidan (Josef 2026-11-26: man gissar på de tre som står där, inte alla).
+ *  Bara om ingen alls har en känd sida (t.ex. test utan entré) visas alla. */
 export function peopleOn(people: VemPerson[], side: Side): VemPerson[] {
-  const on = people.filter((p) => p.side === side || p.side == null)
-  return on.length ? on : people
+  if (!people.some((p) => p.side != null)) return people
+  return people.filter((p) => p.side === side)
 }

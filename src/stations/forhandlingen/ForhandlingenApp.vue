@@ -89,12 +89,13 @@ function onEntreDone(): void {
 }
 // --- Lek-läget (lila, efter done): "Vem där?" — XY-VANTUPPGIFTER.md 1A. Sidorna ur
 //     entrén (sida A = lag1, sida B = lag2); saknas de (t.ex. omladdning i
-//     lek) gissar man bland hela gruppen. ?lek=1 visar leken direkt (förhandsvisning). ---
+//     lek) används startsidorna. Man gissar bara bland talarsidans personer. ?lek=1 visar leken direkt (förhandsvisning). ---
 const lekPreview = lekPreviewFromUrl()
 const lekPeople = computed<VemPerson[]>(() => {
   const ps = entre.personer.value
   if (ps.length) return ps.map((p) => ({ band_id: p.band_id, name: p.name, side: p.side }))
-  return entre.members.value.map((m) => ({ band_id: m.band_id, name: m.name, side: null }))
+  // Ingen lottning än (omladdning, ?lek=1): startsidorna där de står — så gissningen bara gäller den sidan.
+  return entre.members.value.map((m) => ({ band_id: m.band_id, name: m.name, side: entre.voteSides.value[m.band_id] ?? null }))
 })
 const lekSide = computed(() => (store.view === 'lag1' ? 'A' : store.view === 'lag2' ? 'B' : null))
 const lekLeader = computed(() => store.view !== 'lag2')
