@@ -14,6 +14,7 @@ import Undertext from '../undertext/Undertext.vue'
 import type { OverlayData } from '../undertext/undertext'
 import { audio } from '../audio/AudioEngine'
 import { useEntre, type SeqSteg } from './entre'
+import { useHoppa } from '../kiosk/kioskSkip'
 
 const props = defineProps<{
   /** Stationsintrots hype-klipp (config.introClip). */
@@ -61,6 +62,8 @@ function stada(): void {
 function klart(s: SeqSteg | null = steg.value): void {
   if (s) entre.seqNext(s)
 }
+// Hörngesten (kioskSkip) hoppar steget — inga synliga hoppa över-knappar (Josef 2026-11-26).
+useHoppa(() => klart())
 /** Sekunder in i steget enligt ledarens klocka. */
 const iSteget = () => Math.max(0, (Date.now() - at.value) / 1000)
 
@@ -148,7 +151,7 @@ onUnmounted(stada)
       :valvfarg="props.valvfarg"
       @done="klart(steg)"
     />
-    <div v-else-if="arKlipp && src" class="ss__klipp" @click="steg === 'intro' && klart()">
+    <div v-else-if="arKlipp && src" class="ss__klipp">
       <video
         ref="video"
         :key="steg ?? ''"
@@ -168,8 +171,6 @@ onUnmounted(stada)
         :sprak="props.sprak ?? 'sv'"
       />
       <span v-if="steg !== 'intro'" class="ss__roll">{{ rollnamn }}</span>
-      <span v-if="steg === 'intro'" class="ss__hint">Tryck för att hoppa över ▸</span>
-      <button v-else type="button" class="ss__skip" @click.stop="klart()">Hoppa över ▸</button>
     </div>
   </div>
 </template>

@@ -9,6 +9,7 @@ import LekPanel from '@/station-kit/lek/LekPanel.vue'
 import { createLekSync, type LekTransport } from '@/station-kit/lek/lekSync'
 import { audio } from '@/station-kit/audio/AudioEngine'
 import { useLjus } from '@/station-kit/ljus'
+import { useHoppa } from '@/station-kit/kiosk/kioskSkip'
 import {
   initialVem,
   reduceVem,
@@ -85,6 +86,13 @@ function utfall(side: Side): string {
   if (s.correct) return gissade ? 'Ni gissade rätt!' : 'De gissade rätt!'
   return gissade ? 'De lurade er!' : 'Ni lurade dem!'
 }
+// Hörngesten (kioskSkip): välja → byt sida, facit → nästa runda (facit går också vidare själv efter 7 s).
+useHoppa(() => {
+  if (s.phase === 'pick') sync.act({ type: 'skip' })
+  else if (s.phase === 'reveal') sync.act({ type: 'next' })
+  else return false
+  return true
+})
 const vannSida = computed<Side>(() => (s.correct ? other(s.speakerSide) : s.speakerSide))
 </script>
 
@@ -145,8 +153,6 @@ const vannSida = computed<Side>(() => (s.correct ? other(s.speakerSide) : s.spea
       <template #foot>
         <span>{{ SIDE_NAME.A }} {{ s.score.A }} – {{ s.score.B }} {{ SIDE_NAME.B }}</span>
         <span v-if="s.phase === 'speak'" class="vem__clock">{{ leftSec }} s</span>
-        <button v-if="s.phase === 'pick' && side === s.speakerSide" class="lek-btn lek-btn--ghost" @click="sync.act({ type: 'skip' })">Hoppa över ▸</button>
-        <button v-if="s.phase === 'reveal'" class="lek-btn lek-btn--ghost" @click="sync.act({ type: 'next' })">Nästa ▸</button>
       </template>
     </LekPanel>
   </div>

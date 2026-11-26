@@ -7,8 +7,9 @@
  * `done` när filmen är slut (eller direkt om filen saknas). Ett tryck hoppar över, men först när
  * rubriken har landat (FORSLAG F6: ~1 s efter bytet ≈ 4 s in).
  */
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { audio } from '../audio/AudioEngine'
+import { useHoppa } from '../kiosk/kioskSkip'
 
 const props = withDefaults(defineProps<{ src: string; startAt: number; leader: boolean; skipAfterS?: number }>(), {
   skipAfterS: 4,
@@ -17,8 +18,6 @@ const emit = defineEmits<{ done: []; skip: [] }>()
 
 const video = ref<HTMLVideoElement | null>(null)
 const now = ref(Date.now())
-const sekunderIn = computed(() => (now.value - props.startAt) / 1000)
-const kanHoppa = computed(() => sekunderIn.value >= props.skipAfterS)
 let tick: ReturnType<typeof setInterval> | null = null
 let startTimer: ReturnType<typeof setTimeout> | null = null
 let klar = false
@@ -54,15 +53,13 @@ onUnmounted(() => {
   if (startTimer) clearTimeout(startTimer)
 })
 
-function tryck() {
-  if (kanHoppa.value) emit('skip')
-}
+// Hörngesten (kioskSkip) hoppar över kortet — inget tryck-för-att-gå-vidare på skärmen (Josef 2026-11-26).
+useHoppa(() => emit('skip'))
 </script>
 
 <template>
-  <div class="sk" role="button" tabindex="0" @click="tryck" @keydown.enter="tryck">
+  <div class="sk">
     <video ref="video" class="sk__film" :src="src" playsinline preload="auto" @ended="fardig" @error="fardig" />
-    <span v-if="kanHoppa" class="sk__hoppa">tryck för att gå vidare ▸</span>
   </div>
 </template>
 

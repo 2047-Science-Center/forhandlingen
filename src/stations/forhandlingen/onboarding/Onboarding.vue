@@ -32,6 +32,7 @@ import manus from '../exempel/manus.json'
 import ReporterConsole from '../components/ReporterConsole.vue'
 import BarrierWait from './BarrierWait.vue'
 import ProvGenomgang from './ProvGenomgang.vue'
+import { useHoppa } from '@/station-kit/kiosk/kioskSkip'
 import { egnaSidor } from '../ljus'
 
 const props = defineProps<{ team: TeamId }>()
@@ -136,6 +137,21 @@ function genomgangKlar() {
   jagArRedo()
 }
 vidareNar('prov', 'live')
+
+// ---------- Hörngesten (kioskSkip): nästa steg i onboardingen ----------
+// (lägeskortet och exemplet har egna hopp ovanpå detta medan de visas)
+useHoppa(() => {
+  const st = stage.value
+  if (st === 'lage') store.onbGoto('lagekort', Date.now() + 600)
+  else if (st === 'regler') store.onbGoto('exempel', Date.now() + 600)
+  else if (st === 'redo') store.onbGoto(PROVLUCKA ? 'prov' : 'live', null)
+  else if (st === 'prov') {
+    if (provKlar.value) store.onbGoto('live', null)
+    else if (store.state.phase === 'bidding' || store.state.phase === 'guessing') store.hoppaFram(me.value)
+    else return false
+  } else return false
+  return true
+})
 
 // ---------- 'live' ----------
 watch(

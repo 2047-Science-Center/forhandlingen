@@ -27,6 +27,7 @@ import MarknadsVagg from '../components/MarknadsVagg.vue'
 import VaraBild from '../components/VaraBild.vue'
 import MyntStapel from '../components/MyntStapel.vue'
 import type { HatchCell } from '../store/gameStore'
+import { useHoppa } from '@/station-kit/kiosk/kioskSkip'
 
 const props = withDefaults(defineProps<{ startAt: number; leader: boolean; minSida?: 'A' | 'B' }>(), { minSida: 'A' })
 const emit = defineEmits<{ done: []; skip: [] }>()
@@ -133,7 +134,7 @@ const talare = computed(() => {
   const typ = r.vem === 'valdi' ? 'valdi' : r.vem.startsWith('sandebud') ? 'sandebud' : 'rapportor'
   return { ...r, namn: roll?.namn ?? '', sida: roll?.sida ?? null, typ }
 })
-const kanHoppa = computed(() => tid.value > 15)
+useHoppa(() => emit('skip')) // hörngesten (kioskSkip) i stället för en hoppa över-knapp
 
 onMounted(() => {
   window.addEventListener('message', onMeddelande)
@@ -239,7 +240,6 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <button v-if="kanHoppa" class="ex__hoppa" @click="emit('skip')">{{ t('exempel.hoppa') }}</button>
   </div>
 </template>
 
@@ -630,19 +630,6 @@ onUnmounted(() => {
   animation: ex-in 300ms 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.ex__hoppa {
-  position: absolute;
-  right: 1rem;
-  bottom: 0.8rem;
-  font-family: var(--font-retro);
-  font-size: 1rem;
-  color: var(--color-ink-muted);
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
-  padding: 0.2em 0.8em;
-  cursor: pointer;
-}
 @media (prefers-reduced-motion: reduce) {
   .ex__rec i, .ex__stampel, .ex__varabild, .ex__motgissar, .ex__gkort--facit { animation: none; }
 }

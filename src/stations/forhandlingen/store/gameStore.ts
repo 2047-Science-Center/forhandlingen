@@ -391,6 +391,17 @@ export const useGameStore = defineStore('forhandlingen', () => {
   function klubba(winner: TeamId | null, price: number, by: TeamId) {
     dispatch({ type: 'klubba', winner, price, by, now: Date.now() })
   }
+  /** Hörngesten (station-kit/kiosk/kioskSkip) i spelet: ett steg framåt — redo → förhandling → klubban →
+   *  "ingen köpte" → nästa lucka; gissningen → tiden ute. Bara för facilitatorn/labb. */
+  function hoppaFram(by: TeamId = 'lag1') {
+    const s = state.value
+    if (s.phase === 'bidding') {
+      if (s.step === 'getready') beginNegotiation()
+      else if (s.step === 'negotiating') finishNegotiation()
+      else if (s.step === 'klubba') klubba(null, 0, by)
+      else if (s.step === 'sald') dispatch({ type: 'commitSale', now: Date.now() })
+    } else if (s.phase === 'guessing') dispatch({ type: 'guessTimeout' })
+  }
   function angra() {
     dispatch({ type: 'angra' })
   }
@@ -531,6 +542,7 @@ export const useGameStore = defineStore('forhandlingen', () => {
     beginNegotiation,
     finishNegotiation,
     klubba,
+    hoppaFram,
     angra,
     submitGuess,
     reset,
