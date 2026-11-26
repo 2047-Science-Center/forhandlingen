@@ -90,7 +90,7 @@ describe('Förhandlingen: utfall på underglow', () => {
     const bas = sent.filter((m) => m.topic === 'station1/underglow').at(-1)!
     expect(bas.retain).toBe(true)
     const byId = Object.fromEntries(bas.payload.segments.map((s: any) => [s.id, s]))
-    expect(byId.B).toMatchObject({ from: 70, to: 139, color: FARG.gron, effekt: 'static' })
+    expect(byId.B).toMatchObject({ from: 70, to: 140, color: FARG.gron, effekt: 'static' })
     expect(byId.A).toMatchObject({ from: 0, to: 69, color: FARG.rodDjup, effekt: 'static' })
   })
 })

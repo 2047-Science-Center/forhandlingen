@@ -79,14 +79,14 @@ export const BANDLOST: boolean = bandlostFran(true, import.meta.env.VITE_BANDLOS
  * Sida A = vänster (#lag1), sida B = höger (#lag2). Bas retained på
  * station1/underglow, gester på station1/feedback (SOM.md "Stationsljus"). Publiceras bara i
  * drift (överstyr ?ljus=1|0|visa / VITE_LJUS). Broker = samma som rotationen (ROTATION.mqttUrl).
- * Pixelintervallen = standardslingan (140 LED, SOM.md "Stationsljus", 2026-11-25), samma som
- * Undersökningen: A 0–69, B 70–139. Delarna A.1–A.3 / B.1–B.3 läggs till här när de behövs — aldrig i firmware.
+ * Pixelintervallen = standardslingan (141 LED 0–140, SOM.md "Stationsljus", 2026-11-26), samma som
+ * Undersökningen: A 0–69, B 70–140. Delarna A.1–A.3 / B.1–B.3 läggs till här när de behövs — aldrig i firmware.
  */
 export const LJUS: { valv: Valv; segment: Record<string, [number, number]> } = {
   valv: 'diplomat',
   segment: {
     A: [0, 69],
-    B: [70, 139],
+    B: [70, 140],
   },
 }
 
