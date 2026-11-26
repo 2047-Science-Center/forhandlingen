@@ -42,7 +42,6 @@ const s = sync.state
 const sides = computed<Side[]>(() => (props.mySide ? [props.mySide] : ['A', 'B']))
 const prompt = computed(() => VEM_PROMPTS[s.prompt] ?? VEM_PROMPTS[0])
 const candidates = computed(() => peopleOn(props.people, s.speakerSide))
-const guessed = computed(() => props.people.find((p) => p.band_id === s.guess)?.name ?? '')
 
 // Lokal klocka för nedräkningen (ledaren avgör tidsgränsen).
 const now = ref(Date.now())
@@ -73,63 +72,65 @@ watch(
   },
 )
 
+/** EN rad per skärm och fas (Josef 2026-11-26: en sak i taget, ingen spridd info). */
 function hint(side: Side): string {
   const speaking = side === s.speakerSide
-  if (s.phase === 'pick') return speaking ? 'Vem tar headsetet? Tryck på ditt namn.' : 'Motsidan väljer vem som pratar …'
-  if (s.phase === 'speak') return speaking ? 'Prata i headsetet — låt som någon annan!' : 'Vem pratar? Tryck på namnet.'
-  return s.correct ? 'Rätt gissat!' : 'Lurade!'
+  if (s.phase === 'pick') return speaking ? 'Vem tar headsetet? Tryck på ditt namn.' : ''
+  if (s.phase === 'speak') return speaking ? '' : `Vem på ${SIDE_NAME[s.speakerSide]} pratar?`
+  return ''
 }
+/** Facit från den här sidans håll. */
+function utfall(side: Side): string {
+  const gissade = side !== s.speakerSide
+  if (s.correct) return gissade ? 'Ni gissade rätt!' : 'De gissade rätt!'
+  return gissade ? 'De lurade er!' : 'Ni lurade dem!'
+}
+const vannSida = computed<Side>(() => (s.correct ? other(s.speakerSide) : s.speakerSide))
 </script>
 
 <template>
   <div class="vem" :class="{ 'vem--split': sides.length > 1 }">
     <LekPanel v-for="side in sides" :key="side" title="VEM DÄR?" :hint="hint(side)">
-      <!-- VÄLJ TALARE -->
+      <!-- VÄLJ TALARE: talarsidan trycker på sitt namn, motsidan väntar -->
       <template v-if="s.phase === 'pick'">
-        <template v-if="side === s.speakerSide">
-          <div class="vem__names">
-            <button
-              v-for="p in peopleOn(people, side)"
-              :key="p.band_id"
-              class="lek-btn lek-btn--big"
-              @click="sync.act({ type: 'pick', band_id: p.band_id, name: p.name })"
-            >
-              {{ p.name }}
-            </button>
-          </div>
-          <p class="vem__note">Viska i mikrofonen — de ska bara höra dig genom headsetet.</p>
-          <button class="lek-btn lek-btn--ghost vem__skip" @click="sync.act({ type: 'skip' })">Hoppa över ▸</button>
-        </template>
-        <div v-else class="vem__wait">
+        <div v-if="side === s.speakerSide" class="vem__names">
+          <button
+            v-for="p in peopleOn(people, side)"
+            :key="p.band_id"
+            class="lek-btn lek-btn--big"
+            @click="sync.act({ type: 'pick', band_id: p.band_id, name: p.name })"
+          >
+            {{ p.name }}
+          </button>
+        </div>
+        <div v-else class="vem__fokus">
           <span class="vem__ear" aria-hidden="true">🎧</span>
-          <p>Snart pratar någon från <b>{{ SIDE_NAME[other(side)] }}</b>.<br />Gissa vem!</p>
+          <p class="vem__stor">{{ SIDE_NAME[s.speakerSide] }} väljer vem som pratar …</p>
         </div>
       </template>
 
-      <!-- TALA / GISSA -->
+      <!-- TALA: talaren ser BARA sin tur + raden. GISSA: motsidan ser BARA talarsidans namn. -->
       <template v-else-if="s.phase === 'speak'">
         <template v-if="side === s.speakerSide">
-          <p class="vem__who">{{ s.speakerName }}, det är din tur</p>
+          <div class="vem__tur">
+            <span class="vem__tur-namn">{{ s.speakerName }}</span>
+            <span class="vem__tur-text">DIN TUR – PRATA I HEADSETET</span>
+          </div>
           <div class="vem__card">
             <span class="vem__card-kind">{{ prompt.kind === 'las' ? 'SÄG DET HÄR:' : 'SVARA MED EGNA ORD:' }}</span>
             <span class="vem__card-text">{{ prompt.text }}</span>
           </div>
-          <p class="vem__note">Motsidan får ställa EN egen fråga till dig. Svara ärligt, men förställ rösten.</p>
         </template>
-        <template v-else>
-          <div class="vem__names">
-            <button
-              v-for="p in candidates"
-              :key="p.band_id"
-              class="lek-btn lek-btn--big"
-              @click="sync.act({ type: 'guess', band_id: p.band_id })"
-            >
-              {{ p.name }}
-            </button>
-          </div>
-          <p class="vem__note">Ni får ställa EN fråga till den som pratar.</p>
-        </template>
-        <p class="vem__clock">{{ leftSec }} s</p>
+        <div v-else class="vem__names">
+          <button
+            v-for="p in candidates"
+            :key="p.band_id"
+            class="lek-btn lek-btn--big"
+            @click="sync.act({ type: 'guess', band_id: p.band_id })"
+          >
+            {{ p.name }}
+          </button>
+        </div>
       </template>
 
       <!-- FACIT -->
@@ -137,14 +138,14 @@ function hint(side: Side): string {
         <div class="vem__reveal">
           <p class="vem__reveal-k">Det var</p>
           <p class="vem__reveal-name">{{ s.speakerName }}!</p>
-          <p class="vem__reveal-sub">
-            {{ s.guess ? (s.correct ? `${SIDE_NAME[other(s.speakerSide)]} gissade rätt.` : `${SIDE_NAME[other(s.speakerSide)]} gissade på ${guessed}.`) : 'Ingen hann gissa.' }}
-          </p>
+          <p class="vem__utfall" :class="vannSida === side ? 'vem__utfall--vann' : 'vem__utfall--forlust'">{{ utfall(side) }}</p>
         </div>
       </template>
 
       <template #foot>
         <span>{{ SIDE_NAME.A }} {{ s.score.A }} – {{ s.score.B }} {{ SIDE_NAME.B }}</span>
+        <span v-if="s.phase === 'speak'" class="vem__clock">{{ leftSec }} s</span>
+        <button v-if="s.phase === 'pick' && side === s.speakerSide" class="lek-btn lek-btn--ghost" @click="sync.act({ type: 'skip' })">Hoppa över ▸</button>
         <button v-if="s.phase === 'reveal'" class="lek-btn lek-btn--ghost" @click="sync.act({ type: 'next' })">Nästa ▸</button>
       </template>
     </LekPanel>
@@ -165,30 +166,43 @@ function hint(side: Side): string {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 1rem;
+  gap: 1.2rem;
 }
-.vem__note {
-  margin: 0;
+.vem__names .lek-btn--big {
+  min-width: 11rem;
+  font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+}
+.vem__fokus {
   text-align: center;
-  font-size: 1.1rem;
-  color: var(--color-ink-muted, #b9a8d8);
-}
-.vem__skip {
-  align-self: center;
-  font-size: 1rem;
-}
-.vem__wait {
-  text-align: center;
-  font-size: clamp(1.3rem, 2.8vw, 2rem);
 }
 .vem__ear {
-  font-size: 4rem;
+  font-size: 4.5rem;
 }
-.vem__who {
-  margin: 0;
-  text-align: center;
-  font-size: 1.4rem;
-  color: #b48cff;
+.vem__stor {
+  margin: 0.4rem 0 0;
+  font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+}
+/* Vems tur: namnet STORT, så ingen tvekar vem som ska prata */
+.vem__tur {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.6rem 1rem;
+  border-radius: 14px;
+  background: #b48cff;
+  color: #1a0d2e;
+  box-shadow: 0 0 30px rgba(180, 140, 255, 0.6);
+}
+.vem__tur-namn {
+  font-family: var(--font-retro, monospace);
+  font-size: clamp(2.6rem, 7vw, 4.6rem);
+  line-height: 1;
+}
+.vem__tur-text {
+  font-size: clamp(1rem, 2vw, 1.4rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
 }
 .vem__card {
   display: flex;
@@ -209,10 +223,7 @@ function hint(side: Side): string {
   line-height: 1.25;
 }
 .vem__clock {
-  margin: 0;
-  text-align: center;
   font-family: var(--font-retro, monospace);
-  font-size: 2rem;
   color: #b48cff;
 }
 .vem__reveal {
@@ -229,8 +240,14 @@ function hint(side: Side): string {
   color: #b48cff;
   text-shadow: 0 0 22px rgba(180, 140, 255, 0.8);
 }
-.vem__reveal-sub {
-  margin: 0;
-  font-size: 1.3rem;
+.vem__utfall {
+  display: inline-block;
+  margin: 0.4rem 0 0;
+  padding: 0.2em 0.9em;
+  border-radius: 10px;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 700;
 }
+.vem__utfall--vann { background: #7ad14f; color: #0b1a07; }
+.vem__utfall--forlust { background: rgba(255, 255, 255, 0.12); color: #f1eaff; }
 </style>
