@@ -201,7 +201,13 @@ export const useGameStore = defineStore('forhandlingen', () => {
       // Klubbslaget: samma ögonblick på båda skärmarna (synkat state). Vinnarsidan får `rätt`.
       if (s.step === 'sald' && s.pending) {
         audio.play(s.pending.winner ? 'klubba' : 'nobuy')
-        if (skrivare && s.pending.winner) ljus.gest('ratt', [SIDA_FOR_LAG[s.pending.winner]], { tyst: true })
+        // Vinnarsidan: 3 långa gröna blink på sin del av slingan + ett tydligt vinnarljud på SIN skärm
+        // strax efter klubbslaget (Josef 2026-11-26). Förlorarsidan hör bara klubban.
+        if (skrivare && s.pending.winner) ljus.gest('kopt', [SIDA_FOR_LAG[s.pending.winner]], { tyst: true })
+        const minSida = view.value === 'lag1' || view.value === 'lag2' ? view.value : null
+        if (s.pending.winner && (minSida === s.pending.winner || view.value === 'shared')) {
+          setTimeout(() => audio.play('win'), 450)
+        }
       }
       if (s.step === 'klubba' && prevStep === 'sald') audio.play('deny') // ångrat
       prevStep = s.step
