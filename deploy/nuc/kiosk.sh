@@ -168,6 +168,7 @@ common_flags=(
   "$FULLSCREEN_FLAG"
   --disable-pinch
   --no-first-run
+  --password-store=basic   # ingen "lås upp nyckelringen"-fråga efter autologin (som Minnestestet)
   --no-default-browser-check
   --noerrdialogs
   --disable-infobars
