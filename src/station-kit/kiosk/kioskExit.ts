@@ -85,6 +85,9 @@ export function installKioskExit(opts: { holdMs?: number; corner?: number } = {}
     clearTimeout(autoTmr)
   }
   function doExit(): void {
+    // Stationens server stänger båda fönstren (deploy/nuc stop_kiosk) — funkar även när window.close()
+    // blockeras av historiken. Appar utan endpointen får 404 → window.close() nedan som förut.
+    fetch('/api/kiosk/avsluta', { method: 'POST' }).catch(() => {})
     try {
       window.close()
     } catch {
@@ -103,7 +106,7 @@ export function installKioskExit(opts: { holdMs?: number; corner?: number } = {}
       if (!document.hidden)
         hint.innerHTML =
           'Fönstret kunde inte stängas av appen. Starta via <b>kiosk.sh</b> (Chromium med <b>--app</b>), eller tryck <b>Alt+F4</b>.'
-    }, 900)
+    }, 2500)
   }
 
   function mount(): void {
