@@ -259,6 +259,11 @@ function toggleMode(): void {
     <!-- UTFALL: överblick sida A / sida B med namnskyltar över gubbarna -->
     <div v-else-if="s.step === 'utfall'" class="en__stage en__outcome">
       <h2 class="en__question ink-strong">Så här blev det</h2>
+      <!-- Vilken sida DEN HÄR skärmen är (Josef 2026-11-26) — olika på båda skärmarna, i sidfärgen som underglow -->
+      <p v-if="s.screenSide" class="en__har" :class="`en__har--${s.screenSide}`">
+        <b>HÄR ÄR SIDA {{ s.screenSide }}</b>
+        <span>Hör du till sida {{ s.screenSide === 'A' ? 'B' : 'A' }}? Gå till andra sidan.</span>
+      </p>
       <iframe v-if="illuOk" :src="placesSrc" class="en__illu3d" title="Så här ska ni stå" />
       <div v-else class="en__floor">
         <section
@@ -572,6 +577,37 @@ button.en__choice:active {
 }
 .en__voters--on {
   color: var(--color-primary);
+}
+
+/* utfall — "HÄR ÄR SIDA A/B": den här skärmens sida, i sidfärgen */
+.en__har {
+  --har: var(--entre-side-a, #fff1d6);
+  --har-rgb: 255, 241, 214;
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.2rem;
+  padding: 0.3rem 1.4rem;
+  border: 3px solid var(--har);
+  border-radius: 12px;
+  background: rgba(var(--har-rgb), 0.14);
+  box-shadow: 0 0 26px rgba(var(--har-rgb), 0.35);
+}
+.en__har--B {
+  --har: var(--entre-side-b, #ff3cc8);
+  --har-rgb: 255, 60, 200;
+}
+.en__har b {
+  font-family: var(--font-retro, monospace);
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  letter-spacing: 0.08em;
+  color: var(--har);
+}
+.en__har span {
+  font-size: clamp(1rem, 1.8vw, 1.3rem);
+  color: var(--color-ink-strong, #f5f5f0);
 }
 
 /* utfall — "golvet" med sida A / sida B */

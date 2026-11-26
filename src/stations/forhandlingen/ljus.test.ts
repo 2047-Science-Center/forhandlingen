@@ -51,6 +51,19 @@ describe('Förhandlingen: ljus-mappning (§5.1)', () => {
     expect(appLage({ rotationPa: false, franRotation: null, entered: true, onboarded: true })).toBe('skarp')
   })
 
+  it('entrén: ställ er på rätt sida = sidfärgerna, rollklipp och val = mint (Josef 2026-11-26)', () => {
+    const i = (entreSteg: string) => appLage({ rotationPa: true, franRotation: 'tutorial', entered: true, onboarded: false, entreSteg })
+    expect(i('attract')).toBe('startsida')
+    expect(i('redo')).toBe('startsida')
+    expect(i('sekvens')).toBe('tutorial')
+    expect(i('rollval')).toBe('tutorial')
+    expect(i('valet')).toBe('tutorial')
+    expect(i('utfall')).toBe('startsida')
+    expect(i('klar')).toBe('tutorial')
+    // Skarpt påverkas aldrig av entrén.
+    expect(appLage({ rotationPa: true, franRotation: 'skarp', entered: true, onboarded: true, entreSteg: 'utfall' })).toBe('skarp')
+  })
+
   it('alla kanon-ljud har ett Sfx i appen', () => {
     for (const sfx of Object.values(LJUD_TILL_SFX)) expect(typeof sfx).toBe('string')
     expect(LJUD_TILL_SFX.oppnar).toBe('hatch')
