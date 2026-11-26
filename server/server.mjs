@@ -12,10 +12,13 @@ import http from 'node:http'
 import { readFile, stat } from 'node:fs/promises'
 import { join, normalize, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { spawn } from 'node:child_process'
 import { WebSocketServer } from 'ws'
 
 const PORT = Number(process.env.PORT ?? 8080)
 const DIST = fileURLToPath(new URL('../dist', import.meta.url))
+const NUC_DIR = fileURLToPath(new URL('../deploy/nuc', import.meta.url))
+const LOKAL = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1'])
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -40,6 +43,18 @@ async function serveFile(res, filePath) {
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost')
+    // Kiosk-avsluta (håll övre vänstra hörnet → AVSLUTA): stäng BÅDA fönstren med NUC:ens eget stopp
+    // (deploy/nuc/_common.sh stop_kiosk). window.close() blockeras så fort fönstret har historik.
+    // Bara från NUC:en själv — inte från nätet. Samma som Undersökningen (3f20348).
+    if (url.pathname === '/api/kiosk/avsluta' && req.method === 'POST') {
+      const ok = LOKAL.has(req.socket.remoteAddress)
+      res.writeHead(ok ? 202 : 403)
+      res.end()
+      if (ok) {
+        spawn('bash', ['-c', '. ./_common.sh && kiosk_init && stop_kiosk'], { cwd: NUC_DIR, detached: true, stdio: 'ignore' }).unref()
+      }
+      return
+    }
     // Hälsokoll (systemd/övervakning på NUC:en).
     if (url.pathname === '/healthz') {
       res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' })
