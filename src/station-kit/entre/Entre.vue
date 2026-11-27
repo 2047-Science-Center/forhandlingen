@@ -52,8 +52,6 @@ watch(
  * sida B, med 3D-bilden i mitten). Den gamla förskärmen (stationens attract + namnlistor) och ankomst-steget
  * (samma information en gång till) är borta. Stationens eget attract-innehåll (slot) visas bara om gruppen är tom.
  */
-const sideNames = (side: SideId) =>
-  entre.members.value.filter((m) => entre.voteSides.value[m.band_id] === side).map((m) => m.name)
 
 /* ---------- rollbilder ---------- */
 function clipFor(role: EntreRole): string {
@@ -112,10 +110,7 @@ function src3d(params: Record<string, string>): string {
   const q = new URLSearchParams({ station: cfg.value.station3d ?? '', me: s.screenSide ?? '', bg: 'transparent', ...params })
   return `${illuUrl.value}?${q.toString()}`
 }
-/** Ankomsten: startsidorna (fasta halvor) med bara namn. */
-const arrivalSrc = computed(() =>
-  src3d({ lage: 'ankomst', a: sideNames('A').join(','), b: sideNames('B').join(','), la: 'Sida A', lb: 'Sida B' }),
-)
+/* Ankomsten visar inte längre 3D (lage=ankomst) — den dubblerade namnen (xy-produktion/ankomst/UTVARDERING.md). */
 /** Utfallet: varje person på sin rollplats med namn + titel (färgen = sidans, standard i 3D). */
 const placesSrc = computed(() =>
   src3d({
@@ -149,7 +144,7 @@ function toggleMode(): void {
 <template>
   <div class="en" :class="`en--${s.step}`">
     <!-- ATTRACT = "STÄLL ER PÅ RÄTT SIDA": tredelad sida A | stationen (+3D) | sida B -->
-    <Ankomst v-if="s.step === 'attract' && entre.members.value.length" :illu-src="illuOk ? arrivalSrc : ''" />
+    <Ankomst v-if="s.step === 'attract' && entre.members.value.length" /><!-- 3D:n inte längre i ankomsten (UTVARDERING 2026-11-27) -->
 
     <!-- ATTRACT utan grupp (tom roster): stationens eget attract-innehåll -->
     <div v-else-if="s.step === 'attract'" class="en__attract">

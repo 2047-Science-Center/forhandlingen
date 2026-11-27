@@ -366,6 +366,8 @@ export const ENTRE: EntreConfig = {
     { letter: 'A', rollvalRoleId: 'sandebud', name: 'Sändebud', min: 1, plats: 'sandebud' },
     { letter: 'B', rollvalRoleId: 'rapportor', name: 'Rapportör', min: 1, plats: 'rapportor' },
   ],
+  /** Spellägesmärket ① i ankomsten (xy-produktion/ankomst/UTVARDERING.md, spellage/FORSLAG ①). */
+  lage: 'tavling',
   sides: {
     A: { id: 'A', label: '' },
     B: { id: 'B', label: '' },

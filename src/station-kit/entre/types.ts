@@ -30,6 +30,7 @@
  * rollen (Pulsvakt, Gyro, Fälttekniker) och modellen behöver en tredje zon — se XY-PLATSER.
  * OBS: results.assigned_role är ENUM('A','B') — underrollen (sub_role) får inte plats i DB:n.
  */
+import type { Lage } from '../spellage/spellage'
 
 /** Roll-bokstav i X&Y-resultatet (DB: results.chosen_role / assigned_role = ENUM('A','B')). */
 export type RoleLetter = 'A' | 'B'
@@ -92,8 +93,11 @@ export interface EntreRole {
 /** Vad stationens sida heter i spelet (t.ex. "Labbtekniker", "Lögndetektorn"). */
 export interface EntreSideInfo {
   id: SideId
-  /** Visas i utfallet: "gå till sida B · Lögndetektorn". */
+  /** Visas i utfallet: "gå till sida B · Lögndetektorn". Visas INTE i ankomsten (rollen är inte vald än). */
   label?: string
+  /** Liten underrad under "SIDA A" i ankomsten — bara där sidan redan ÄR något vid ankomsten
+   *  (st2: sidans spel). Saknas → bara "SIDA A". (xy-produktion/ankomst/UTVARDERING.md) */
+  ankomst?: string
 }
 
 /** Stationens entré-data (bor i stationens config.ts). */
@@ -152,6 +156,8 @@ export interface EntreConfig {
    * Saknas → ingen bild (som förut).
    */
   attractBild?: string | null
+  /** Spelläget (spellage ①): märket överst i ankomsten — symbolen + SAMARBETE/TÄVLING/MOT VALDI. Saknas → inget märke. */
+  lage?: Lage
   rollkort?: {
     /** Rollnamnen på korten, [roll A, roll B] (t.ex. "Labbtekniker", "Forensiker"). */
     A: string
