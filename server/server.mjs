@@ -9,7 +9,8 @@
  * av plattformen. Inga hemligheter här.
  */
 import http from 'node:http'
-import { readFile, stat } from 'node:fs/promises'
+import { stat } from 'node:fs/promises'
+import { createReadStream } from 'node:fs'
 import { join, normalize, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
@@ -32,12 +33,41 @@ const MIME = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
 }
 
-async function serveFile(res, filePath) {
-  const data = await readFile(filePath)
-  res.writeHead(200, { 'content-type': MIME[extname(filePath)] ?? 'application/octet-stream' })
-  res.end(data)
+/**
+ * Range-stöd (206) för video/ljud: Chromium spolar i klippen (rollklippens synk sätter currentTime vid start
+ * och vid glidning) och behöver då byte-intervall. Utan det blev varje spolning en ny nedladdning från början
+ * → klippen hackade och fastnade i början (Josef 2026-11-27). Filen strömmas, läses inte in i minnet.
+ */
+async function serveFile(req, res, filePath) {
+  const type = MIME[extname(filePath).toLowerCase()] ?? 'application/octet-stream'
+  const { size } = await stat(filePath)
+  const fel = () => res.destroy()
+  const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '')
+  if (m && (m[1] || m[2])) {
+    const start = m[1] ? Number(m[1]) : Math.max(0, size - Number(m[2]))
+    const end = m[1] && m[2] ? Math.min(Number(m[2]), size - 1) : size - 1
+    if (start >= size || start > end) {
+      res.writeHead(416, { 'content-range': `bytes */${size}` })
+      res.end()
+      return
+    }
+    res.writeHead(206, {
+      'content-type': type,
+      'accept-ranges': 'bytes',
+      'content-range': `bytes ${start}-${end}/${size}`,
+      'content-length': end - start + 1,
+    })
+    createReadStream(filePath, { start, end }).on('error', fel).pipe(res)
+    return
+  }
+  res.writeHead(200, { 'content-type': type, 'accept-ranges': 'bytes', 'content-length': size })
+  createReadStream(filePath).on('error', fel).pipe(res)
 }
 
 const server = http.createServer(async (req, res) => {
@@ -69,10 +99,10 @@ const server = http.createServer(async (req, res) => {
     try {
       const s = await stat(filePath)
       if (s.isDirectory()) filePath = join(filePath, 'index.html')
-      await serveFile(res, filePath)
+      await serveFile(req, res, filePath)
     } catch {
       // SPA-fallback: allt okänt → index.html
-      await serveFile(res, join(DIST, 'index.html'))
+      await serveFile(req, res, join(DIST, 'index.html'))
     }
   } catch {
     res.writeHead(500)
