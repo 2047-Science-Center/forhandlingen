@@ -36,8 +36,14 @@ const total = computed(() => Math.max(1, ...Object.values(ljus.state.segment).ma
 
 const segs = computed(() => {
   const t = now.value
-  return Object.entries(ljus.state.segment).map(([id, [from, to]]) => {
-    const look = ljus.state.bas[id] ?? { color: '#000000', effekt: 'av' }
+  // Segmenten + underglow-spårets extra delar ovanpå (samma ordning som firmwaren ritar).
+  const alla: Array<[string, number, number, { color: string; effekt: string }]> = [
+    ...Object.entries(ljus.state.segment).map(
+      ([id, [from, to]]) => [id, from, to, ljus.state.bas[id] ?? { color: '#000000', effekt: 'av' }] as [string, number, number, { color: string; effekt: string }],
+    ),
+    ...ljus.state.extra.map((d) => [d.id, d.from, d.to, d] as [string, number, number, { color: string; effekt: string }]),
+  ]
+  return alla.map(([id, from, to, look]) => {
     let bg = '#000'
     if (look.effekt === 'static') bg = look.color
     else if (look.effekt === 'blink') bg = Math.floor(t / 550) % 2 === 0 ? look.color : scale(look.color, 0.12)

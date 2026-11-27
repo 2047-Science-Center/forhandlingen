@@ -56,6 +56,50 @@ export const VALVNAMN: Record<Valv, string> = {
   forskning: 'Forskningslaget',
 }
 
+/**
+ * Dämpa en hex linjärt (k = 0..1). Med xy-firmware ≥ 0.2.2 (gamma bara på kulören, ljusstyrkan linjär efter
+ * max-kanalen) behåller en dämpad färg sin ton och syns: `#ff9500` × 0,35 ≈ `#5a3400` (Josef 2026-11-27, fråga 1).
+ */
+export function dampa(hex: string, k = 0.35): string {
+  const v = parseInt(hex.slice(1), 16)
+  const c = (n: number) => Math.round(n * k).toString(16).padStart(2, '0')
+  return `#${c((v >> 16) & 255)}${c((v >> 8) & 255)}${c(v & 255)}`
+}
+
+/** Valvfärgerna dämpade (presenterat valv i trailern, capstone-avtoningen — XY-UNDERGLOW-MANUS §1.3). */
+export const VALVDIM: Record<Valv, string> = {
+  teknolog: dampa(VALVFARG.teknolog),
+  diplomat: dampa(VALVFARG.diplomat),
+  drift: dampa(VALVFARG.drift),
+  forskning: dampa(VALVFARG.forskning),
+}
+
+/** Valvordningen (trailern, VALdi-ringens `chase` mal 0–3): teknolog → diplomat → drift → forskning. */
+export const VALVORDNING: readonly Valv[] = ['teknolog', 'diplomat', 'drift', 'forskning']
+
+/**
+ * Gångordningen medsols st1 → st4 → st3 → st2 uttryckt i valv (st1 Diplomatkåren, st4 Driften,
+ * st3 Forskningslaget, st2 Teknologerna) — attract-vågen går i den här ordningen.
+ */
+export const GANGORDNING: readonly Valv[] = ['diplomat', 'drift', 'forskning', 'teknolog']
+
+/**
+ * Standardslingan (SOM.md "Stationsljus", 141 LED, samma på alla stationer): två sidor × tre delar.
+ * Underglow-spåren adresserar de här delarna; stationen ritar dem ovanpå sina egna segment.
+ */
+export const STANDARDSLINGA: Record<string, [number, number]> = {
+  A: [0, 69],
+  'A.1': [0, 23],
+  'A.2': [24, 45],
+  'A.3': [46, 69],
+  B: [70, 140],
+  'B.1': [70, 94],
+  'B.2': [95, 116],
+  'B.3': [117, 140],
+}
+/** `runt` i spåren = delarna i den här ordningen ("tänds runt vagnen"). */
+export const RUNT: readonly string[] = ['A.1', 'A.2', 'A.3', 'B.1', 'B.2', 'B.3']
+
 export const FARG = {
   tutorial: '#35e0d0',
   skarp: '#ff9500',
@@ -67,6 +111,12 @@ export const FARG = {
   rodDjup: '#7a1410',
   vit: '#fff0d0',
   stal: '#9fb2c0',
+  /** Dämpad stålgrå (reveal: "vanor sitter djupt", väntan på de andra). */
+  stalDim: dampa('#9fb2c0'),
+  /** Dämpat varmvitt (reveal: "Sjukstugan" — inget valv, inga könskodade färger). */
+  vitDim: dampa('#fff0d0', 0.6),
+  /** Blixt/stämpel i filmerna. */
+  blixt: '#ffffff',
   /** Startsidor vid ankomsten (spikade 2026-11-19: varmvitt + magenta) — LED-värdena ur SIDFARG. */
   sidaA: SIDFARG.A.led,
   sidaB: SIDFARG.B.led,
@@ -164,7 +214,20 @@ export type LjudNamn =
   | 'oppnar'
   | 'stanger'
 
-export type Gest = 'kvitto' | 'ratt' | 'kopt' | 'inom' | 'fel' | 'over' | 'oppnar' | 'stanger' | 'vinst' | 'forlust' | 'klar'
+export type Gest =
+  | 'kvitto'
+  | 'ratt'
+  | 'kopt'
+  | 'inom'
+  | 'fel'
+  | 'over'
+  | 'oppnar'
+  | 'stanger'
+  | 'vinst'
+  | 'forlust'
+  | 'klar'
+  | 'oenig'
+  | 'blixt'
 
 export interface GestDef {
   color: string
@@ -191,6 +254,10 @@ export const GEST: Record<Gest, GestDef> = {
   vinst: { color: FARG.gron, tempo: 400, antal: 3, prio: 3, ljud: 'vinst', bas: 'vinst' },
   forlust: { color: FARG.rod, tempo: 600, antal: 3, prio: 3, ljud: 'forlust', bas: 'forlust' },
   klar: { color: FARG.lek, tempo: 600, antal: 1, prio: 3, ljud: 'klar', bas: 'lek' },
+  /** Sidorna tror olika (Undersökningens tavla): orange, inte rött — det är inte fel, bara oenigt. */
+  oenig: { color: FARG.amber, tempo: 450, antal: 2, prio: 2, ljud: 'fel' },
+  /** Vit blixt 150 ms (stämpeln i filmerna, underglow-spåren). Spåren spelar den tyst — filmen bär ljudet. */
+  blixt: { color: FARG.blixt, tempo: 300, antal: 1, prio: 0, ljud: 'kvitto' },
 }
 
 /**
@@ -198,20 +265,25 @@ export const GEST: Record<Gest, GestDef> = {
  * XY-RIGG-ARKITEKTUR §1.2). null = stationens eget läge styr (rotationen).
  */
 /**
- * Regi-faser som går FÖRE stationens eget läge (Josef 2026-11-25): under trailern dämpas
- * underglow till amber fast så att filmen syns, även om gruppen redan står vid stationen
- * (startsida från incheckningen). Samma under `sortering` (dämpad orange + VALdis hjärtslag/dom, 2026-11-25),
- * annars syns rotationens sidfärger/lila. Efter fasen tar stationens läge över igen.
+ * Regi-faser som går FÖRE stationens eget läge: alla utom `incheckning` och `rotation`, där stationens
+ * eget läge gäller (XY-UNDERGLOW-MANUS §4.10, Josef 2026-11-27). Trailer/sortering = dämpad amber fast
+ * (2026-11-25) med underglow-spåren ovanpå; utan listan låg t.ex. lila lek kvar in i reveal/SYV.
  */
-export const REGI_FORE: readonly string[] = ['trailer', 'sortering']
+export const REGI_FORE: readonly string[] = ['idle', 'attract', 'trailer', 'intro', 'reveal', 'sortering', 'syv', 'klart']
 
 export function regiLook(fas: string | null, valv: Valv): Look | null {
   const v = VALVFARG[valv]
   switch (fas) {
     case 'idle':
     case 'attract':
+      // Bärnsten andas som portalerna; valvfärgen anas bara i attract-vågen (Josef 2026-11-27, manus §4.1).
+      return { color: FARG.amber, effekt: 'puls' }
     case 'klart':
+      // Reserv om capstone-spåret saknas (spåret tänder valv för valv → fullt → blixt → av).
       return { color: v, effekt: 'puls' }
+    case 'intro':
+      // Instruktionsfilmen: dämpad bas, spåret visar lägesfärgerna där de kommer att synas (manus §4.4).
+      return { color: FARG.amberDim, effekt: 'static' }
     case 'incheckning':
       return { color: FARG.amber, effekt: 'puls' }
     case 'trailer':
