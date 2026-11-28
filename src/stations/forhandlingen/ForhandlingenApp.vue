@@ -21,7 +21,7 @@ import RotationScreens from '@/station-kit/rotation/RotationScreens.vue'
 import { initRotation, rotationOptions } from '@/station-kit/rotation/rotation'
 import { initResultat, resultatOptions } from '@/station-kit/resultat'
 import ForhandlingAvslut from './components/ForhandlingAvslut.vue'
-import { initLjus, ljusOptions, lageFranRotation, LjusRemsa } from '@/station-kit/ljus'
+import { initLjus, ljusOptions, lageFranRotation, medSaHarBlevDet, LjusRemsa } from '@/station-kit/ljus'
 import { initFilm, filmOptions, FilmOverlay } from '@/station-kit/film'
 import { initIncheckning, incheckningOptions } from '@/station-kit/incheckning/incheckning'
 import IncheckningScreen from '@/station-kit/incheckning/IncheckningScreen.vue'
@@ -142,13 +142,13 @@ initIncheckning(
 )
 
 const ljusLage = computed(() =>
-  appLage({
+  medSaHarBlevDet(entre.state.step, appLage({
     rotationPa: rotation.state.phase !== 'off',
     franRotation: lageFranRotation(rotation.state.phase, rotation.state.mode),
     entered: entered.value,
     onboarded: onboarded.value,
     entreSteg: entre.state.step,
-  }),
+  })),
 )
 watch(
   ljusLage,

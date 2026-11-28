@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initLjus, useLjus, __resetLjusForTest, type LjusClient } from './stationLjus'
-import { lageFranRotation, lageLook, regiLook, sidaForSegment, FARG, SIDFARG, VALVFARG } from './kanon'
+import { lageFranRotation, medSaHarBlevDet, lageLook, regiLook, sidaForSegment, FARG, SIDFARG, VALVFARG } from './kanon'
 
 type Msg = { topic: string; payload: any; retain: boolean }
 
@@ -219,6 +219,16 @@ describe('station-kit/ljus', () => {
     expect(regiLook('idle', 'drift')).toEqual({ color: FARG.amber, effekt: 'puls' }) // manus §4.1: bärnsten + vågen
     expect(regiLook('klart', 'drift')).toEqual({ color: VALVFARG.drift, effekt: 'puls' }) // reserv utan capstone-spår
     expect(regiLook('rotation', 'drift')).toBeNull()
+  })
+
+  it('kanon: "Så här blev det" (entrén utfall) → sidorna blinkar i sidfärgerna (Josef 2026-11-28)', () => {
+    expect(medSaHarBlevDet('utfall', 'tutorial')).toBe('sidaBlink')
+    expect(medSaHarBlevDet('valet', 'tutorial')).toBe('tutorial')
+    expect(medSaHarBlevDet('klar', 'skarp')).toBe('skarp')
+    expect(medSaHarBlevDet(undefined, null)).toBeNull()
+    expect(lageLook('sidaBlink', 'A')).toEqual({ color: FARG.sidaA, effekt: 'blink' })
+    expect(lageLook('sidaBlink', 'B')).toEqual({ color: FARG.sidaB, effekt: 'blink' })
+    expect(lageLook('sidaBlink', 'falt.1a')).toEqual({ color: FARG.amber, effekt: 'blink' }) // st4 långsidorna
   })
 })
 

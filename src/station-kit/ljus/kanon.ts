@@ -127,6 +127,8 @@ export const FARG = {
  *  vila         amber andning (attract/väntar)
  *  ankomst      amber chase ("kom hit", ny grupp)
  *  startsida    sidfärg A varmvitt / B magenta (sidaForSegment) vid ankomsten; segment utan sida → amber chase
+ *  sidaBlink    "Så här blev det" (entrén, steget utfall): sidfärg A varmvitt / B magenta BLINKAR så att man
+ *               ser var man ska stå; segment utan sida (st4 fält) → bärnsten blink (Josef 2026-11-28)
  *  tutorial     ljusblå fast
  *  skarp        orange fast
  *  varning      orange andning (tiden ≤15 s)
@@ -144,6 +146,7 @@ export type Lage =
   | 'vila'
   | 'ankomst'
   | 'startsida'
+  | 'sidaBlink'
   | 'tutorial'
   | 'skarp'
   | 'varning'
@@ -167,6 +170,11 @@ export function lageLook(lage: Lage, segmentId = ''): Look {
       const sida = sidaForSegment(segmentId)
       if (!sida) return { color: FARG.amber, effekt: 'chase' }
       return { color: sida === 'B' ? FARG.sidaB : FARG.sidaA, effekt: 'static' }
+    }
+    case 'sidaBlink': {
+      const sida = sidaForSegment(segmentId)
+      if (!sida) return { color: FARG.amber, effekt: 'blink' }
+      return { color: sida === 'B' ? FARG.sidaB : FARG.sidaA, effekt: 'blink' }
     }
     case 'tutorial':
       return { color: FARG.tutorial, effekt: 'static' }
@@ -316,4 +324,12 @@ export function lageFranRotation(phase: string, mode: string | null): Lage | nul
     default:
       return null
   }
+}
+
+/**
+ * Entréns "Så här blev det" (steget `utfall`) går före allt annat: sidorna blinkar i sidfärgerna
+ * så att gruppen ser var den ska stå (Josef 2026-11-28). Övriga steg → `annars` oförändrat.
+ */
+export function medSaHarBlevDet(entreSteg: string | null | undefined, annars: Lage | null): Lage | null {
+  return entreSteg === 'utfall' ? 'sidaBlink' : annars
 }

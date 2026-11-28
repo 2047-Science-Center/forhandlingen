@@ -13,6 +13,7 @@ export {
   lageLook,
   regiLook,
   lageFranRotation,
+  medSaHarBlevDet,
   sidaForSegment,
 } from './kanon'
 export type { Spar, SparRad } from './underglowSpar'
