@@ -75,6 +75,11 @@ const state = reactive({
   redo: { A: false, B: false } as Record<SideId, boolean>,
   /** synkIntro: var sekvensen står (ledaren sätter, följaren följer). `at` = epoch-ms då steget började. */
   seq: null as { steg: SeqSteg; at: number } | null,
+  /**
+   * synkIntro: andra sidan är redan klar med gruppen (står i lek, t.ex. efter en omstart av en NUC) → den här
+   * skärmen kör entrén själv: eget intro och rollval, lottar själv när de egna har valt (2026-11-28).
+   */
+  annanKlar: false,
 })
 let redoTimer: ReturnType<typeof setInterval> | null = null
 
@@ -127,6 +132,7 @@ function resetLocal(): void {
   state.step = 'attract'
   state.redo = { A: false, B: false }
   state.seq = null
+  state.annanKlar = false
   stoppaRedoTimer()
   state.votes = {}
   state.result = null
@@ -154,21 +160,27 @@ function recordVote(bandId: string, role: RoleLetter, broadcast: boolean): void 
   tryResolve()
 }
 
-/** Ledaren: alla har valt → ombalansera, lotta, skicka ut. */
+/** De som röstar på den här skärmen har alla valt (solo: andra sidan är redan klar). */
+const myVotersVoted = (): boolean => myVoters.value.length > 0 && myVoters.value.every((m) => state.votes[m.band_id])
+
+/** Ledaren: alla har valt → ombalansera, lotta, skicka ut. Solo (andra sidan klar): när de egna valt. */
 function tryResolve(): void {
-  if (state.leader && !state.result && allVoted.value) resolve()
+  if (state.result) return
+  if (state.leader && allVoted.value) resolve()
+  else if (state.annanKlar && myVotersVoted()) resolve()
 }
 
-/** Lotta nu (även de som inte valt). Icke-ledare ber ledaren. */
+/** Lotta nu (även de som inte valt). Icke-ledare ber ledaren, utom solo (då finns ingen ledare att fråga). */
 function resolve(): void {
   if (state.result) return
-  if (!state.leader) {
+  if (!state.leader && !state.annanKlar) {
     send('entre:force', { run: state.run })
     return
   }
   const personer = place(members.value, state.votes, cfg(), voteSides.value, rngFactory(state.run))
   setResult(personer)
-  send('entre:result', { run: state.run, personer })
+  // Solo: andra sidan är klar med gruppen och ska inte få en ny lottning.
+  if (!state.annanKlar) send('entre:result', { run: state.run, personer })
 }
 
 function onTransport(msg: Msg): void {
@@ -195,9 +207,17 @@ function onTransport(msg: Msg): void {
       break
     case 'entre:redo':
       if (p.side === 'A' || p.side === 'B') {
+        // Den här sidan är redan klar med gruppen (lek) → svara det, så kör den väntande sidan själv.
+        if (rotation.state.phase === 'lek' && state.screenSide != null && p.side !== state.screenSide) {
+          send('entre:klar', { run: state.run, side: state.screenSide })
+          return
+        }
         state.redo = { ...state.redo, [p.side]: true }
         startaSekvensOmBadaRedo()
       }
+      break
+    case 'entre:klar':
+      if (state.step === 'redo' && p.side !== state.screenSide) gaSolo()
       break
     case 'entre:seq':
       if (!state.leader) foljSeq(p)
@@ -280,6 +300,11 @@ function start(): void {
   // Rotationen väntar på regi / står i lek → overlayen äger skärmen, ingen start.
   if (rotation.state.phase === 'waiting' || rotation.state.phase === 'lek') return
   if (rotation.state.phase === 'group') rotation.begin()
+  // Lottningen finns redan (synkad från andra sidan, t.ex. efter en omstart) → direkt till utfallet (E1).
+  if (state.result) {
+    state.step = 'utfall'
+    return
+  }
   state.clipSet = pickClipSet()
   if (synk()) {
     // Vänta in andra sidan; skicka "redo" tills sekvensen startat (tål en missad/omladdad mottagare).
@@ -350,6 +375,21 @@ function seqNext(fran: SeqSteg): void {
   if (nasta) satSeq(nasta)
   else seqKlar()
 }
+/**
+ * Andra sidan är redan klar med gruppen (svarade entre:klar) → kör entrén ensam som en enskild skärm:
+ * eget intro, eget rollval, lotta när de egna valt. Ingen sekvens skickas (andra sidan står i lek).
+ */
+function gaSolo(): void {
+  stoppaRedoTimer()
+  state.annanKlar = true
+  state.seq = null
+  if (state.result) {
+    state.step = 'utfall'
+    return
+  }
+  if (state.introAvailable) state.step = 'intro'
+  else afterIntro()
+}
 /** Följaren: ledarens position i sekvensen. */
 function foljSeq(p: Record<string, unknown>): void {
   if (state.step !== 'attract' && state.step !== 'redo' && state.step !== 'sekvens') return
@@ -419,6 +459,13 @@ function finish(): void {
 
 /** Facilitator: hoppa över valet (lotta alla som inte valt). */
 function skipVote(): void {
+  // Lottningen finns redan → utfallet (annars en återvändsgränd: resolve() gör inget när result finns, E1).
+  if (state.result && ['redo', 'sekvens', 'intro', 'rollval', 'valet', 'vantar'].includes(state.step)) {
+    stoppaRedoTimer()
+    state.seq = null
+    state.step = 'utfall'
+    return
+  }
   if (['redo', 'sekvens', 'intro', 'rollval', 'valet', 'vantar'].includes(state.step)) {
     if (['redo', 'sekvens', 'intro', 'rollval'].includes(state.step)) {
       stoppaRedoTimer()
@@ -564,6 +611,6 @@ export function __resetEntreForTest(rng?: (run: string) => () => number): void {
   mqttClient = null
   if (rng) rngFactory = rng
   resetLocal()
-  Object.assign(state, { voteMode: 'skarm', screenSide: null, leader: true, run: 'pilot', mqttConnected: false, bandlost: true, introAvailable: false })
+  Object.assign(state, { voteMode: 'skarm', screenSide: null, leader: true, run: 'pilot', mqttConnected: false, bandlost: true, introAvailable: false, annanKlar: false })
   stoppaRedoTimer()
 }

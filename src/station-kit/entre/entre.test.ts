@@ -591,6 +591,91 @@ describe('entrén — synkIntro (två skärmar väntar in varandra och spelar se
     expect(e.state.step).toBe('valet')
   })
 
+  it('E1: lottningen finns redan (synkad från andra sidan) → "Vi står rätt" går direkt till utfallet', () => {
+    const { e, foljare } = ledare()
+    const personer = place(CONFIG.pilotRoster!, {}, CONFIG, {}, seededRng(1))
+    foljare.send({ kind: 'entre:result', payload: { run: 'pilot', personer } })
+    expect(e.state.step).toBe('attract')
+    e.start()
+    expect(e.state.step).toBe('utfall')
+  })
+
+  it('E1: hörngesten när lottningen redan finns → utfallet (inte en återvändsgränd i "vantar")', () => {
+    __resetRotationForTest()
+    __resetEntreForTest(() => seededRng(6))
+    const b = bus()
+    const e = initEntre({ stationN: 3, config: SYNK })
+    e.setScreen({ side: null, leader: true })
+    e.attachTransport(b.endpoint())
+    e.setIntroAvailable(true)
+    e.start()
+    expect(e.state.step).toBe('intro')
+    const personer = place(CONFIG.pilotRoster!, {}, CONFIG, {}, seededRng(1))
+    b.endpoint().send({ kind: 'entre:result', payload: { run: 'pilot', personer } })
+    expect(e.state.step).toBe('intro')
+    e.skipVote()
+    expect(e.state.step).toBe('utfall')
+  })
+
+  it('andra sidan redan klar (entre:klar) → följaren kör entrén själv och lottar när de egna valt', () => {
+    __resetRotationForTest()
+    __resetEntreForTest(() => seededRng(7))
+    const b = bus()
+    const e = initEntre({ stationN: 3, config: SYNK })
+    e.setScreen({ side: 'B', leader: false })
+    e.attachTransport(b.endpoint())
+    e.setIntroAvailable(true)
+    const annan = b.endpoint()
+    const fran: { kind: string; payload: Record<string, unknown> }[] = []
+    annan.subscribe((m) => fran.push(m as (typeof fran)[number]))
+    e.start()
+    expect(e.state.step).toBe('redo')
+    annan.send({ kind: 'entre:klar', payload: { run: 'pilot', side: 'A' } })
+    expect(e.state.annanKlar).toBe(true)
+    expect(e.state.step).toBe('intro')
+    e.introDone()
+    expect(e.state.step).toBe('rollval')
+    e.clipsDone()
+    expect(e.state.step).toBe('valet')
+    expect(e.myVoters.value.length).toBeGreaterThan(0)
+    let varv = 0
+    while (e.state.step === 'valet' && varv++ < 20) e.vote('A')
+    expect(e.state.step).toBe('utfall')
+    expect(e.personer.value.length).toBe(CONFIG.pilotRoster!.length)
+    // Solo: ingen ny lottning till andra sidan och ingen begäran till en ledare som inte finns.
+    expect(fran.some((m) => m.kind === 'entre:result' || m.kind === 'entre:force')).toBe(false)
+  })
+
+  it('en sida som redan är klar (lek) svarar entre:klar på andra sidans "redo"', () => {
+    __resetRotationForTest()
+    __resetEntreForTest(() => seededRng(8))
+    let deliver: (t: string, p: { toString(): string }) => void = () => {}
+    const client: RotationClient = {
+      publish: () => {},
+      subscribe: () => {},
+      on: ((ev: string, cb: (...a: never[]) => void) => {
+        if (ev === 'message') deliver = cb as unknown as typeof deliver
+      }) as RotationClient['on'],
+    }
+    const rot = initRotation({ stationN: 2, enabled: true, mqttUrl: '', side: 'A' }, client)
+    deliver('station2/group', { toString: () => JSON.stringify({ session_id: 9, round: 1, group: 4, members: group(6) }) })
+    rot.begin()
+    rot.markSkarp()
+    expect(rot.finishSkarp()).toBe(true)
+    expect(rot.state.phase).toBe('lek')
+    const b = bus()
+    const e = initEntre({ stationN: 2, config: SYNK })
+    e.setScreen({ side: 'A', leader: true })
+    e.attachTransport(b.endpoint())
+    const annan = b.endpoint()
+    const fran: { kind: string; payload: Record<string, unknown> }[] = []
+    annan.subscribe((m) => fran.push(m as (typeof fran)[number]))
+    annan.send({ kind: 'entre:redo', payload: { run: e.state.run, side: 'B' } })
+    expect(fran.some((m) => m.kind === 'entre:klar' && m.payload.side === 'A' && m.payload.run === e.state.run)).toBe(true)
+    expect(e.state.step).toBe('attract')
+    expect(e.state.redo.B).toBe(false)
+  })
+
   it('utan synkIntro (eller en delad skärm) beter sig entrén som förut', () => {
     __resetRotationForTest()
     __resetEntreForTest(() => seededRng(5))

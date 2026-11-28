@@ -56,6 +56,11 @@ const columns = computed(() =>
     other: egen.value != null && egen.value !== side,
   })),
 )
+/**
+ * Första rotationen (runda 1): en pil som bippar mot "VI STÅR RÄTT", så att gruppen förstår vad de ska göra efter
+ * trailern och instruktionsfilmen (Josef 2026-11-28). Senare rundor kan de redan.
+ */
+const forstaGangen = computed(() => rot.round === 1)
 /** Många namn på en sida → lite mindre text så att alla får plats. */
 const manga = computed(() => Math.max(...columns.value.map((c) => c.names.length)) > 3)
 
@@ -154,7 +159,13 @@ const pil = (side: SideId) => (side === 'A' ? '◀ Gå till andra skärmen' : 'G
         <template v-if="egen"><em>Står det i den stora rutan?</em> Då är du rätt.</template>
         <template v-else>Ställ er på er sida.</template>
       </p>
-      <button type="button" class="ak__cta" @click.stop="entre.start()">VI STÅR RÄTT ▸</button>
+      <p v-if="forstaGangen" class="ak__hint" aria-hidden="true">
+        Tryck här när ni står rätt
+        <span class="ak__hint-pil">▶</span>
+      </p>
+      <button type="button" class="ak__cta" :class="{ 'ak__cta--forsta': forstaGangen }" @click.stop="entre.start()">
+        VI STÅR RÄTT ▸
+      </button>
     </footer>
   </div>
 </template>
@@ -464,6 +475,34 @@ const pil = (side: SideId) => (side === 'A' ? '◀ Gå till andra skärmen' : 'G
   animation: ak-puls 2.4s ease-in-out infinite;
 }
 
+.ak__cta--forsta {
+  animation: ak-puls 1.2s ease-in-out infinite;
+}
+/* Första rotationen: skylt + pil precis till vänster om knappen som bippar mot den. */
+.ak__hint {
+  flex: none;
+  margin: 0 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: var(--font-mono);
+  font-size: clamp(1rem, 2.6vh, 1.7rem);
+  letter-spacing: 0.04em;
+  color: var(--color-primary);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.ak__hint-pil {
+  font-size: clamp(1.6rem, 4.5vh, 3rem);
+  line-height: 1;
+  animation: ak-bipp 0.9s ease-in-out infinite;
+}
+@keyframes ak-bipp {
+  50% {
+    transform: translateX(0.4em);
+  }
+}
+
 @keyframes ak-blink {
   50% {
     opacity: 0.35;
@@ -482,7 +521,8 @@ const pil = (side: SideId) => (side === 'A' ? '◀ Gå till andra skärmen' : 'G
 @media (prefers-reduced-motion: reduce) {
   .ak__har,
   .ak__pil,
-  .ak__cta {
+  .ak__cta,
+  .ak__hint-pil {
     animation: none;
   }
 }
